@@ -1,0 +1,13 @@
+pandas
+langchain-core
+langchain-community
+langchain-text-splitters
+pypdf>=4.3.0
+openai>=1.40.0
+google-genai>=0.3.0
+python-dotenv>=1.0.1
+chromadb>=0.5.0
+sentence-transformers>=3.0.0
+scikit-learn>=1.4.0
+streamlit
+fonttools

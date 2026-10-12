@@ -1,0 +1,28 @@
+# Entorno virtual
+venv/
+.venv/
+env/
+
+# Credenciales — NUNCA subir al repo
+.env
+
+# Python
+__pycache__/
+*.pyc.DS_Store
+*.py[cod]
+*.pyo
+
+# IDEs
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Output, chroma y archivos pesados
+output/experimentos
+chroma/
+embeddings.json
+
+#Archivos de prueba
+prueba_*.py
+rag.log
