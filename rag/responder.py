@@ -9,8 +9,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from config import TOP_K, GENERATION_MODEL
-from src.retrieve import retrieve, format_context
-from src.generate import generate
+from .retrieve import retrieve, format_context
+from .generate import generate
 
 logging.basicConfig(
     filename="rag.log",

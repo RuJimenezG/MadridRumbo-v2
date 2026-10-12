@@ -7,8 +7,8 @@ from dataclasses import dataclass
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from config import TOP_K
-from src.index import get_client, get_or_create_collection
-from src.embed import embeddear_textos
+from .index import get_client, get_or_create_collection
+from .embed import embeddear_textos
 
 
 @dataclass

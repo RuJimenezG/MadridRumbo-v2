@@ -25,7 +25,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import chromadb
 from langchain_core.documents import Document
 from config import CHROMA_DIR, COLLECTION_NAME, MAX_CHUNKS
-from src.embed import embeddear_textos
+from .embed import embeddear_textos
 
 import json
 from config import EMBEDDINGS_JSON, EMBEDDING_MODEL

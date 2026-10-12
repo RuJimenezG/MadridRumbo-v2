@@ -22,7 +22,7 @@ from collections import defaultdict
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from config import QUERIES_DIR
-from src.retrieve import retrieve
+from .retrieve import retrieve
 
 
 def load_eval_questions() -> list[dict]:

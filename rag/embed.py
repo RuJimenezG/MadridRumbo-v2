@@ -23,7 +23,7 @@ from config import (
     GEMINI_API_KEY,
 )
 
-from .model_auth import configurar_gemini_api_key, configurar_openai_api_key
+from model_auth import configurar_gemini_api_key, configurar_openai_api_key
 
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
