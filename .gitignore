@@ -19,6 +19,7 @@ __pycache__/
 Thumbs.db
 
 # Output, chroma y archivos pesados
+output/
 output/experimentos
 chroma/
 embeddings.json
