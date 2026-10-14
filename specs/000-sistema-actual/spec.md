@@ -97,9 +97,4 @@ MadridRumbo implementa un RAG sobre transporte público de Madrid. Procesa un co
 | RF-18–20 | `rag/rag_cli.py`: `main`, `_cmd_query`, `_cmd_ask` | Sin test |
 | RF-21 | `app.py` | Sin test |
 
-## Huecos detectados
 
-- No hay directorio `tests/`, `pytest` no está instalado y ningún RF tiene cobertura.
-- La abstención depende de una instrucción al LLM; no existe validación determinista de evidencia.
-- El sistema todavía no cumple los principios de constitución relativos al multiagente, allowlist, HITL, `MemorySaver` y `thread_id`; pertenecen a la siguiente iteración PB2.
-- La interfaz Streamlit existente funciona como cliente directo del RAG, no del futuro grafo compartido.
