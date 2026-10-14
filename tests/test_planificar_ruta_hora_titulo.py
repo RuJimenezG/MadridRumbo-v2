@@ -95,3 +95,43 @@ def test_hora_llegada_no_calcula(ahora_invierno):
     assert pr.validar_hora("rara", "9:00")["estado"] == "hora_llegada_no_admitida"
     # Una hora de llegada vacía equivale a no haberla pedido.
     assert pr.validar_hora("2026-01-12T08:30", "  ")["estado"] == "ok"
+
+
+def test_titulo_vacio_aplica_billete_sencillo():
+    # RF-19: si no se indica título se considera el billete sencillo.
+    for vacio in (None, "", "   "):
+        assert pr.resolver_titulo(vacio) == (config.TITULO_POR_DEFECTO, True)
+    assert config.TITULO_POR_DEFECTO == "billete sencillo"
+
+
+def test_titulo_de_la_lista_se_normaliza_a_su_valor_canonico():
+    # RF-35: los títulos de la lista cerrada se reconocen sin importar mayúsculas ni espacios.
+    assert pr.resolver_titulo("Billete de 10 viajes ") == ("billete de 10 viajes", True)
+    assert pr.resolver_titulo("BILLETE   SENCILLO") == ("billete sencillo", True)
+
+
+def test_titulo_fuera_de_lista_no_esta_disponible():
+    # RF-36: un título fuera de la lista (p. ej. un abono) se conserva tal cual y se marca no disponible.
+    assert pr.resolver_titulo("abono mensual") == ("abono mensual", False)
+    assert pr.resolver_titulo(123) == ("123", False)
+
+
+def test_cabecera_con_hora_pedida_incluye_hora_y_titulo():
+    # RF-38: la cabecera de todo mensaje lleva la hora de salida y el título considerados.
+    hora = datetime(2026, 1, 15, 8, 30, tzinfo=MADRID)
+    assert pr.cabecera(hora, "billete de 10 viajes") == "Salida: 15/01/2026 08:30 · Título: billete de 10 viajes."
+
+
+def test_cabecera_sin_hora_pedida_indica_ahora():
+    # RF-38, RF-14: sin hora de salida se muestra la hora actual marcada como "ahora".
+    hora = datetime(2026, 1, 10, 10, 0, tzinfo=MADRID)
+    assert pr.cabecera(hora, "billete sencillo", es_ahora=True) == (
+        "Salida: ahora (10/01/2026 10:00) · Título: billete sencillo."
+    )
+
+
+def test_cabecera_con_hora_no_interpretable_muestra_el_texto_recibido():
+    # RF-38: si la hora no se pudo interpretar, se muestra lo que llegó.
+    assert pr.cabecera("mañana a las 8", "billete sencillo") == (
+        "Salida: «mañana a las 8» · Título: billete sencillo."
+    )

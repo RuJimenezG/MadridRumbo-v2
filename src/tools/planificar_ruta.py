@@ -1,6 +1,6 @@
 """Tool planificar_ruta (spec 004): ruta en transporte público CRTM con zona y precio del RAG.
 
-De momento solo contiene las funciones puras del ámbito de cobertura y de la hora de salida.
+De momento solo contiene las funciones puras del ámbito de cobertura, la hora de salida y el título.
 """
 import re
 from datetime import datetime, timedelta, timezone
@@ -74,3 +74,35 @@ def validar_hora(hora_salida, hora_llegada=None) -> dict:
         "considerada": salida,
         "salida_rfc3339": salida.isoformat(timespec="seconds"),
     }
+
+
+def resolver_titulo(titulo) -> tuple[str, bool]:
+    """Devuelve (título considerado, ¿está en la lista cerrada?).
+
+    Sin título se aplica el predeterminado. Un título de la lista se devuelve con su valor
+    canónico; uno que no está se devuelve tal cual lo recibió, marcado como no disponible.
+    """
+    if titulo is None or not str(titulo).strip():
+        return config.TITULO_POR_DEFECTO, True
+    recibido = str(titulo).strip()
+    # Se ignoran mayúsculas y espacios repetidos al comparar con la lista cerrada.
+    normalizado = " ".join(recibido.casefold().split())
+    for canonico in config.TITULOS_TRANSPORTE:
+        if normalizado == canonico:
+            return canonico, True
+    return recibido, False
+
+
+def cabecera(hora: "datetime | str", titulo: str, es_ahora: bool = False) -> str:
+    """Primera frase de todo mensaje: hora de salida y título considerados.
+
+    `hora` es un datetime, o el texto recibido si no se pudo interpretar.
+    `es_ahora` marca que la persona no pidió hora y se usa la actual.
+    """
+    if isinstance(hora, str):
+        salida = f"«{hora}»"
+    elif es_ahora:
+        salida = f"ahora ({hora:%d/%m/%Y %H:%M})"
+    else:
+        salida = f"{hora:%d/%m/%Y %H:%M}"
+    return f"Salida: {salida} · Título: {titulo}."
