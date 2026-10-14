@@ -65,6 +65,7 @@ Flujo (prompt del especialista):
 | `describir_imagen` con `cliente` inyectable y rutas relativas | Rutas absolutas | Test sin API y sin lectura fuera de la carpeta autorizada |
 | Dos tools separadas | Una tool «lee y calcula» | Cada una determinista/trazable por separado; se prueba la calculadora sin LLM |
 | El flujo vive en el prompt del especialista (no en código fijo) | Función que encadena ambas | El LLM decide, pero cada paso pasa por la allowlist y el tope de pasos |
+| `MODELO_VISION = "gemini-3.8-flash"`, independiente de `GENERATION_MODEL` | Reutilizar `GENERATION_MODEL` (`gemini-3.6-flash`) | En la demo real (2026-10-14) `gemini-3.6-flash` dio 503 por demanda alta y `gemini-2.5-flash` ya no está disponible; `gemini-3.8-flash` leyó bien la imagen. Así no se toca el modelo del RAG |
 
 ## Estrategia de tests
 Sin API: cliente falso, LLM falso y `tmp_path` (ver `docs/tests_sin_api.md`).

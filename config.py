@@ -79,7 +79,8 @@ IMAGENES_DIR = BASE_DIR / "assets"
 IMAGEN_DEMO = "imagen_demo.jpg"
 IMAGEN_MAX_MB = 4
 EXTENSIONES_IMAGEN = {".jpg", ".jpeg", ".png"}
-MODELO_VISION = GENERATION_MODEL
+# Modelo propio de la tool de imagen: gemini-3.6-flash (GENERATION_MODEL) devolvió 503 por demanda alta en las pruebas.
+MODELO_VISION = "gemini-3.8-flash"
 
 # --- Tool calculadora ---
 CALC_MAX_CARACTERES = 200

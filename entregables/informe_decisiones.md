@@ -77,7 +77,7 @@ Después `calculadora` con `3*1,50+5,00` devolvió **9,50**, el total correcto. 
 - `gemini-2.5-flash` devolvió `404`: Google lo ha retirado para cuentas nuevas.
 - Una primera clave mal configurada dio `400 API_KEY_INVALID`.
 
-Con `gemini-3.8-flash` funcionó a la primera llamada válida.
+Con `gemini-3.8-flash` funcionó a la primera llamada válida, por lo que `MODELO_VISION` en `config.py` pasó a ese modelo, independiente de `GENERATION_MODEL` (el del RAG).
 
 ## 5. Fallos conocidos y siguientes pasos
 
@@ -86,7 +86,7 @@ Con `gemini-3.8-flash` funcionó a la primera llamada válida.
 3. **`hora_actual` no conoce los festivos.** Solo distingue laborable, sábado y domingo, así que un festivo se trata como un día laborable y el especialista podría dar un horario equivocado. *Siguiente paso:* incorporar un calendario de festivos como dato (CSV) o consultarlo al RAG.
 4. **El bucle depende de que el LLM cumpla el protocolo JSON** (`{"tool","args"}` o `{"final"}`). Si no lo cumple, el especialista devuelve una nota de error controlada, pero la pregunta queda sin responder. *Siguiente paso:* pasar a `bind_tools` de LangChain o validar y reintentar una vez antes de rendirse; en MLOps, medir la tasa de respuestas no interpretables.
 
-**Otras limitaciones.** El modelo configurado en el proyecto (`gemini-3.6-flash`) no respondió en la demo por saturación; con `gemini-3.8-flash` sí. La `rag_ask` real depende de integrar `feature/tools-rag`; `elegir_rol_por_palabras` y los especialistas no están todavía conectados a un grafo; y las palabras clave del fallback pueden solaparse con las de otros especialistas, por lo que el orden de las reglas del supervisor debe acordarse.
+**Otras limitaciones.** El RAG sigue con `gemini-3.6-flash` (`GENERATION_MODEL`), que dio un 503 por saturación en la demo de visión; conviene que el equipo valore cambiarlo también. La `rag_ask` real depende de integrar `feature/tools-rag`; `elegir_rol_por_palabras` y los especialistas no están todavía conectados a un grafo; y las palabras clave del fallback pueden solaparse con las de otros especialistas, por lo que el orden de las reglas del supervisor debe acordarse.
 
 ## 6. Trabajo con SDD
 
