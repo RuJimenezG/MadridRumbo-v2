@@ -34,6 +34,7 @@ Hoy MadridRumbo responde preguntas sobre el corpus CRTM (RAG), pero no sabe cóm
 - RF-8: SI hay varios candidatos dentro del ámbito, ENTONCES EL SISTEMA no calcula la ruta, muestra un número limitado de candidatos y pide a la persona que elija o concrete.
 - RF-9: EL SISTEMA formula la petición de aclaración de los RF-6 y RF-8 en la respuesta de la conversación, sin usar la pausa de aprobación humana del grafo (HITL).
 - RF-10: SI el origen y el destino resuelven a la misma ubicación, ENTONCES EL SISTEMA informa de ello y no calcula la ruta.
+- RF-40: SI Nominatim falla (error, timeout, error HTTP o límite de peticiones), ENTONCES EL SISTEMA informa de que no pudo localizar las direcciones, no llama a Google Routes ni al RAG y pide reintentar más tarde.
 
 ### Cálculo de la ruta
 
@@ -45,6 +46,7 @@ Hoy MadridRumbo responde preguntas sobre el corpus CRTM (RAG), pero no sabe cóm
 - RF-16: SI Google Routes falla por error o falta de conexión, ENTONCES EL SISTEMA informa de que no se pudo calcular la ruta.
 - RF-17: SI Google Routes responde pero no hay ruta en transporte público, ENTONCES EL SISTEMA informa de que no hay ruta disponible y no da zona ni precio.
 - RF-18: EL SISTEMA no inventa ni estima tiempos ni trayectos en ningún caso.
+- RF-42: SI ocurre un error inesperado en la herramienta, ENTONCES EL SISTEMA devuelve un mensaje de error controlado en español, sin lanzar excepción y sin mostrar detalles internos, y lo registra en la traza.
 
 ### Zona tarifaria y precio
 
@@ -54,6 +56,7 @@ Hoy MadridRumbo responde preguntas sobre el corpus CRTM (RAG), pero no sabe cóm
 - RF-22: SI el RAG aporta la zona pero no el precio, o al revés, ENTONCES EL SISTEMA informa solo del dato disponible y declara cuál falta.
 - RF-23: EL SISTEMA no estima ni inventa ningún precio ni zona que el RAG no haya respaldado.
 - RF-24: EL SISTEMA indica en la respuesta qué datos proceden de la ruta (Google) y cuáles del corpus (RAG).
+- RF-41: SI el RAG falla por error al consultar la zona o el precio, ENTONCES EL SISTEMA entrega la ruta e informa de que no pudo consultar la zona ni el precio, sin sustituirlos por valores propios.
 
 ### Especialista "rutas"
 
@@ -92,10 +95,13 @@ Hoy MadridRumbo responde preguntas sobre el corpus CRTM (RAG), pero no sabe cóm
 - Único resultado fuera del ámbito: RF-4, RF-5.
 - Varios candidatos dentro del ámbito: RF-8, RF-9.
 - Ningún resultado de Nominatim: RF-6.
+- Nominatim caído, con timeout, error HTTP o límite de peticiones: RF-40.
 - Origen y destino en la misma ubicación: RF-10.
 - Google caído o sin conexión: RF-16, RF-18, RF-20.
 - Sin ruta en transporte público: RF-17.
 - RAG sin evidencia, total o parcial: RF-21, RF-22, RF-23.
+- RAG con error al consultar zona o precio: RF-41.
+- Error inesperado en la herramienta: RF-42.
 - Falta origen o destino, o ambos: RF-26, RF-27.
 - Dato faltante aportado en el turno siguiente: RF-28.
 - Consulta que no es de rutas: RF-29.
