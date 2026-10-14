@@ -20,10 +20,10 @@ import json
 from langchain_core.documents import Document
 from config import CHUNKS_JSON
 
-from src.pipeline import ejecutar_ingesta
-from src.embed import ejecutar_embeddings
-from src.index import index_chunks
-from src.retrieve import retrieve, format_context
+from .pipeline import ejecutar_ingesta
+from .embed import ejecutar_embeddings
+from .index import index_chunks
+from .retrieve import retrieve, format_context
 # El módulo de generación se importa únicamente cuando se ejecuta --ask.
 # De esta forma, los comandos --prepare, --index y --query pueden
 # utilizarse sin necesidad de inicializar el cliente de Gemini.
@@ -72,7 +72,7 @@ def _cmd_query(pregunta: str, k: int) -> None:
 
 def _cmd_ask(pregunta: str, k: int) -> None:
     """RAG completo: retrieval (ChromaDB) + generación (Gemini), con abstención si no hay evidencia."""
-    from src.responder import responder
+    from .responder import responder
     resultado = responder(pregunta, k=k)
     print(f"\nPREGUNTA: {pregunta}\n")
     print(f"RESPUESTA:\n{resultado['respuesta']}\n")

@@ -19,7 +19,7 @@ import json
 import time
 
 from config import QUERIES_DIR
-from src.responder import responder
+from .responder import responder
 from google.genai.errors import APIError
 
 FRASE_ABSTENCION = "no lo sé, no está en los documentos"

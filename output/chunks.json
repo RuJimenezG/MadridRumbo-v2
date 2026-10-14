@@ -1,0 +1,2473 @@
+{
+  "chunk_size_config": {
+    "chunk_size": 400,
+    "chunk_overlap": 50
+  },
+  "total_chunks": 192,
+  "ingesta_stats": {
+    "documentos_cargados": 17,
+    "documentos_tras_limpieza": 17,
+    "chunks_generados": 192,
+    "documentos_por_fuente": {
+      "bocm-20251231-precios_transporte.pdf": 4,
+      "bocm-20251231-tarifas_transporte.pdf": 4,
+      "crtm_billetes_tarifas.md": 1,
+      "crtm_faq.md": 1,
+      "Paradas CRTM.csv": 7
+    },
+    "chunks_por_fuente": {
+      "bocm-20251231-precios_transporte.pdf": 33,
+      "bocm-20251231-tarifas_transporte.pdf": 29,
+      "crtm_billetes_tarifas.md": 44,
+      "crtm_faq.md": 79,
+      "Paradas CRTM.csv": 7
+    }
+  },
+  "chunks": [
+    {
+      "text": "MIÉRCOLES 31 DE DICIEMBRE DE 2025B.O.C.M. Núm. 311 Pág. 65\nBOCM-20251231-2\nBOLETÍN OFICIAL DE LA COMUNIDAD DE MADRIDBOCM\nI. COMUNIDAD DE MADRID\nC) Otras Disposiciones\nConsejería de Vivienda,Transportes e Infraestructuras\nO. A. CONSORCIO REGIONAL DE TRANSPORTES PÚBLICOS\nREGULARES DE MADRID\n2 RESOLUCIÓN de 29 de diciembre de 2025, de la Dirección-Gerencia del",
+      "metadata": {
+        "producer": "Acrobat Distiller 8.1.0 (Windows); modified using iText 2.1.7 by 1T3XT",
+        "creator": "PyPDF",
+        "creationdate": "2025-12-30T14:01:51+01:00",
+        "moddate": "2025-12-30T16:29:44+01:00",
+        "prtc_pagina": "68",
+        "prtc_noriginales": "0",
+        "title": "untitled",
+        "prtc_fechapublicacion": "31/12/2025 00:00",
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\bocm-20251231-precios_transporte.pdf",
+        "total_pages": 4,
+        "page": 0,
+        "page_label": "1",
+        "chunk_index": 0,
+        "chunk_size": 359,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "Consorcio Regional de Transportes Públicos Regulares de Madrid, por la que\nse dispone la publicación del acuerdo del Consejo de Administración por el\nque se determinan los precios del transporte público en el año 2026.\nEl Consejo de Administración del Consorcio Regional de Transportes, en sesión cele-\nbrada el día 29 de diciembre de 2025, ha aprobado:",
+      "metadata": {
+        "producer": "Acrobat Distiller 8.1.0 (Windows); modified using iText 2.1.7 by 1T3XT",
+        "creator": "PyPDF",
+        "creationdate": "2025-12-30T14:01:51+01:00",
+        "moddate": "2025-12-30T16:29:44+01:00",
+        "prtc_pagina": "68",
+        "prtc_noriginales": "0",
+        "title": "untitled",
+        "prtc_fechapublicacion": "31/12/2025 00:00",
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\bocm-20251231-precios_transporte.pdf",
+        "total_pages": 4,
+        "page": 0,
+        "page_label": "1",
+        "chunk_index": 1,
+        "chunk_size": 353,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "Mantener los precios del transporte público en el año 2026 continuando con los mis-\nmos existentes en el segundo semestre de 2025.\nQuedan fuera del ámbito de aplicación del Real Decreto-Ley y por tanto del acuerdo\nanterior los billetes sencillos, ida y vuelta, títulos turísticos y títulos 10 viajes de autobús de\nconcesiones propias del CRTM con origen/destino municipios de Castilla y León.",
+      "metadata": {
+        "producer": "Acrobat Distiller 8.1.0 (Windows); modified using iText 2.1.7 by 1T3XT",
+        "creator": "PyPDF",
+        "creationdate": "2025-12-30T14:01:51+01:00",
+        "moddate": "2025-12-30T16:29:44+01:00",
+        "prtc_pagina": "68",
+        "prtc_noriginales": "0",
+        "title": "untitled",
+        "prtc_fechapublicacion": "31/12/2025 00:00",
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\bocm-20251231-precios_transporte.pdf",
+        "total_pages": 4,
+        "page": 0,
+        "page_label": "1",
+        "chunk_index": 2,
+        "chunk_size": 392,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "El Real Decreto-Ley 17/2025, de 23 de diciembre (“Boletín Oficial del Estado” de 24\nde diciembre) se atribuye como finalidad fomentar el uso del transporte público en España,\npromoviendo la sostenibilidad, la cohesión social y territorial, y la reducción de emisiones\nde gases de efecto invernadero. Para ello, se establecen ayudas y bonificaciones en abonos",
+      "metadata": {
+        "producer": "Acrobat Distiller 8.1.0 (Windows); modified using iText 2.1.7 by 1T3XT",
+        "creator": "PyPDF",
+        "creationdate": "2025-12-30T14:01:51+01:00",
+        "moddate": "2025-12-30T16:29:44+01:00",
+        "prtc_pagina": "68",
+        "prtc_noriginales": "0",
+        "title": "untitled",
+        "prtc_fechapublicacion": "31/12/2025 00:00",
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\bocm-20251231-precios_transporte.pdf",
+        "total_pages": 4,
+        "page": 0,
+        "page_label": "1",
+        "chunk_index": 3,
+        "chunk_size": 358,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "y títulos multiviaje para distintos colectivos y servicios de transporte público.\nAdemás de una serie de medidas dirigidas al transporte por carretera de titularidad es-\ntatal, bonificaciones en los servicios de Renfe (en particular Cercanías y Media Distancia),\nestablece un conjunto de ayudas directas a Comunidades Autónomas y Entidades Locales,",
+      "metadata": {
+        "producer": "Acrobat Distiller 8.1.0 (Windows); modified using iText 2.1.7 by 1T3XT",
+        "creator": "PyPDF",
+        "creationdate": "2025-12-30T14:01:51+01:00",
+        "moddate": "2025-12-30T16:29:44+01:00",
+        "prtc_pagina": "68",
+        "prtc_noriginales": "0",
+        "title": "untitled",
+        "prtc_fechapublicacion": "31/12/2025 00:00",
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\bocm-20251231-precios_transporte.pdf",
+        "total_pages": 4,
+        "page": 0,
+        "page_label": "1",
+        "chunk_index": 4,
+        "chunk_size": 348,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "en su Capítulo III, para el transporte colectivo urbano e interurbano competencia de las co-\nmunidades autónomas y de entidades locales.\nAl igual que en el segundo semestre de 2025, durante 2026 y para que comunidades\nautónomas y entidades locales puedan reducir el precio de los abonos y títulos multiviaje\ndel transporte público colectivo urbano e interurbano, vuelve a establecer un conjunto de",
+      "metadata": {
+        "producer": "Acrobat Distiller 8.1.0 (Windows); modified using iText 2.1.7 by 1T3XT",
+        "creator": "PyPDF",
+        "creationdate": "2025-12-30T14:01:51+01:00",
+        "moddate": "2025-12-30T16:29:44+01:00",
+        "prtc_pagina": "68",
+        "prtc_noriginales": "0",
+        "title": "untitled",
+        "prtc_fechapublicacion": "31/12/2025 00:00",
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\bocm-20251231-precios_transporte.pdf",
+        "total_pages": 4,
+        "page": 0,
+        "page_label": "1",
+        "chunk_index": 5,
+        "chunk_size": 397,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "ayudas con las siguientes características:\n— Beneficiarios: Comunidades autónomas, entidades locales y entes supramunicipales\nque presten servicios de transporte público colectivo y cumplan ciertos requisitos\nmedioambientales (como tener zonas de bajas emisiones o cumplir límites de cali-\ndad del aire).\n— Objetivo de las ayudas: Reducir el precio de los títulos multiviaje y abonos, espe-",
+      "metadata": {
+        "producer": "Acrobat Distiller 8.1.0 (Windows); modified using iText 2.1.7 by 1T3XT",
+        "creator": "PyPDF",
+        "creationdate": "2025-12-30T14:01:51+01:00",
+        "moddate": "2025-12-30T16:29:44+01:00",
+        "prtc_pagina": "68",
+        "prtc_noriginales": "0",
+        "title": "untitled",
+        "prtc_fechapublicacion": "31/12/2025 00:00",
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\bocm-20251231-precios_transporte.pdf",
+        "total_pages": 4,
+        "page": 0,
+        "page_label": "1",
+        "chunk_index": 6,
+        "chunk_size": 390,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "cialmente para población infantil y juvenil, pero también para otros usuarios.\n— Descuentos:\n/_d_135 Gratuidad para abonos y títulos infantiles (niños nacidos entre 2012 y 2026).\n/_d_135 Descuento del 50 % para abonos y títulos jóvenes (nacidos entre 2000 y 2011).\n/_d_135 Descuento del 20 % para otros títulos multiviaje y abonos (excluyendo billetes\nde ida y vuelta y títulos turísticos).",
+      "metadata": {
+        "producer": "Acrobat Distiller 8.1.0 (Windows); modified using iText 2.1.7 by 1T3XT",
+        "creator": "PyPDF",
+        "creationdate": "2025-12-30T14:01:51+01:00",
+        "moddate": "2025-12-30T16:29:44+01:00",
+        "prtc_pagina": "68",
+        "prtc_noriginales": "0",
+        "title": "untitled",
+        "prtc_fechapublicacion": "31/12/2025 00:00",
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\bocm-20251231-precios_transporte.pdf",
+        "total_pages": 4,
+        "page": 0,
+        "page_label": "1",
+        "chunk_index": 7,
+        "chunk_size": 390,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "de ida y vuelta y títulos turísticos).\nEn todos los casos anteriores el precio del título de transporte que será financiado con\nlas ayudas se considerará tomando como referencia el régimen tarifario que el beneficiario\ntuviese implantado a 30 de noviembre de 2025, excepto en la gratuidad infantil.\nA su vez, se regulan en el mismo RD-Ley la gestión y procedimiento de petición y",
+      "metadata": {
+        "producer": "Acrobat Distiller 8.1.0 (Windows); modified using iText 2.1.7 by 1T3XT",
+        "creator": "PyPDF",
+        "creationdate": "2025-12-30T14:01:51+01:00",
+        "moddate": "2025-12-30T16:29:44+01:00",
+        "prtc_pagina": "68",
+        "prtc_noriginales": "0",
+        "title": "untitled",
+        "prtc_fechapublicacion": "31/12/2025 00:00",
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\bocm-20251231-precios_transporte.pdf",
+        "total_pages": 4,
+        "page": 0,
+        "page_label": "1",
+        "chunk_index": 8,
+        "chunk_size": 379,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "resolución de las ayudas, el pago de las mismas, así como su justificación, determinando a\nsu vez que las entidades beneficiarias (como ya ocurría en 2025) deben informar a los usua-\nrios de que los descuentos están financiados por el Ministerio.\nUna novedad muy importante de este Real Decreto-Ley en relación a anteriores simi-",
+      "metadata": {
+        "producer": "Acrobat Distiller 8.1.0 (Windows); modified using iText 2.1.7 by 1T3XT",
+        "creator": "PyPDF",
+        "creationdate": "2025-12-30T14:01:51+01:00",
+        "moddate": "2025-12-30T16:29:44+01:00",
+        "prtc_pagina": "68",
+        "prtc_noriginales": "0",
+        "title": "untitled",
+        "prtc_fechapublicacion": "31/12/2025 00:00",
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\bocm-20251231-precios_transporte.pdf",
+        "total_pages": 4,
+        "page": 0,
+        "page_label": "1",
+        "chunk_index": 9,
+        "chunk_size": 329,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "lares, es que no condiciona la ayuda estatal a que las CCAA y EELL participen con fondos\npropios en la reducción del precio de los títulos de viaje.",
+      "metadata": {
+        "producer": "Acrobat Distiller 8.1.0 (Windows); modified using iText 2.1.7 by 1T3XT",
+        "creator": "PyPDF",
+        "creationdate": "2025-12-30T14:01:51+01:00",
+        "moddate": "2025-12-30T16:29:44+01:00",
+        "prtc_pagina": "68",
+        "prtc_noriginales": "0",
+        "title": "untitled",
+        "prtc_fechapublicacion": "31/12/2025 00:00",
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\bocm-20251231-precios_transporte.pdf",
+        "total_pages": 4,
+        "page": 0,
+        "page_label": "1",
+        "chunk_index": 10,
+        "chunk_size": 148,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "MIÉRCOLES 31 DE DICIEMBRE DE 2025Pág. 66 B.O.C.M. Núm. 311\nBOCM-20251231-2\nBOLETÍN OFICIAL DE LA COMUNIDAD DE MADRIDBOCM\nNo obstante, el Consorcio Regional de la Comunidad de Madrid, plantea que esta co-\nlaboración (la de la Comunidad de Madrid y Ayuntamientos financiadores) siga existien-\ndo, de forma que los precios del transporte público en 2026 sean siendo los mismos para los",
+      "metadata": {
+        "producer": "Acrobat Distiller 8.1.0 (Windows); modified using iText 2.1.7 by 1T3XT",
+        "creator": "PyPDF",
+        "creationdate": "2025-12-30T14:01:51+01:00",
+        "moddate": "2025-12-30T16:29:44+01:00",
+        "prtc_pagina": "68",
+        "prtc_noriginales": "0",
+        "title": "untitled",
+        "prtc_fechapublicacion": "31/12/2025 00:00",
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\bocm-20251231-precios_transporte.pdf",
+        "total_pages": 4,
+        "page": 1,
+        "page_label": "2",
+        "chunk_index": 11,
+        "chunk_size": 382,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "usuarios que los que ha tenido en el segundo semestre de 2025.\nEn consecuencia, los precios del transportes público en el año 2026 en el ámbito de\ncompetencias del Consorcio Regional de Transportes Públicos Regulares de Madrid, son\nlos siguientes:\nOrdinario\nPersonas con\ndiscapacidad\nsuperior o\nigual al 65%\nFamilias\nNumerosas\nCategoría\nGeneral\nFamilias\nNumerosas\nCategoría\nEspecial\nFNGeneral +",
+      "metadata": {
+        "producer": "Acrobat Distiller 8.1.0 (Windows); modified using iText 2.1.7 by 1T3XT",
+        "creator": "PyPDF",
+        "creationdate": "2025-12-30T14:01:51+01:00",
+        "moddate": "2025-12-30T16:29:44+01:00",
+        "prtc_pagina": "68",
+        "prtc_noriginales": "0",
+        "title": "untitled",
+        "prtc_fechapublicacion": "31/12/2025 00:00",
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\bocm-20251231-precios_transporte.pdf",
+        "total_pages": 4,
+        "page": 1,
+        "page_label": "2",
+        "chunk_index": 12,
+        "chunk_size": 394,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "Familias\nNumerosas\nCategoría\nEspecial\nFNGeneral +\nPersonas con\ndiscapacidad\n≥ 65%\nFNEspecial +\nPersonas con\ndiscapacidad\n≥ 65%\nA 32,70 € 26,10 € 26,10 € 16,30 € 19,60 € 9,70 €\nB1 38,20 € 30,50 € 30,50 € 19,00 € 22,90 € 11,40 €\nB2 43,20 € 34,50 € 34,50 € 21,60 € 25,90 € 12,90 €\nB3 49,20 € 39,30 € 39,30 € 24,60 € 29,50 € 14,70 €\nC1 49,20 € 39,30 € 39,30 € 24,60 € 29,50 € 14,70 €",
+      "metadata": {
+        "producer": "Acrobat Distiller 8.1.0 (Windows); modified using iText 2.1.7 by 1T3XT",
+        "creator": "PyPDF",
+        "creationdate": "2025-12-30T14:01:51+01:00",
+        "moddate": "2025-12-30T16:29:44+01:00",
+        "prtc_pagina": "68",
+        "prtc_noriginales": "0",
+        "title": "untitled",
+        "prtc_fechapublicacion": "31/12/2025 00:00",
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\bocm-20251231-precios_transporte.pdf",
+        "total_pages": 4,
+        "page": 1,
+        "page_label": "2",
+        "chunk_index": 13,
+        "chunk_size": 379,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "C2 49,20 € 39,30 € 39,30 € 24,60 € 29,50 € 14,70 €\nE1 66,30 € 53,00 € 53,00 € 33,10 € 39,70 € 19,80 €\nE2 79,00 € 63,20 € 63,20 € 39,50 € 47,40 € 23,70 €\nB1-B2 28,70 € 22,90 € 22,90 € 14,30 € 17,20 € 8,50 €\nB1-B3 32,70 € 26,10 € 26,10 € 16,30 € 19,60 € 9,70 €\nB1-C1 32,70 € 26,10 € 26,10 € 16,30 € 19,60 € 9,70 €\nB1-C2 32,70 € 26,10 € 26,10 € 16,30 € 19,60 € 9,70 €",
+      "metadata": {
+        "producer": "Acrobat Distiller 8.1.0 (Windows); modified using iText 2.1.7 by 1T3XT",
+        "creator": "PyPDF",
+        "creationdate": "2025-12-30T14:01:51+01:00",
+        "moddate": "2025-12-30T16:29:44+01:00",
+        "prtc_pagina": "68",
+        "prtc_noriginales": "0",
+        "title": "untitled",
+        "prtc_fechapublicacion": "31/12/2025 00:00",
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\bocm-20251231-precios_transporte.pdf",
+        "total_pages": 4,
+        "page": 1,
+        "page_label": "2",
+        "chunk_index": 14,
+        "chunk_size": 364,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "B1-E1 49,20 € 39,30 € 39,30 € 24,60 € 29,50 € 14,70 €\nB1-E2 53,70 € 42,90 € 42,90 € 26,80 € 32,20 € 16,00 €\nB2-B3 28,70 € 22,90 € 22,90 € 14,30 € 17,20 € 8,50 €\nB2-C1 28,70 € 22,90 € 22,90 € 14,30 € 17,20 € 8,50 €\nB2-C2 28,70 € 22,90 € 22,90 € 14,30 € 17,20 € 8,50 €\nB2-E1 43,20 € 34,50 € 34,50 € 21,60 € 25,90 € 12,90 €\nB2-E2 49,20 € 39,30 € 39,30 € 24,60 € 29,50 € 14,70 €",
+      "metadata": {
+        "producer": "Acrobat Distiller 8.1.0 (Windows); modified using iText 2.1.7 by 1T3XT",
+        "creator": "PyPDF",
+        "creationdate": "2025-12-30T14:01:51+01:00",
+        "moddate": "2025-12-30T16:29:44+01:00",
+        "prtc_pagina": "68",
+        "prtc_noriginales": "0",
+        "title": "untitled",
+        "prtc_fechapublicacion": "31/12/2025 00:00",
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\bocm-20251231-precios_transporte.pdf",
+        "total_pages": 4,
+        "page": 1,
+        "page_label": "2",
+        "chunk_index": 15,
+        "chunk_size": 374,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "B3-C1 28,70 € 22,90 € 22,90 € 14,30 € 17,20 € 8,50 €\nB3-C2 28,70 € 22,90 € 22,90 € 14,30 € 17,20 € 8,50 €\nB3-E1 38,20 € 30,50 € 30,50 € 19,00 € 22,90 € 11,40 €\nB3-E2 43,20 € 34,50 € 34,50 € 21,60 € 25,90 € 12,90 €\nC1-C2 28,70 € 22,90 € 22,90 € 14,30 € 17,20 € 8,50 €\nC1-E1 32,70 € 26,10 € 26,10 € 16,30 € 19,60 € 9,70 €\nC1-E2 38,20 € 30,50 € 30,50 € 19,00 € 22,90 € 11,40 €",
+      "metadata": {
+        "producer": "Acrobat Distiller 8.1.0 (Windows); modified using iText 2.1.7 by 1T3XT",
+        "creator": "PyPDF",
+        "creationdate": "2025-12-30T14:01:51+01:00",
+        "moddate": "2025-12-30T16:29:44+01:00",
+        "prtc_pagina": "68",
+        "prtc_noriginales": "0",
+        "title": "untitled",
+        "prtc_fechapublicacion": "31/12/2025 00:00",
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\bocm-20251231-precios_transporte.pdf",
+        "total_pages": 4,
+        "page": 1,
+        "page_label": "2",
+        "chunk_index": 16,
+        "chunk_size": 373,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "C2-E1 28,70 € 22,90 € 22,90 € 14,30 € 17,20 € 8,50 €\nC2-E2 32,70 € 26,10 € 26,10 € 16,30 € 19,60 € 9,70 €\n10,00 € 8,00 € 8,00 € 5,00 € 6,00 € 3,00 €\n3,70 €\n(*) 365 días de validez\nLa tarjeta transporte público infantil y la tarjeta azul son gratuitas\nJOVEN\nABONO TRANSPORTE: PRECIOS APLICABLES CON DESCUENTO DESDE 1/1/2026\nTÍTULO 30 DÍAS\nNORMAL\nRelaciones con AInterzonales\nABONO DE 7 HASTA 14 AÑOS",
+      "metadata": {
+        "producer": "Acrobat Distiller 8.1.0 (Windows); modified using iText 2.1.7 by 1T3XT",
+        "creator": "PyPDF",
+        "creationdate": "2025-12-30T14:01:51+01:00",
+        "moddate": "2025-12-30T16:29:44+01:00",
+        "prtc_pagina": "68",
+        "prtc_noriginales": "0",
+        "title": "untitled",
+        "prtc_fechapublicacion": "31/12/2025 00:00",
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\bocm-20251231-precios_transporte.pdf",
+        "total_pages": 4,
+        "page": 1,
+        "page_label": "2",
+        "chunk_index": 17,
+        "chunk_size": 398,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "ABONO DE 7 HASTA 14 AÑOS\nTítulo gratuito\nTARJETA AZUL\nABONO +65 (*) Título gratuito\nTARJETA INFANTIL Título gratuito",
+      "metadata": {
+        "producer": "Acrobat Distiller 8.1.0 (Windows); modified using iText 2.1.7 by 1T3XT",
+        "creator": "PyPDF",
+        "creationdate": "2025-12-30T14:01:51+01:00",
+        "moddate": "2025-12-30T16:29:44+01:00",
+        "prtc_pagina": "68",
+        "prtc_noriginales": "0",
+        "title": "untitled",
+        "prtc_fechapublicacion": "31/12/2025 00:00",
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\bocm-20251231-precios_transporte.pdf",
+        "total_pages": 4,
+        "page": 1,
+        "page_label": "2",
+        "chunk_index": 18,
+        "chunk_size": 116,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "El precio de los abonos anuales, con validez 1 de enero, será 10 veces el precio del título de 30 días correspondiente.",
+      "metadata": {
+        "producer": "Acrobat Distiller 8.1.0 (Windows); modified using iText 2.1.7 by 1T3XT",
+        "creator": "PyPDF",
+        "creationdate": "2025-12-30T14:01:51+01:00",
+        "moddate": "2025-12-30T16:29:44+01:00",
+        "prtc_pagina": "68",
+        "prtc_noriginales": "0",
+        "title": "untitled",
+        "prtc_fechapublicacion": "31/12/2025 00:00",
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\bocm-20251231-precios_transporte.pdf",
+        "total_pages": 4,
+        "page": 1,
+        "page_label": "2",
+        "chunk_index": 19,
+        "chunk_size": 119,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "MIÉRCOLES 31 DE DICIEMBRE DE 2025B.O.C.M. Núm. 311 Pág. 67\nBOCM-20251231-2\nBOLETÍN OFICIAL DE LA COMUNIDAD DE MADRIDBOCM\nOrdinario Discapacidad\nFamilia\nNumerosa\nGeneral\nFamilia\nNumerosa\nEspecial\nFamilia\nNumerosa\nGeneral+\nDisc\nFamilia\nNumerosa\nEspecial+Dis\nc\nMetro Zona A, EMT y ML1 7,30 € 5,80 € 5,80 € 3 ,60 € 4,30 € 2,10 €\nMetroEste, MetroNorte y MetroSur 6,70 € 5,30 € 5,30 € 3 ,30 € 4,00 € 1,90 €",
+      "metadata": {
+        "producer": "Acrobat Distiller 8.1.0 (Windows); modified using iText 2.1.7 by 1T3XT",
+        "creator": "PyPDF",
+        "creationdate": "2025-12-30T14:01:51+01:00",
+        "moddate": "2025-12-30T16:29:44+01:00",
+        "prtc_pagina": "68",
+        "prtc_noriginales": "0",
+        "title": "untitled",
+        "prtc_fechapublicacion": "31/12/2025 00:00",
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\bocm-20251231-precios_transporte.pdf",
+        "total_pages": 4,
+        "page": 2,
+        "page_label": "3",
+        "chunk_index": 20,
+        "chunk_size": 400,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "TFM 7,30 € 5,80 € 5,80 € 3 ,60 € 4,30 € 2,10 €\nMetro Ligero Oeste 7,30 € 5,80 € 5,80 € 3 ,60 € 4,30 € 2,10 €\nCombinado Metro (1) 10,90 € 8,70 € 8,70 € 5 ,40 € 6,50 € 3,20 €\n5,30 €\n11,20 € 13,40 € 6,70 €\n10 Viajes 5,10 € 4,00 € 4,00 € 2 ,50 € 3,00 € 1,50 €\n2,50 € 3,00 € 1,50 €\n22,40 € 17,90 €\n5,80 € 5,80 €\n7,60 €\n10 Viajes 17,80 € 14,20 € 14,20 €\n10 Viajes 13,80 € 11,00 €\n8,80 € 10,60 €",
+      "metadata": {
+        "producer": "Acrobat Distiller 8.1.0 (Windows); modified using iText 2.1.7 by 1T3XT",
+        "creator": "PyPDF",
+        "creationdate": "2025-12-30T14:01:51+01:00",
+        "moddate": "2025-12-30T16:29:44+01:00",
+        "prtc_pagina": "68",
+        "prtc_noriginales": "0",
+        "title": "untitled",
+        "prtc_fechapublicacion": "31/12/2025 00:00",
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\bocm-20251231-precios_transporte.pdf",
+        "total_pages": 4,
+        "page": 2,
+        "page_label": "3",
+        "chunk_index": 21,
+        "chunk_size": 388,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "10 Viajes 13,80 € 11,00 €\n8,80 € 10,60 €\n6,90 € 8,20 €\nTranvía de Parla\nA-C1\nB1-C2\n4,00 €\n10 Viajes 17,90 €A-C2\nB1 C1\nB2 C2\nB3\n10 Viajes 5,10 € 4,00 €\nA-B1 B2-B3 C1-C2\nB1-B2 B3-C1\nA-B2 B2-C1\nB1-B3 B3-C2\nA-B3\nB1-C1\nB2-C2\n2,10 €\n10 Viajes 9,60 € 7,60 €\n11,00 €\n3,60 € 4,30 €\n2,80 €\n4,10 €\n4,80 € 5,70 €\n10 Viajes 7,30 €\nBILLETES 10 VIAJES : PRECIOS APLICABLES CON DESCUENTO DESDE 1/1/2026",
+      "metadata": {
+        "producer": "Acrobat Distiller 8.1.0 (Windows); modified using iText 2.1.7 by 1T3XT",
+        "creator": "PyPDF",
+        "creationdate": "2025-12-30T14:01:51+01:00",
+        "moddate": "2025-12-30T16:29:44+01:00",
+        "prtc_pagina": "68",
+        "prtc_noriginales": "0",
+        "title": "untitled",
+        "prtc_fechapublicacion": "31/12/2025 00:00",
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\bocm-20251231-precios_transporte.pdf",
+        "total_pages": 4,
+        "page": 2,
+        "page_label": "3",
+        "chunk_index": 22,
+        "chunk_size": 386,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "Títulos Metro, ML1, MLO Y EMT\n10 Viajes\n(1) Válido para Metro de Madrid, TFM, Metros Ligeros de Madrid y Metro Ligero O\nFamilia\nNumerosa\nGeneral+\nDisc\nFamilia\nNumerosa\nEspecial+Dis\nc\nConcesiones de transporte urbano e interurbano\npor carretera Ordinario Discapacidad\nFamilia\nNumerosa\nGeneral\nFamilia\nNumerosa\nEspecial",
+      "metadata": {
+        "producer": "Acrobat Distiller 8.1.0 (Windows); modified using iText 2.1.7 by 1T3XT",
+        "creator": "PyPDF",
+        "creationdate": "2025-12-30T14:01:51+01:00",
+        "moddate": "2025-12-30T16:29:44+01:00",
+        "prtc_pagina": "68",
+        "prtc_noriginales": "0",
+        "title": "untitled",
+        "prtc_fechapublicacion": "31/12/2025 00:00",
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\bocm-20251231-precios_transporte.pdf",
+        "total_pages": 4,
+        "page": 2,
+        "page_label": "3",
+        "chunk_index": 23,
+        "chunk_size": 317,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "MIÉRCOLES 31 DE DICIEMBRE DE 2025Pág. 68 B.O.C.M. Núm. 311\nBOCM-20251231-2\nhttp://www.bocm.es BOLETÍN OFICIAL DE LA COMUNIDAD DE MADRID D. L.: M. 19.462-1983 ISSN 1989-4791\nBOLETÍN OFICIAL DE LA COMUNIDAD DE MADRIDBOCM\nOrdinario Discapacidad\nFamilia\nNumerosa\nGeneral\nFamilia\nNumerosa\nEspecial\nFamilia\nNumerosa\nGeneral+Disc\nFamilia\nNumerosa\nEspecial+Disc\nEMT 1,50 € 1,20 € 1,20 € 0 ,70 € 0,90 € 0,40 €",
+      "metadata": {
+        "producer": "Acrobat Distiller 8.1.0 (Windows); modified using iText 2.1.7 by 1T3XT",
+        "creator": "PyPDF",
+        "creationdate": "2025-12-30T14:01:51+01:00",
+        "moddate": "2025-12-30T16:29:44+01:00",
+        "prtc_pagina": "68",
+        "prtc_noriginales": "0",
+        "title": "untitled",
+        "prtc_fechapublicacion": "31/12/2025 00:00",
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\bocm-20251231-precios_transporte.pdf",
+        "total_pages": 4,
+        "page": 3,
+        "page_label": "4",
+        "chunk_index": 24,
+        "chunk_size": 400,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "EMT 1,50 € 1,20 € 1,20 € 0 ,70 € 0,90 € 0,40 €\n1,50 € 1,20 € 1,20 € 0 ,70 € 0,90 € 0,40 €\n1,60 € 1,20 € 1,20 € 0 ,80 € 0,90 € 0,40 €\n1,70 € 1,30 € 1,30 € 0 ,80 € 1,00 € 0,50 €\n1,80 € 1,40 € 1,40 € 0 ,90 € 1,00 € 0,50 €\n1,90 € 1,50 € 1,50 € 0 ,90 € 1,10 € 0,50 €\n2,00 € 1,60 € 1,60 € 1 ,00 € 1,20 € 0,60 €\nMetroEste, MetroNorte y MetroSur 1,50 € 1,20 € 1,20 € 0 ,70 € 0,90 € 0,40 €",
+      "metadata": {
+        "producer": "Acrobat Distiller 8.1.0 (Windows); modified using iText 2.1.7 by 1T3XT",
+        "creator": "PyPDF",
+        "creationdate": "2025-12-30T14:01:51+01:00",
+        "moddate": "2025-12-30T16:29:44+01:00",
+        "prtc_pagina": "68",
+        "prtc_noriginales": "0",
+        "title": "untitled",
+        "prtc_fechapublicacion": "31/12/2025 00:00",
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\bocm-20251231-precios_transporte.pdf",
+        "total_pages": 4,
+        "page": 3,
+        "page_label": "4",
+        "chunk_index": 25,
+        "chunk_size": 380,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "TFM 2,00 € 1,60 € 1,60 € 1 ,00 € 1,20 € 0,60 €\nMetro Ligero Oeste 2,00 € 1,60 € 1,60 € 1 ,00 € 1,20 € 0,60 €\nCombinado Metro (1) 3,00 € 2,40 € 2,40 € 1 ,50 € 1,80 € 0,90 €\nInterurbano (entre municipios)\nBillete Sencillo 3,00 € 2,40 € 2,40 € 1 ,50 € 1,80 € 0,90 €\n1,50 € 1,20 € 1,20 € 0 ,70 € 0,90 € 0,40 €\n3,00 € 2,40 € 2,40 € 1 ,50 € 1,80 € 0,90 €",
+      "metadata": {
+        "producer": "Acrobat Distiller 8.1.0 (Windows); modified using iText 2.1.7 by 1T3XT",
+        "creator": "PyPDF",
+        "creationdate": "2025-12-30T14:01:51+01:00",
+        "moddate": "2025-12-30T16:29:44+01:00",
+        "prtc_pagina": "68",
+        "prtc_noriginales": "0",
+        "title": "untitled",
+        "prtc_fechapublicacion": "31/12/2025 00:00",
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\bocm-20251231-precios_transporte.pdf",
+        "total_pages": 4,
+        "page": 3,
+        "page_label": "4",
+        "chunk_index": 26,
+        "chunk_size": 348,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "3,00 € 2,40 € 2,40 € 1 ,50 € 1,80 € 0,90 €\nLínea Exprés Aeropuerto EMT Billete Sencillo 5,00 € 4,00 € 4,00 € 2 ,50 € 3,00 € 1,50 €\n0,40 €\n0,30 €Billete Sencillo 1,30 € 1,00 € 1,00 €Tranvía de Parla\nSuplemento Aeropuerto Metro\n0,60 € 0,70 €\nBillete SencilloUrbanos (internos al municipio)\n(*) Billete único para recorridos interiores a Zona A\n1,50 € 1,20 € 1,20 € 0,70 € 0,90 €",
+      "metadata": {
+        "producer": "Acrobat Distiller 8.1.0 (Windows); modified using iText 2.1.7 by 1T3XT",
+        "creator": "PyPDF",
+        "creationdate": "2025-12-30T14:01:51+01:00",
+        "moddate": "2025-12-30T16:29:44+01:00",
+        "prtc_pagina": "68",
+        "prtc_noriginales": "0",
+        "title": "untitled",
+        "prtc_fechapublicacion": "31/12/2025 00:00",
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\bocm-20251231-precios_transporte.pdf",
+        "total_pages": 4,
+        "page": 3,
+        "page_label": "4",
+        "chunk_index": 27,
+        "chunk_size": 376,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "1,50 € 1,20 € 1,20 € 0,70 € 0,90 €\nBILLETES SENCILLOS: PRECIOS VIGENTES 2026\nTítulos Metro, ML1, MLO Y EMT\nBillete Sencillo\nMetro Zona A y ML1\nDiscapacidad\nFamilia\nNumerosa\nGeneral\nFamilia\nNumerosa\nEspecial\nFamilia\nNumerosa\nGeneral+Disc\nConcesiones de transporte urbano e interurbano por\ncarretera (*)\nFamilia\nNumerosa\nEspecial+Disc\nOrdinario",
+      "metadata": {
+        "producer": "Acrobat Distiller 8.1.0 (Windows); modified using iText 2.1.7 by 1T3XT",
+        "creator": "PyPDF",
+        "creationdate": "2025-12-30T14:01:51+01:00",
+        "moddate": "2025-12-30T16:29:44+01:00",
+        "prtc_pagina": "68",
+        "prtc_noriginales": "0",
+        "title": "untitled",
+        "prtc_fechapublicacion": "31/12/2025 00:00",
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\bocm-20251231-precios_transporte.pdf",
+        "total_pages": 4,
+        "page": 3,
+        "page_label": "4",
+        "chunk_index": 28,
+        "chunk_size": 342,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "Precio de las tarjetas",
+      "metadata": {
+        "producer": "Acrobat Distiller 8.1.0 (Windows); modified using iText 2.1.7 by 1T3XT",
+        "creator": "PyPDF",
+        "creationdate": "2025-12-30T14:01:51+01:00",
+        "moddate": "2025-12-30T16:29:44+01:00",
+        "prtc_pagina": "68",
+        "prtc_noriginales": "0",
+        "title": "untitled",
+        "prtc_fechapublicacion": "31/12/2025 00:00",
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\bocm-20251231-precios_transporte.pdf",
+        "total_pages": 4,
+        "page": 3,
+        "page_label": "4",
+        "chunk_index": 29,
+        "chunk_size": 22,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "Tarjeta nuevo usuario o por caducidad Importe\nTarjeta Transporte Público Personal 4,00 €\nTarjeta Transporte Público Infantil\nTarjeta Azul\nTarjeta Multi 2,50 €\nDuplicado tarjeta Importe\nPor deterioro o robo /extravío Tarjeta\nTransporte Público Personal\nPor deterioro o robo /extravío Tarjeta\nTransporte Público Infantil\nPor deterioro o robo /extravío Tarjeta Azul\nPor deterioro Tarjeta Multi 2,50 €",
+      "metadata": {
+        "producer": "Acrobat Distiller 8.1.0 (Windows); modified using iText 2.1.7 by 1T3XT",
+        "creator": "PyPDF",
+        "creationdate": "2025-12-30T14:01:51+01:00",
+        "moddate": "2025-12-30T16:29:44+01:00",
+        "prtc_pagina": "68",
+        "prtc_noriginales": "0",
+        "title": "untitled",
+        "prtc_fechapublicacion": "31/12/2025 00:00",
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\bocm-20251231-precios_transporte.pdf",
+        "total_pages": 4,
+        "page": 3,
+        "page_label": "4",
+        "chunk_index": 30,
+        "chunk_size": 397,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "Por deterioro Tarjeta Multi 2,50 €\nGratuita\n6,00 €",
+      "metadata": {
+        "producer": "Acrobat Distiller 8.1.0 (Windows); modified using iText 2.1.7 by 1T3XT",
+        "creator": "PyPDF",
+        "creationdate": "2025-12-30T14:01:51+01:00",
+        "moddate": "2025-12-30T16:29:44+01:00",
+        "prtc_pagina": "68",
+        "prtc_noriginales": "0",
+        "title": "untitled",
+        "prtc_fechapublicacion": "31/12/2025 00:00",
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\bocm-20251231-precios_transporte.pdf",
+        "total_pages": 4,
+        "page": 3,
+        "page_label": "4",
+        "chunk_index": 31,
+        "chunk_size": 50,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "En Madrid, a 29 de diciembre de 2025.—El Director-Gerente del Consorcio Regional\nde Transportes de Madrid, Pablo Rodríguez Sardinero.\n(03/21.790/25)",
+      "metadata": {
+        "producer": "Acrobat Distiller 8.1.0 (Windows); modified using iText 2.1.7 by 1T3XT",
+        "creator": "PyPDF",
+        "creationdate": "2025-12-30T14:01:51+01:00",
+        "moddate": "2025-12-30T16:29:44+01:00",
+        "prtc_pagina": "68",
+        "prtc_noriginales": "0",
+        "title": "untitled",
+        "prtc_fechapublicacion": "31/12/2025 00:00",
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\bocm-20251231-precios_transporte.pdf",
+        "total_pages": 4,
+        "page": 3,
+        "page_label": "4",
+        "chunk_index": 32,
+        "chunk_size": 148,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "MIÉRCOLES 31 DE DICIEMBRE DE 2025B.O.C.M. Núm. 311 Pág. 69\nBOCM-20251231-3\nBOLETÍN OFICIAL DE LA COMUNIDAD DE MADRIDBOCM\nI. COMUNIDAD DE MADRID\nC) Otras Disposiciones\nConsejería de Vivienda,Transportes e Infraestructuras\nO. A. CONSORCIO REGIONAL DE TRANSPORTES PÚBLICOS\nREGULARES DE MADRID\n3 RESOLUCIÓN de 29 de diciembre de 2025, de la Dirección-Gerencia del Con-",
+      "metadata": {
+        "producer": "Acrobat Distiller 8.1.0 (Windows); modified using iText 2.1.7 by 1T3XT",
+        "creator": "PyPDF",
+        "creationdate": "2025-12-30T14:01:49+01:00",
+        "moddate": "2025-12-30T16:29:46+01:00",
+        "prtc_pagina": "72",
+        "prtc_noriginales": "0",
+        "title": "untitled",
+        "prtc_fechapublicacion": "31/12/2025 00:00",
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\bocm-20251231-tarifas_transporte.pdf",
+        "total_pages": 4,
+        "page": 0,
+        "page_label": "1",
+        "chunk_index": 33,
+        "chunk_size": 364,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "sorcio Regional de Transportes Públicos Regulares de Madrid, por la que se dis-\npone la publicación del Acuerdo del Consejo de Administración, por el que se\nactualizan las tarifas del transporte público en el año 2026.\nEl Consejo de Administración del Consorcio Regional de Transportes, en sesión cele-\nbrada el día 29 de diciembre de 2025, ha aprobado:",
+      "metadata": {
+        "producer": "Acrobat Distiller 8.1.0 (Windows); modified using iText 2.1.7 by 1T3XT",
+        "creator": "PyPDF",
+        "creationdate": "2025-12-30T14:01:49+01:00",
+        "moddate": "2025-12-30T16:29:46+01:00",
+        "prtc_pagina": "72",
+        "prtc_noriginales": "0",
+        "title": "untitled",
+        "prtc_fechapublicacion": "31/12/2025 00:00",
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\bocm-20251231-tarifas_transporte.pdf",
+        "total_pages": 4,
+        "page": 0,
+        "page_label": "1",
+        "chunk_index": 34,
+        "chunk_size": 353,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "Aprobar las tablas tarifarias actualizadas con un incremento de un 3 % sobre las vigen-\ntes, con excepción del abono joven y el título 10 viajes de Castilla-León.\nDesde que se introdujeron en septiembre de 2022 las medidas de bonificación en el\nprecio del transporte público como ayudas del Estado dirigidas a Comunidades Autónomas",
+      "metadata": {
+        "producer": "Acrobat Distiller 8.1.0 (Windows); modified using iText 2.1.7 by 1T3XT",
+        "creator": "PyPDF",
+        "creationdate": "2025-12-30T14:01:49+01:00",
+        "moddate": "2025-12-30T16:29:46+01:00",
+        "prtc_pagina": "72",
+        "prtc_noriginales": "0",
+        "title": "untitled",
+        "prtc_fechapublicacion": "31/12/2025 00:00",
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\bocm-20251231-tarifas_transporte.pdf",
+        "total_pages": 4,
+        "page": 0,
+        "page_label": "1",
+        "chunk_index": 35,
+        "chunk_size": 331,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "y Entidades Locales, Administraciones competentes en la materia, el Consorcio Regional\nde Transporte, como titular de las competencias tarifarias en el ámbito de la Comunidad de\nMadrid y de todo su transporte público, no modificó las tarifas del transporte público, sino\nque fue aprobando diferentes bonificaciones temporales que se aplicaban a cada una de las\ntarifas y períodos correspondientes.",
+      "metadata": {
+        "producer": "Acrobat Distiller 8.1.0 (Windows); modified using iText 2.1.7 by 1T3XT",
+        "creator": "PyPDF",
+        "creationdate": "2025-12-30T14:01:49+01:00",
+        "moddate": "2025-12-30T16:29:46+01:00",
+        "prtc_pagina": "72",
+        "prtc_noriginales": "0",
+        "title": "untitled",
+        "prtc_fechapublicacion": "31/12/2025 00:00",
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\bocm-20251231-tarifas_transporte.pdf",
+        "total_pages": 4,
+        "page": 0,
+        "page_label": "1",
+        "chunk_index": 36,
+        "chunk_size": 397,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "tarifas y períodos correspondientes.\nAsí, se aplicaron bonificaciones temporales para el último cuatrimestre del año 2022,\nseguidas de bonificaciones para el primer semestre de 2023, segundo semestre de 2023, lue-\ngo todo el ejercicio 2024, primer semestre de 2025 y segundo semestre de 2025.\nLa explicación de venir a establecer estas bonificaciones es que todas las bonificacio-",
+      "metadata": {
+        "producer": "Acrobat Distiller 8.1.0 (Windows); modified using iText 2.1.7 by 1T3XT",
+        "creator": "PyPDF",
+        "creationdate": "2025-12-30T14:01:49+01:00",
+        "moddate": "2025-12-30T16:29:46+01:00",
+        "prtc_pagina": "72",
+        "prtc_noriginales": "0",
+        "title": "untitled",
+        "prtc_fechapublicacion": "31/12/2025 00:00",
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\bocm-20251231-tarifas_transporte.pdf",
+        "total_pages": 4,
+        "page": 0,
+        "page_label": "1",
+        "chunk_index": 37,
+        "chunk_size": 380,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "nes previstas, o mejor dicho, las normativas por las que se aplicaban las ayudas dirigidas a\ncompensar esas bonificaciones, tenían carácter temporal.\nEllo se ha traducido en que existan, por una parte, las tarifas oficiales de transporte pú-\nblico, y por otra, los precios que paga el usuario, que en realidad son las tarifas menos las",
+      "metadata": {
+        "producer": "Acrobat Distiller 8.1.0 (Windows); modified using iText 2.1.7 by 1T3XT",
+        "creator": "PyPDF",
+        "creationdate": "2025-12-30T14:01:49+01:00",
+        "moddate": "2025-12-30T16:29:46+01:00",
+        "prtc_pagina": "72",
+        "prtc_noriginales": "0",
+        "title": "untitled",
+        "prtc_fechapublicacion": "31/12/2025 00:00",
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\bocm-20251231-tarifas_transporte.pdf",
+        "total_pages": 4,
+        "page": 0,
+        "page_label": "1",
+        "chunk_index": 38,
+        "chunk_size": 335,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "bonificaciones que se han venido aplicando en los últimos ejercicios.\nTambién es conocido que la última actualización de tarifas se produjo en el año 2013,\nen concreto en enero, y que desde entonces el Consorcio Regional de Transportes no ha\naplicado ningún incremento en las tarifas del transporte público que paga el usuario.",
+      "metadata": {
+        "producer": "Acrobat Distiller 8.1.0 (Windows); modified using iText 2.1.7 by 1T3XT",
+        "creator": "PyPDF",
+        "creationdate": "2025-12-30T14:01:49+01:00",
+        "moddate": "2025-12-30T16:29:46+01:00",
+        "prtc_pagina": "72",
+        "prtc_noriginales": "0",
+        "title": "untitled",
+        "prtc_fechapublicacion": "31/12/2025 00:00",
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\bocm-20251231-tarifas_transporte.pdf",
+        "total_pages": 4,
+        "page": 0,
+        "page_label": "1",
+        "chunk_index": 39,
+        "chunk_size": 327,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "Se aprueban pues las tarifas de transporte público actualizadas con un incremento de\nun 3 % sobre las vigentes, quedando como siguen:",
+      "metadata": {
+        "producer": "Acrobat Distiller 8.1.0 (Windows); modified using iText 2.1.7 by 1T3XT",
+        "creator": "PyPDF",
+        "creationdate": "2025-12-30T14:01:49+01:00",
+        "moddate": "2025-12-30T16:29:46+01:00",
+        "prtc_pagina": "72",
+        "prtc_noriginales": "0",
+        "title": "untitled",
+        "prtc_fechapublicacion": "31/12/2025 00:00",
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\bocm-20251231-tarifas_transporte.pdf",
+        "total_pages": 4,
+        "page": 0,
+        "page_label": "1",
+        "chunk_index": 40,
+        "chunk_size": 133,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "MIÉRCOLES 31 DE DICIEMBRE DE 2025Pág. 70 B.O.C.M. Núm. 311\nBOCM-20251231-3\nBOLETÍN OFICIAL DE LA COMUNIDAD DE MADRIDBOCM",
+      "metadata": {
+        "producer": "Acrobat Distiller 8.1.0 (Windows); modified using iText 2.1.7 by 1T3XT",
+        "creator": "PyPDF",
+        "creationdate": "2025-12-30T14:01:49+01:00",
+        "moddate": "2025-12-30T16:29:46+01:00",
+        "prtc_pagina": "72",
+        "prtc_noriginales": "0",
+        "title": "untitled",
+        "prtc_fechapublicacion": "31/12/2025 00:00",
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\bocm-20251231-tarifas_transporte.pdf",
+        "total_pages": 4,
+        "page": 1,
+        "page_label": "2",
+        "chunk_index": 41,
+        "chunk_size": 120,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "1 día 10,30 €\n2 días 17,50 €\n3 días 23,10 €\n4 días 27,80 €\n5 días 33,40 €\n7 días 43,20 €\n1 día 15,40 €\n2 días 26,20 €\n3 días 35,00 €\n4 días 43,20 €\n5 días 50,40 €\n7 días 62,80 €\nDescuento del 50% para niños menores de 11 años.\nBILLETE TURÍSTICO\nZona A\nZona T\nEl Billete Turístico se comercializará con desc uento según el\nescalado de descuentos sobre la tarifa oficial aprobado por el",
+      "metadata": {
+        "producer": "Acrobat Distiller 8.1.0 (Windows); modified using iText 2.1.7 by 1T3XT",
+        "creator": "PyPDF",
+        "creationdate": "2025-12-30T14:01:49+01:00",
+        "moddate": "2025-12-30T16:29:46+01:00",
+        "prtc_pagina": "72",
+        "prtc_noriginales": "0",
+        "title": "untitled",
+        "prtc_fechapublicacion": "31/12/2025 00:00",
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\bocm-20251231-tarifas_transporte.pdf",
+        "total_pages": 4,
+        "page": 1,
+        "page_label": "2",
+        "chunk_index": 42,
+        "chunk_size": 384,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "Consejo de Administración del Consorcio Regional de\nTransportes de Madrid de 20 de noviembre de 2020.",
+      "metadata": {
+        "producer": "Acrobat Distiller 8.1.0 (Windows); modified using iText 2.1.7 by 1T3XT",
+        "creator": "PyPDF",
+        "creationdate": "2025-12-30T14:01:49+01:00",
+        "moddate": "2025-12-30T16:29:46+01:00",
+        "prtc_pagina": "72",
+        "prtc_noriginales": "0",
+        "title": "untitled",
+        "prtc_fechapublicacion": "31/12/2025 00:00",
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\bocm-20251231-tarifas_transporte.pdf",
+        "total_pages": 4,
+        "page": 1,
+        "page_label": "2",
+        "chunk_index": 43,
+        "chunk_size": 101,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "Sin\ndescuento\nPersonas con\ndiscapacidad\nsuperior o\nigual al 65%\nFamilias\nNumerosas\nCategoría\nGeneral\nFamilias\nNumerosas\nCategoría\nEspecial\nFNGeneral +\nPersonas con\ndiscapacidad ≥\n65%\nFNEspecial +\nPersonas con\ndiscapacidad\n65%\nA 56,20 € 44,90 € 44,90 € 28,10 € 33,70 € 16,80 €\nB1 65,60 € 52,40 € 52,40 € 32,80 € 39,30 € 19,60 €\nB2 74,10 € 59,20 € 59,20 € 37,00 € 44,40 € 22,20 €",
+      "metadata": {
+        "producer": "Acrobat Distiller 8.1.0 (Windows); modified using iText 2.1.7 by 1T3XT",
+        "creator": "PyPDF",
+        "creationdate": "2025-12-30T14:01:49+01:00",
+        "moddate": "2025-12-30T16:29:46+01:00",
+        "prtc_pagina": "72",
+        "prtc_noriginales": "0",
+        "title": "untitled",
+        "prtc_fechapublicacion": "31/12/2025 00:00",
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\bocm-20251231-tarifas_transporte.pdf",
+        "total_pages": 4,
+        "page": 1,
+        "page_label": "2",
+        "chunk_index": 44,
+        "chunk_size": 377,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "B3 84,40 € 67,50 € 67,50 € 42,20 € 50,60 € 25,30 €\nC1 84,40 € 67,50 € 67,50 € 42,20 € 50,60 € 25,30 €\nC2 84,40 € 67,50 € 67,50 € 42,20 € 50,60 € 25,30 €\nE1 113,90 € 91,10 € 91,10 € 56,90 € 68,30 € 34,10 €\nE2 135,70 € 108,50 € 108,50 € 67,80 € 81,40 € 40,70 €\nB1-B2 49,30 € 39,40 € 39,40 € 24,60 € 29,50 € 14,70 €\nB1-B3 56,20 € 44,90 € 44,90 € 28,10 € 33,70 € 16,80 €",
+      "metadata": {
+        "producer": "Acrobat Distiller 8.1.0 (Windows); modified using iText 2.1.7 by 1T3XT",
+        "creator": "PyPDF",
+        "creationdate": "2025-12-30T14:01:49+01:00",
+        "moddate": "2025-12-30T16:29:46+01:00",
+        "prtc_pagina": "72",
+        "prtc_noriginales": "0",
+        "title": "untitled",
+        "prtc_fechapublicacion": "31/12/2025 00:00",
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\bocm-20251231-tarifas_transporte.pdf",
+        "total_pages": 4,
+        "page": 1,
+        "page_label": "2",
+        "chunk_index": 45,
+        "chunk_size": 366,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "B1-C1 56,20 € 44,90 € 44,90 € 28,10 € 33,70 € 16,80 €\nB1-C2 56,20 € 44,90 € 44,90 € 28,10 € 33,70 € 16,80 €\nB1-E1 84,40 € 67,50 € 67,50 € 42,20 € 50,60 € 25,30 €\nB1-E2 92,10 € 73,60 € 73,60 € 46,00 € 55,20 € 27,60 €\nB2-B3 49,30 € 39,40 € 39,40 € 24,60 € 29,50 € 14,70 €\nB2-C1 49,30 € 39,40 € 39,40 € 24,60 € 29,50 € 14,70 €\nB2-C2 49,30 € 39,40 € 39,40 € 24,60 € 29,50 € 14,70 €",
+      "metadata": {
+        "producer": "Acrobat Distiller 8.1.0 (Windows); modified using iText 2.1.7 by 1T3XT",
+        "creator": "PyPDF",
+        "creationdate": "2025-12-30T14:01:49+01:00",
+        "moddate": "2025-12-30T16:29:46+01:00",
+        "prtc_pagina": "72",
+        "prtc_noriginales": "0",
+        "title": "untitled",
+        "prtc_fechapublicacion": "31/12/2025 00:00",
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\bocm-20251231-tarifas_transporte.pdf",
+        "total_pages": 4,
+        "page": 1,
+        "page_label": "2",
+        "chunk_index": 46,
+        "chunk_size": 377,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "B2-E1 74,10 € 59,20 € 59,20 € 37,00 € 44,40 € 22,20 €\nB2-E2 84,40 € 67,50 € 67,50 € 42,20 € 50,60 € 25,30 €\nB3-C1 49,30 € 39,40 € 39,40 € 24,60 € 29,50 € 14,70 €\nB3-C2 49,30 € 39,40 € 39,40 € 24,60 € 29,50 € 14,70 €\nB3-E1 65,60 € 52,40 € 52,40 € 32,80 € 39,30 € 19,60 €\nB3-E2 74,10 € 59,20 € 59,20 € 37,00 € 44,40 € 22,20 €\nC1-C2 49,30 € 39,40 € 39,40 € 24,60 € 29,50 € 14,70 €",
+      "metadata": {
+        "producer": "Acrobat Distiller 8.1.0 (Windows); modified using iText 2.1.7 by 1T3XT",
+        "creator": "PyPDF",
+        "creationdate": "2025-12-30T14:01:49+01:00",
+        "moddate": "2025-12-30T16:29:46+01:00",
+        "prtc_pagina": "72",
+        "prtc_noriginales": "0",
+        "title": "untitled",
+        "prtc_fechapublicacion": "31/12/2025 00:00",
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\bocm-20251231-tarifas_transporte.pdf",
+        "total_pages": 4,
+        "page": 1,
+        "page_label": "2",
+        "chunk_index": 47,
+        "chunk_size": 377,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "C1-E1 56,20 € 44,90 € 44,90 € 28,10 € 33,70 € 16,80 €\nC1-E2 65,60 € 52,40 € 52,40 € 32,80 € 39,30 € 19,60 €\nC2-E1 49,30 € 39,40 € 39,40 € 24,60 € 29,50 € 14,70 €\nC2-E2 56,20 € 44,90 € 44,90 € 28,10 € 33,70 € 16,80 €\n20,00 € 16,00 € 16,00 € 10,00 € 12,00 € 6,00 €\n6,30 €\nGratuita\nGratuita",
+      "metadata": {
+        "producer": "Acrobat Distiller 8.1.0 (Windows); modified using iText 2.1.7 by 1T3XT",
+        "creator": "PyPDF",
+        "creationdate": "2025-12-30T14:01:49+01:00",
+        "moddate": "2025-12-30T16:29:46+01:00",
+        "prtc_pagina": "72",
+        "prtc_noriginales": "0",
+        "title": "untitled",
+        "prtc_fechapublicacion": "31/12/2025 00:00",
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\bocm-20251231-tarifas_transporte.pdf",
+        "total_pages": 4,
+        "page": 1,
+        "page_label": "2",
+        "chunk_index": 48,
+        "chunk_size": 287,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "6,30 €\nGratuita\nGratuita\nEl precio de los abonos anuales, con validez 1 de enero, será 10 veces el precio del título de 30 días correspondiente.\nTERCERA EDAD\nTARJETA INFANTIL\nTARJETA AZUL\nJOVEN\nTARIFAS DESDE 01/01/2026\nTÍTULO 30 DÍAS\nNORMAL\nRelaciones con AInterzonales",
+      "metadata": {
+        "producer": "Acrobat Distiller 8.1.0 (Windows); modified using iText 2.1.7 by 1T3XT",
+        "creator": "PyPDF",
+        "creationdate": "2025-12-30T14:01:49+01:00",
+        "moddate": "2025-12-30T16:29:46+01:00",
+        "prtc_pagina": "72",
+        "prtc_noriginales": "0",
+        "title": "untitled",
+        "prtc_fechapublicacion": "31/12/2025 00:00",
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\bocm-20251231-tarifas_transporte.pdf",
+        "total_pages": 4,
+        "page": 1,
+        "page_label": "2",
+        "chunk_index": 49,
+        "chunk_size": 269,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "MIÉRCOLES 31 DE DICIEMBRE DE 2025B.O.C.M. Núm. 311 Pág. 71\nBOCM-20251231-3\nBOLETÍN OFICIAL DE LA COMUNIDAD DE MADRIDBOCM\nTítulos Metro, ML1, MLO Y EMT Ordinario Discapacidad\nFamilia\nNumerosa\nGeneral\nFamilia\nNumerosa\nEspecial\nFamilia\nNumerosa\nGeneral+Disc\nFamilia\nNumerosa\nEspecial+Disc\nEMT 1,50 € 1,20 € 1,20 € 0 ,70 € 0,90 € 0,40 €\n1,50 € 1,20 € 1,20 € 0 ,70 € 0,90 € 0,40 €",
+      "metadata": {
+        "producer": "Acrobat Distiller 8.1.0 (Windows); modified using iText 2.1.7 by 1T3XT",
+        "creator": "PyPDF",
+        "creationdate": "2025-12-30T14:01:49+01:00",
+        "moddate": "2025-12-30T16:29:46+01:00",
+        "prtc_pagina": "72",
+        "prtc_noriginales": "0",
+        "title": "untitled",
+        "prtc_fechapublicacion": "31/12/2025 00:00",
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\bocm-20251231-tarifas_transporte.pdf",
+        "total_pages": 4,
+        "page": 2,
+        "page_label": "3",
+        "chunk_index": 50,
+        "chunk_size": 375,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "1,50 € 1,20 € 1,20 € 0 ,70 € 0,90 € 0,40 €\n1,60 € 1,20 € 1,20 € 0 ,80 € 0,90 € 0,40 €\n1,70 € 1,30 € 1,30 € 0 ,80 € 1,00 € 0,50 €\n1,80 € 1,40 € 1,40 € 0 ,90 € 1,00 € 0,50 €\n1,90 € 1,50 € 1,50 € 0 ,90 € 1,10 € 0,50 €\n2,00 € 1,60 € 1,60 € 1 ,00 € 1,20 € 0,60 €\nMetroEste, MetroNorte y MetroSur 1,50 € 1,20 € 1,20 € 0 ,70 € 0,90 € 0,40 €\nTFM 2,00 € 1,60 € 1,60 € 1 ,00 € 1,20 € 0,60 €",
+      "metadata": {
+        "producer": "Acrobat Distiller 8.1.0 (Windows); modified using iText 2.1.7 by 1T3XT",
+        "creator": "PyPDF",
+        "creationdate": "2025-12-30T14:01:49+01:00",
+        "moddate": "2025-12-30T16:29:46+01:00",
+        "prtc_pagina": "72",
+        "prtc_noriginales": "0",
+        "title": "untitled",
+        "prtc_fechapublicacion": "31/12/2025 00:00",
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\bocm-20251231-tarifas_transporte.pdf",
+        "total_pages": 4,
+        "page": 2,
+        "page_label": "3",
+        "chunk_index": 51,
+        "chunk_size": 380,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "TFM 2,00 € 1,60 € 1,60 € 1 ,00 € 1,20 € 0,60 €\nMetro Ligero Oeste 2,00 € 1,60 € 1,60 € 1 ,00 € 1,20 € 0,60 €\nCombinado Metro (1) 3,00 € 2,40 € 2,40 € 1 ,50 € 1,80 € 0,90 €\nInterurbano (entre municipios) 3,00 € 2,40 € 2,40 € 1 ,50 € 1,80 € 0,90 €\nUrbanos (internos al municipio) 1,50 € 1,20 € 1,20 € 0 ,70 € 0,90 € 0,40 €\n(*) Billete único para recorridos interiores a\nZona A",
+      "metadata": {
+        "producer": "Acrobat Distiller 8.1.0 (Windows); modified using iText 2.1.7 by 1T3XT",
+        "creator": "PyPDF",
+        "creationdate": "2025-12-30T14:01:49+01:00",
+        "moddate": "2025-12-30T16:29:46+01:00",
+        "prtc_pagina": "72",
+        "prtc_noriginales": "0",
+        "title": "untitled",
+        "prtc_fechapublicacion": "31/12/2025 00:00",
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\bocm-20251231-tarifas_transporte.pdf",
+        "total_pages": 4,
+        "page": 2,
+        "page_label": "3",
+        "chunk_index": 52,
+        "chunk_size": 374,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "Zona A\n1,50 € 1,20 € 1,20 € 0 ,70 € 0,90 € 0,40 €\nTranvía de Parla 1,50 € 1,20 € 1,20 € 0 ,70 € 0,90 € 0,40 €\nSuplemento Aeropuerto Metro 3,00 € 2,40 € 2,40 € 1 ,50 € 1,80 € 0,90 €\nLínea Exprés Aeropuerto EMT 5,10 € 4,00 € 4,00 € 2 ,50 € 3,00 € 1,50 €\nBILLETES SENCILLOS. TARIFAS VIGENTES 2026\nMetro Zona A y ML1\nConcesiones de transporte urbano e\ninterurbano por carretera (*)",
+      "metadata": {
+        "producer": "Acrobat Distiller 8.1.0 (Windows); modified using iText 2.1.7 by 1T3XT",
+        "creator": "PyPDF",
+        "creationdate": "2025-12-30T14:01:49+01:00",
+        "moddate": "2025-12-30T16:29:46+01:00",
+        "prtc_pagina": "72",
+        "prtc_noriginales": "0",
+        "title": "untitled",
+        "prtc_fechapublicacion": "31/12/2025 00:00",
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\bocm-20251231-tarifas_transporte.pdf",
+        "total_pages": 4,
+        "page": 2,
+        "page_label": "3",
+        "chunk_index": 53,
+        "chunk_size": 377,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "interurbano por carretera (*)\nOrdinario Discapacidad\nFamilia\nNumerosa\nGeneral\nFamilia\nNumerosa\nEspecial\nFamilia\nNumerosa\nGeneral+Disc\nFamilia\nNumerosa\nEspecial+Disc",
+      "metadata": {
+        "producer": "Acrobat Distiller 8.1.0 (Windows); modified using iText 2.1.7 by 1T3XT",
+        "creator": "PyPDF",
+        "creationdate": "2025-12-30T14:01:49+01:00",
+        "moddate": "2025-12-30T16:29:46+01:00",
+        "prtc_pagina": "72",
+        "prtc_noriginales": "0",
+        "title": "untitled",
+        "prtc_fechapublicacion": "31/12/2025 00:00",
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\bocm-20251231-tarifas_transporte.pdf",
+        "total_pages": 4,
+        "page": 2,
+        "page_label": "3",
+        "chunk_index": 54,
+        "chunk_size": 164,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "MIÉRCOLES 31 DE DICIEMBRE DE 2025Pág. 72 B.O.C.M. Núm. 311\nBOCM-20251231-3\nhttp://www.bocm.es BOLETÍN OFICIAL DE LA COMUNIDAD DE MADRID D. L.: M. 19.462-1983 ISSN 1989-4791\nBOLETÍN OFICIAL DE LA COMUNIDAD DE MADRIDBOCM\nTítulos Metro, ML1, MLO Y EMT Ordinario Discapacidad\nFamilia\nNumerosa\nGeneral\nFamilia\nNumerosa\nEspecial\nFamilia\nNumerosa\nGeneral+Di\nsc\nFamilia\nNumerosa\nEspecial+\nDisc",
+      "metadata": {
+        "producer": "Acrobat Distiller 8.1.0 (Windows); modified using iText 2.1.7 by 1T3XT",
+        "creator": "PyPDF",
+        "creationdate": "2025-12-30T14:01:49+01:00",
+        "moddate": "2025-12-30T16:29:46+01:00",
+        "prtc_pagina": "72",
+        "prtc_noriginales": "0",
+        "title": "untitled",
+        "prtc_fechapublicacion": "31/12/2025 00:00",
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\bocm-20251231-tarifas_transporte.pdf",
+        "total_pages": 4,
+        "page": 3,
+        "page_label": "4",
+        "chunk_index": 55,
+        "chunk_size": 385,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "General+Di\nsc\nFamilia\nNumerosa\nEspecial+\nDisc\nMetro Zona A, EMT y ML1 12,50 € 10,00 € 10,00 € 6 ,20 € 7,50 € 3,70 €\nMetroEste, MetroNorte y MetroSur 11,50 € 9,20 € 9,20 € 5 ,70 € 6,90 € 3,40 €\nTFM 12,50 € 10,00 € 10,00 € 6 ,20 € 7,50 € 3,70 €\nMetro Ligero Oeste 12,50 € 10,00 € 10,00 € 6 ,20 € 7,50 € 3,70 €\nCombinado Metro (1) 18,80 € 15,00 € 15,00 € 9 ,40 € 11,20 € 5,60 €",
+      "metadata": {
+        "producer": "Acrobat Distiller 8.1.0 (Windows); modified using iText 2.1.7 by 1T3XT",
+        "creator": "PyPDF",
+        "creationdate": "2025-12-30T14:01:49+01:00",
+        "moddate": "2025-12-30T16:29:46+01:00",
+        "prtc_pagina": "72",
+        "prtc_noriginales": "0",
+        "title": "untitled",
+        "prtc_fechapublicacion": "31/12/2025 00:00",
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\bocm-20251231-tarifas_transporte.pdf",
+        "total_pages": 4,
+        "page": 3,
+        "page_label": "4",
+        "chunk_index": 56,
+        "chunk_size": 374,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "Concesiones de transporte urbano e\ninterurbano por carretera Ordinario Discapacidad\nFamilia\nNumerosa\nGeneral\nFamilia\nNumerosa\nEspecial\nFamilia\nNumerosa\nGeneral+Di\nsc\nFamilia\nNumerosa\nEspecial+\nDisc\nA-B1 B2-B3 C1-C2\nB1-B2 B3-C1 12,50 € 10,00 € 10,00 € 6 ,20 € 7,50 € 3,70 €\nA-B2 B2-C1\nB1-B3 B3-C2 16,50 € 13,20 € 13,20 € 8 ,20 € 9,90 € 4,90 €\nA-B3\nB1-C1\nB2-C2",
+      "metadata": {
+        "producer": "Acrobat Distiller 8.1.0 (Windows); modified using iText 2.1.7 by 1T3XT",
+        "creator": "PyPDF",
+        "creationdate": "2025-12-30T14:01:49+01:00",
+        "moddate": "2025-12-30T16:29:46+01:00",
+        "prtc_pagina": "72",
+        "prtc_noriginales": "0",
+        "title": "untitled",
+        "prtc_fechapublicacion": "31/12/2025 00:00",
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\bocm-20251231-tarifas_transporte.pdf",
+        "total_pages": 4,
+        "page": 3,
+        "page_label": "4",
+        "chunk_index": 57,
+        "chunk_size": 358,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "A-B3\nB1-C1\nB2-C2\n23,60 € 18,80 € 18,80 € 11,80 € 14,10 € 7,00 €\nA-C1\nB1-C2 30,50 € 24,40 € 24,40 € 15,20 € 18,30 € 9,10 €\nA-C2 38,50 € 30,80 € 30,80 € 19,20 € 23,10 € 11,50 €\nB1 C1\nB2 C2\nB3\n8,70 € 6,90 € 6,90 € 4 ,30 € 5,20 € 2,60 €\nTranvía de Parla 8,70 € 6,90 € 6,90 € 4 ,30 € 5,20 € 2,60 €\nBILLETES 10 VIAJES\nTARIFAS DESDE 1/1/2026",
+      "metadata": {
+        "producer": "Acrobat Distiller 8.1.0 (Windows); modified using iText 2.1.7 by 1T3XT",
+        "creator": "PyPDF",
+        "creationdate": "2025-12-30T14:01:49+01:00",
+        "moddate": "2025-12-30T16:29:46+01:00",
+        "prtc_pagina": "72",
+        "prtc_noriginales": "0",
+        "title": "untitled",
+        "prtc_fechapublicacion": "31/12/2025 00:00",
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\bocm-20251231-tarifas_transporte.pdf",
+        "total_pages": 4,
+        "page": 3,
+        "page_label": "4",
+        "chunk_index": 58,
+        "chunk_size": 334,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "BILLETES 10 VIAJES\nTARIFAS DESDE 1/1/2026\n(1) Válido para Metro de Madrid, TFM, Metros Ligeros de Madrid y Metro Ligero Oeste",
+      "metadata": {
+        "producer": "Acrobat Distiller 8.1.0 (Windows); modified using iText 2.1.7 by 1T3XT",
+        "creator": "PyPDF",
+        "creationdate": "2025-12-30T14:01:49+01:00",
+        "moddate": "2025-12-30T16:29:46+01:00",
+        "prtc_pagina": "72",
+        "prtc_noriginales": "0",
+        "title": "untitled",
+        "prtc_fechapublicacion": "31/12/2025 00:00",
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\bocm-20251231-tarifas_transporte.pdf",
+        "total_pages": 4,
+        "page": 3,
+        "page_label": "4",
+        "chunk_index": 59,
+        "chunk_size": 125,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "Multiviajes CyL\nOrdinario Discapacidad\nFamilia\nNumerosa\nGeneral\nFamilia\nNumerosa\nEspecial\nFamilia\nNumerosa\nGeneral+D\nisc\nFamilia\nNumerosa\nEspecial+\nDisc\n10 viajes A-CyL 52,50 € 42,00 € 42,00 € 26,20 € 31,50 € 15,70 €\n10 viajes B/C-CyL 30,00 € 24,00 € 24,00 € 15,00 € 18,00 € 9,00 €\n10 viajes internos CyL 22,50 € 18,00 € 18,00 € 11,20 € 13,50 € 6,70 €",
+      "metadata": {
+        "producer": "Acrobat Distiller 8.1.0 (Windows); modified using iText 2.1.7 by 1T3XT",
+        "creator": "PyPDF",
+        "creationdate": "2025-12-30T14:01:49+01:00",
+        "moddate": "2025-12-30T16:29:46+01:00",
+        "prtc_pagina": "72",
+        "prtc_noriginales": "0",
+        "title": "untitled",
+        "prtc_fechapublicacion": "31/12/2025 00:00",
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\bocm-20251231-tarifas_transporte.pdf",
+        "total_pages": 4,
+        "page": 3,
+        "page_label": "4",
+        "chunk_index": 60,
+        "chunk_size": 351,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "En Madrid, a 29 de diciembre de 2025.—El Director-Gerente del Consorcio Regional\nde Transportes de Madrid, Pablo Rodríguez Sardinero.\n(03/21.791/25)",
+      "metadata": {
+        "producer": "Acrobat Distiller 8.1.0 (Windows); modified using iText 2.1.7 by 1T3XT",
+        "creator": "PyPDF",
+        "creationdate": "2025-12-30T14:01:49+01:00",
+        "moddate": "2025-12-30T16:29:46+01:00",
+        "prtc_pagina": "72",
+        "prtc_noriginales": "0",
+        "title": "untitled",
+        "prtc_fechapublicacion": "31/12/2025 00:00",
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\bocm-20251231-tarifas_transporte.pdf",
+        "total_pages": 4,
+        "page": 3,
+        "page_label": "4",
+        "chunk_index": 61,
+        "chunk_size": 148,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "---\nsource: https://www.crtm.es/billetes-y-tarifas/\norganismo: Consorcio Regional de Transportes de Madrid\nfecha_extraccion: 2026-09-07\ntipo: billetes_tarifas\n---\n\n# Billetes y tarifas CRTM\n\n## Tarjetas",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_billetes_tarifas.md",
+        "chunk_index": 62,
+        "chunk_size": 202,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "# Billetes y tarifas CRTM\n\n## Tarjetas\n\nLas tarjetas de transporte son el soporte en el que se cargan la mayoría de los billetes que te permiten viajar en transporte público. La tecnología sin contacto te permitirá validar dichos billetes en los puntos de acceso al medio de transporte.\n\nDispones de dos tipos de formato: tarjetas físicas y tarjetas virtuales.\n\n### Tarjeta física",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_billetes_tarifas.md",
+        "chunk_index": 63,
+        "chunk_size": 380,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "### Tarjeta física\n\nLa tarjeta física es de plástico y en su interior contiene un chip y una antena. Gracias a estos elementos, puedes cargar los billetes con antelación en alguno de los puntos de venta.\n\nAsimismo, permiten dar validez al billete contenido en el chip y poder viajar con solo acercar la tarjeta a una validadora.\n\nTTP Personal",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_billetes_tarifas.md",
+        "chunk_index": 64,
+        "chunk_size": 342,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "TTP Personal\n\nLa Tarjeta de Transporte Público Personal (TTP Personal) es intransferible. En ella figuran impresos el nombre y un número de identificación de la tarjeta, además de la fotografía del titular. El chip interior también se encuentra personalizado con las características de franja de edad (perfil) y descuentos (colectivo).",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_billetes_tarifas.md",
+        "chunk_index": 65,
+        "chunk_size": 335,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "Es la opción estándar para los usuarios que superan los 7 años y sus ventajas están disponibles para los residentes en la Comunidad de Madrid o en un amplio número de municipios de Castilla-La Mancha y Castilla y León.",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_billetes_tarifas.md",
+        "chunk_index": 66,
+        "chunk_size": 218,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "Este tipo de tarjetas son imprescindibles para cargar billetes vinculados a una persona concreta, como pueden ser los abonos 30 días, o bien para beneficiarse de algún descuento por edad, familia numerosa o discapacidad.\n\nPero también permiten cargar billetes no personales. Así, pueden contener un Abono Transporte (personal) y dos billetes no personales, o bien, tres billetes no personales.",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_billetes_tarifas.md",
+        "chunk_index": 67,
+        "chunk_size": 393,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "Existen otros tipos de TTP Personal para determinados usuarios:\n\n* #### Infantil\n\nLa Tarjeta Transporte Público Infantil es gratuita y está dirigida a la población de 4, 5 y 6 años de edad.",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_billetes_tarifas.md",
+        "chunk_index": 68,
+        "chunk_size": 189,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "Con ella, sus usuarios pueden utilizar todos los servicios de transporte público de la Comunidad de Madrid durante el periodo de validez de la tarjeta, que se extiende hasta el día en que los menores cumplan 7 años.\n* #### Azul",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_billetes_tarifas.md",
+        "chunk_index": 69,
+        "chunk_size": 227,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "La Tarjeta Transporte Público Azul está dirigida a ciudadanos empadronados en el municipio de Madrid que cumplan determinadas características de edad o discapacidad, y con un límite de renta.\n\nSe solicita a través del Ayuntamiento de Madrid y es de utilización exclusiva en los servicios de Metro de Madrid (zona A), Empresa Municipal de Transportes de Madrid y Metros Ligeros de Madrid (ML1).",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_billetes_tarifas.md",
+        "chunk_index": 70,
+        "chunk_size": 393,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "TTP Multi\n\nLa Tarjeta Transporte Público Multi (TTP Multi) es anónima y puede ser utilizada por diferentes usuarios. Puede contener hasta tres billetes no personales que dan acceso al transporte público de la Comunidad de Madrid (billetes sencillos, 10 viajes y billetes turísticos).\n\n### Tarjeta Virtual",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_billetes_tarifas.md",
+        "chunk_index": 71,
+        "chunk_size": 304,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "### Tarjeta Virtual\n\nLa Tarjeta Transporte Virtual funciona de manera similar a la Tarjeta Transporte Público (TTP) física, pero está integrada en tu dispositivo móvil.\n\nA través de la aplicación “Mi Tarjeta Transporte”, disponible para sistemas Android, puedes adquirir y cargar tu TTP anónima con los diferentes billetes de 10 viajes o turísticos.",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_billetes_tarifas.md",
+        "chunk_index": 72,
+        "chunk_size": 349,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "Además, puedes convertir tu TTP Personal en una tarjeta virtual, cargarla con los títulos necesarios y utilizarla para validar tus viajes desde el móvil.\n\n## Billetes",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_billetes_tarifas.md",
+        "chunk_index": 73,
+        "chunk_size": 166,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "Los billetes son los títulos de transporte que se cargan en las tarjetas y que permiten realizar el acceso al sistema de transporte público. El sistema tarifario madrileño pone a tu disposición una gran variedad de títulos en función al número de viajes que realices, las zonas en las que te muevas, los medios de transporte utilizados o tu situación personal, para que puedas escoger el que",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_billetes_tarifas.md",
+        "chunk_index": 74,
+        "chunk_size": 391,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "personal, para que puedas escoger el que prefieras.",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_billetes_tarifas.md",
+        "chunk_index": 75,
+        "chunk_size": 51,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "Por ejemplo, podrás seleccionar títulos que te permiten realizar viajes ilimitados durante un período de tiempo determinado (abonos) u otros con los que podrás realizar un número de viajes concreto cuando lo necesites (sencillos y 10 viajes).\n\n### Abonos",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_billetes_tarifas.md",
+        "chunk_index": 76,
+        "chunk_size": 254,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "### Abonos\n\nEl Abono Transporte es un título personal e intransferible, que permite realizar un número ilimitado de viajes dentro de su ámbito de validez geográfico y temporal, en múltiples modos de transporte. Para poder utilizarse, este título se debe cargar en la Tarjeta Transporte Público Personal (TTP Personal), a excepción del Turístico, que se carga en la tarjeta anónima.",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_billetes_tarifas.md",
+        "chunk_index": 77,
+        "chunk_size": 381,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "Los abonos se personalizan en función de la edad del usuario (perfil) y, en el caso del Abono 30 días, de los posibles descuentos aplicables por familia numerosa o discapacidad (colectivo).\n\nLos datos anteriores, que se registran en el chip de la TTP Personal, permitirán obtener el abono más adecuado a tus características y aplicarle la tarifa correspondiente.",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_billetes_tarifas.md",
+        "chunk_index": 78,
+        "chunk_size": 362,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "Tal y como puedes observar en nuestro Buscador, estos son los perfiles establecidos en nuestro sistema tarifario:\n\n+ Infantil: menores de 4, 5 y 6 años\n+ Joven de 7-14 años\n+ Joven de 15 a 25 años\n+ General: de 26 a 64 años\n+ +65: mayores de 65 años\n\nY estos, los tipos de abonos que puedes encontrar:\n\n30 días",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_billetes_tarifas.md",
+        "chunk_index": 79,
+        "chunk_size": 310,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "30 días\n\nEste título te permite viajar de forma ilimitada por la zona elegida durante 30 días naturales consecutivos.\n\nSe carga en la Tarjeta Transporte Público Personal y está disponible para los perfiles normal o joven.\n\nEncontrarás un Abono 30 días adaptado a tu edad, zona en la que te mueves y descuento aplicable.",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_billetes_tarifas.md",
+        "chunk_index": 80,
+        "chunk_size": 319,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "Así, por ejemplo, podrás adquirir un Abono 30 días General para la zona B1 o, si es tu caso, un Abono 30 días Joven Familia Numerosa Especial.\n\n+65\n\nEs un título de transporte gratuito, exclusivo para usuarios de más de 65 años, que permite viajar durante 365 días naturales por toda la Comunidad de Madrid.\n\nEste título se carga en la Tarjeta Transporte Público Personal.\n\nInfantil",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_billetes_tarifas.md",
+        "chunk_index": 81,
+        "chunk_size": 382,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "Infantil\n\nEl abono infantil es gratuito y para utilizarlo es necesario cargarlo, una sola vez, en la Tarjeta Transporte Público Infantil. Permite viajar por toda la Comunidad de Madrid desde los 4 años y hasta el día en que se cumplan 7.\n\nPara los menores de 4 años, el transporte público madrileño es gratuito y no requiere la adquisición de título alguno.\n\nTurístico",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_billetes_tarifas.md",
+        "chunk_index": 82,
+        "chunk_size": 368,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "Turístico\n\nEl abono turístico es un título de carácter personal que permite efectuar un número ilimitado de desplazamientos en la zona elegida durante un período de tiempo determinado (1, 2, 3, 4, 5 o 7 días naturales consecutivos).\n\nSe han definido dos zonas para este abono: zona A y zona T",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_billetes_tarifas.md",
+        "chunk_index": 83,
+        "chunk_size": 292,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "+ La zona A: coincide prácticamente con el término municipal de Madrid.\n+ La zona T: comprende la totalidad de la cobertura geográfica de los Abono Transportes, hasta la zona E2.\n\nA diferencia de los anteriores abonos reseñados, el Turístico debe cargarse en una tarjeta anónima (Tarjeta Transporte Público Multi), que será gratuita con la compra de este abono.",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_billetes_tarifas.md",
+        "chunk_index": 84,
+        "chunk_size": 361,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "La tarifa del título se reduce en un 50% para los menores de 11 años.\n\nOtras modalidades de abonos\n\n* #### Azul\n\nSe trata de un título de transportes de 30 días, contenido en la Tarjeta Azul, que permite viajar en Metro de Madrid (zona A), Empresa Municipal de Transportes de Madrid y Metros Ligeros de Madrid (ML1).",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_billetes_tarifas.md",
+        "chunk_index": 85,
+        "chunk_size": 316,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "La tarifa vigente de este título es de 3,70 €. Consulta aquí más detalles.\n* #### Anual\n\nDesde 2023 se encuentra suspendida la venta de títulos anuales particulares. Actualmente se mantiene la comercialización para personas jurídicas (abono anual empresas).\n\n### Sencillos y 10 viajes",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_billetes_tarifas.md",
+        "chunk_index": 86,
+        "chunk_size": 284,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "### Sencillos y 10 viajes\n\nLos **billetes sencillos** permiten realizar un solo trayecto en un único medio de transporte. Su precio varía en función del modo de transporte elegido y del origen y destino.",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_billetes_tarifas.md",
+        "chunk_index": 87,
+        "chunk_size": 203,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "Los billetes sencillos se adquieren al acceder al medio de transporte. En el caso de Metro de Madrid y Metros Ligeros, deben cargarse en una Tarjeta Transporte Público a través de las máquinas de venta situadas en las estaciones para, una vez cargados, validarlos al pasar por los tornos de entrada.\n\nEn autobuses se adquieren a bordo y no necesitan cargarse en una Tarjeta Transporte Público.",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_billetes_tarifas.md",
+        "chunk_index": 88,
+        "chunk_size": 393,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "Los **billetes de 10 viajes** permiten realizar 10 trayectos en el transporte público de la Comunidad de Madrid. Existen distintos tipos de billetes en función de la zona y los medios de transporte a utilizar, por lo que es importante consultar las condiciones específicas y el lugar de adquisición.",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_billetes_tarifas.md",
+        "chunk_index": 89,
+        "chunk_size": 299,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "Estos títulos se cargan en una Tarjeta Transporte Público (excepto Tranvía de Parla). Los billetes de 10 viajes tienen carácter multipersonal, lo que significa que pueden ser utilizados por varias personas, siempre que se validen tantas veces como viajeros accedan y que estos viajeros realicen el trayecto junto al portador de la tarjeta en la que están contenidos los billetes validados.",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_billetes_tarifas.md",
+        "chunk_index": 90,
+        "chunk_size": 389,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "\\*Los títulos de Renfe Cercanías pueden consultarse en su web.\n\n### Puntos de venta\n\nLos billetes pueden adquirirse en los siguientes puntos de venta:",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_billetes_tarifas.md",
+        "chunk_index": 91,
+        "chunk_size": 150,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "+ Máquinas automáticas instaladas en las Estaciones de Metro de Madrid y ML1: billetes de la red de metro (sencillos y 10 viajes) y Abonos Transporte\n+ Máquinas automáticas instaladas en las Estaciones de Metro Ligero (ML2 y ML3): billetes sencillos y 10 viajes válidos en el servicio y Abonos Transporte\n+ Máquinas automáticas instaladas en las Estaciones de Cercanías: Abonos Transporte",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_billetes_tarifas.md",
+        "chunk_index": 92,
+        "chunk_size": 388,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "+ Puntos de información de los Intercambiadores de Transporte: Bonobuses de servicios urbanos e interurbanos y Abonos Transporte\n+ Estancos y otros establecimientos comerciales autorizados: Abonos Transporte y billetes de 10 viajes (Metrobús y bonobús interurbanos)\n+ App Mi Tarjeta Transporte (para Android); App Tarjeta Transporte (para iOS)",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_billetes_tarifas.md",
+        "chunk_index": 93,
+        "chunk_size": 343,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "## Tarifas\n\nEl precio de tus billetes varía en función de la modalidad elegida (abono, sencillo, 10 viajes, etc.), de tu perfil de edad (infantil, joven, +65 o general) y de tus circunstancias personales (familia numerosa o discapacidad). Además, durante 2026 algunos billetes incluyen bonificaciones extraordinarias sobre las tarifas oficiales.",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_billetes_tarifas.md",
+        "chunk_index": 94,
+        "chunk_size": 345,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "Puedes encontrar el billete más conveniente para ti en nuestro buscador o, si lo prefieres, consultar todos los precios finales aquí. En ambos casos, sobre los precios que se muestran ya se han aplicado los descuentos y bonificaciones correspondientes.\n\n### Descuentos",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_billetes_tarifas.md",
+        "chunk_index": 95,
+        "chunk_size": 268,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "### Descuentos\n\nEl Consorcio Regional de Transportes de Madrid ofrece una variedad de descuentos diseñados para facilitar el acceso al transporte público a los usuarios con discapacidad o pertenecientes a Familias Numerosas, que se aplicarán a cualquier tipología de billete (salvo turísticos, Tarjeta Azul y billetes gratuitos, como el Infantil, el abono 7-14 o el +65).",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_billetes_tarifas.md",
+        "chunk_index": 96,
+        "chunk_size": 371,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "Estos usuarios deberán disponer de una Tarjeta Transporte Público Personal (TTP Personal) y tener su descuento actualizado en el chip de la misma. Al cargar los billetes en dicha tarjeta se aplicará el descuento correspondiente.",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_billetes_tarifas.md",
+        "chunk_index": 97,
+        "chunk_size": 228,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "En el caso de los viajes en autobús urbano o interurbano, para beneficiarse de los descuentos al adquirir un billete sencillo a bordo será preciso aproximar al lector de validación la TTP Personal en la que conste la pertenencia al colectivo bonificado. En ese momento, la expendedora emitirá un billete sencillo con el descuento que corresponda.\n\n**Familias numerosas**",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_billetes_tarifas.md",
+        "chunk_index": 98,
+        "chunk_size": 370,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "**Familias numerosas**\n\nLos usuarios de transporte público pertenecientes al colectivo de familias numerosas se beneficiarán de los siguientes descuentos establecidos en las tarifas:\n\n+ Familias Numerosas Categoría General: descuento del 20%\n+ Familias Numerosas Categoría Especial: descuento del 50%\n\n**Discapacidad**",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_billetes_tarifas.md",
+        "chunk_index": 99,
+        "chunk_size": 318,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "**Discapacidad**\n\nLos usuarios de transporte público que tengan un grado de discapacidad de al menos el 65% se beneficiarán de los siguientes descuentos establecidos en las tarifas:\n\n+ Personas con Discapacidad ≥ 65 %: descuento del 20%\n\n### Bonificaciones extraordinarias",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_billetes_tarifas.md",
+        "chunk_index": 100,
+        "chunk_size": 272,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "### Bonificaciones extraordinarias\n\nEl Consejo de Administración del Consorcio Regional de Transportes de Madrid, en su reunión del 29 de diciembre de 2025, ha acordado mantener la subvención tarifaria establecida para el segundo semestre de 2025, según el ámbito de aplicación del Real Decreto-Ley 17/2025, de 23 de diciembre.",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_billetes_tarifas.md",
+        "chunk_index": 101,
+        "chunk_size": 327,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "De esta manera, desde el 1 de enero y hasta el 31 de diciembre de 2026, se continuará aplicando una reducción (\\*) del 40% en los billetes de 10 viajes, Abono Transporte 30 días para usuarios de 26 a 64 años y Tarjeta Azul, así como del 50% para los usuarios del Abono 30 días Joven. Se mantiene, además, la gratuidad para los usuarios de 7 a 14 años.",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_billetes_tarifas.md",
+        "chunk_index": 102,
+        "chunk_size": 351,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "Se excluyen de esta medida los billetes sencillos y billetes Turísticos.\n\n*(\\*) Descuentos financiados por el Ministerio de Transportes y Movilidad sostenible, la Comunidad de Madrid y resto de administraciones adheridas al Consorcio Regional de Transportes de Madrid.*\n\n➢ Las tarifas oficiales, sin bonificaciones extraordinarias, se recogen en el siguiente Acuerdo.\n\n## Zonas",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_billetes_tarifas.md",
+        "chunk_index": 103,
+        "chunk_size": 377,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "## Zonas\n\nExisten 8 zonas tarifarias, 6 de ellas dentro de la Comunidad de Madrid y 2 en Castilla-La Mancha.\n\nLa utilización de cada billete deberá ser siempre dentro de su zona de validez. Existen dos tipologías: billetes de zona y billetes interzonales.",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_billetes_tarifas.md",
+        "chunk_index": 104,
+        "chunk_size": 255,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "En los billetes de zona -abonos- cada zona incluye a las interiores, si las hubiera; así, un abono 30 días de la zona B2 puede ser utilizado en las zonas A, B1 y B2.\n\nEl billete interzonal hace referencia a los extremos de las zonas que incluye. Así, por ejemplo, un abono 30 días interzonal B1-B3 puede ser utilizado en las zonas B1, B2 y B3.\n\n### Plano de zonas",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_billetes_tarifas.md",
+        "chunk_index": 105,
+        "chunk_size": 363,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "---\nsource: https://www.crtm.es/billetes-y-tarifas/preguntas-frecuentes/\norganismo: Consorcio Regional de Transportes de Madrid\nfecha_extraccion: 2026-09-08\ntipo: faq_billetes_tarifas\n---\n\n# Preguntas frecuentes CRTM\n\n## ¿Qué documentación necesito para solicitar mi Tarjeta Transporte Público Personal?",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 106,
+        "chunk_size": 303,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "* Una fotografía reciente, en color y tamaño pasaporte (excepto tramitación en Oficina de Gestión, donde la foto se hace en el acto).\n* DNI, pasaporte o permiso de residencia (si tienes DNI español, puedes autorizar su consulta).\n* Certificado o volante de empadronamiento (si estás empadronado en un municipio de la Comunidad de Madrid, puedes autorizar su consulta).",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 107,
+        "chunk_size": 368,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "* En caso de cumplir con las condiciones que dan derecho a descuento, presentar el carné individual de familia numerosa, o en su defecto el certificado individual que acredite tal condición, que se puede descargar de la APP Tarjeta Familia Numerosa, o el Certificado de Discapacidad igual o superior al 65%.",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 108,
+        "chunk_size": 307,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "En caso de que el solicitante sea menor de 14 años sin DNI, se deberá presentar el impreso de autorización de padres/tutores; Libro de Familia o, en su defecto, la partida de nacimiento; y DNI del padre, madre o tutor.",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 109,
+        "chunk_size": 218,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "En caso de que el solicitante sea menor de 7 años y acuda con una persona distinta a su representante legal, se deberá aportar una autorización firmada por el padre, madre o tutor del menor.\n\n## ¿Es necesario pedir cita para acudir a una Oficina de Gestión?",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 110,
+        "chunk_size": 257,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "Es necesario si lo que deseas es obtener por primera vez tu Tarjeta Transporte Público Personal. Si lo que necesitas es realizar otro tipo de gestión, consulta el listado de servicios en oficinas de gestión. Es recomendable, en cualquier caso, la cita previa para evitar esperas innecesarias.\n\n## ¿Cómo puedo pedir cita previa?",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 111,
+        "chunk_size": 327,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "## ¿Cómo puedo pedir cita previa?\n\nPuedes solicitar cita previa para obtener la Tarjeta Transporte Público en la web o en el teléfono de información general de la Comunidad de Madrid 012 (91 580 42 60 para llamadas desde fuera de Madrid).",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 112,
+        "chunk_size": 238,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "Para la gestión de la Tarjeta Transporte Público es necesario que acuda el interesado provisto del documento de identidad en vigor (original). La emisión de la nueva Tarjeta tiene un coste de 4 euros y la fotografía será tomada en el momento en la propia oficina.",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 113,
+        "chunk_size": 263,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "En caso de cumplir con las condiciones que dan derecho a descuento, tiene que presentar el Carné de Familia Numerosa o Certificado de Discapacidad igual o superior al 65% (original).\n\nLa Tarjeta Transporte Público se entrega en el acto.\n\n## ¿Dónde y en qué horario puedo realizar las gestiones de la Tarjeta Transporte Público Personal?",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 114,
+        "chunk_size": 336,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "En cualquiera de nuestras Oficinas de Gestión de la Tarjeta Transporte Público.\n\nPara solicitar la Tarjeta Transporte Público Personal por primera vez, es imprescindible pedir cita previa.\n\nPara cualquier otra gestión, es recomendable con el fin de evitar esperas innecesarias.",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 115,
+        "chunk_size": 277,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "## ¿Puedo acabar de consumir la carga de mi tarjeta si durante su periodo de validez cumplo la edad que me obliga a cambiar de perfil de usuario?",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 116,
+        "chunk_size": 145,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "Si durante el periodo de validez de una recarga de 30 días el usuario pasa por una de estas dos circunstancias: o bien cumple 26 años y su perfil pasa de Joven a Normal, o bien cumple 65 años y su perfil pasa de Normal a Tercera Edad, el usuario podrá terminar de consumir su carga sin que se le aplique ningún suplemento tarifario. Cuando realice la siguiente carga, su tarjeta actualizará",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 117,
+        "chunk_size": 390,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "la siguiente carga, su tarjeta actualizará automáticamente su perfil de usuario y se aplicará la tarifa correspondiente.",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 118,
+        "chunk_size": 120,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "## ¿Dónde puedo utilizar la Tarjeta Transporte Público Personal?\n\n* Abonos de 30 días: disponibles para todas las zonas tarifarias y abonos interzonales.\n* Abonos Anuales: disponibles para todas las zonas tarifarias y abonos interzonales.\n\n## ¿Puedo cambiar la zona del título cargado en la Tarjeta?",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 119,
+        "chunk_size": 299,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "Si a lo largo de los 30 días del periodo de validez de una carga, el usuario necesita cambiar de zona, puede hacerlo en cualquiera de las Oficinas de Gestión, en los estancos y en las máquinas de metro.\n\nEsta operación se puede realizar en los siguientes casos:",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 120,
+        "chunk_size": 261,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "* Cambio de una zona por otra de precio superior: el usuario deberá abonar la diferencia entre ambas tarifas zonales. La diferencia de precio se aplicará entre tarifas completas, con independencia del número de días consumidos y la validez seguirá siendo la misma.\n* Cambio de un abono interzonal por otro interzonal del mismo precio: el usuario podrá realizar este cambio sin coste alguno.",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 121,
+        "chunk_size": 390,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "## Extravío o robo de la Tarjeta Transporte Público Personal\n\nEn caso de extravío o robo, el usuario podrá solicitar el bloqueo de su tarjeta y un duplicado de la misma.",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 122,
+        "chunk_size": 169,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "Para la tramitación del duplicado, será necesario aportar un certificado o volante de empadronamiento en vigor que acredite la residencia en la Comunidad de Madrid o en alguno de los municipios de Castilla-La Mancha y Castilla y León relacionados en este enlace.\n\n🚩Si estás empadronado en la Comunidad de Madrid, puedes autorizar su consulta digital.",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 123,
+        "chunk_size": 350,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "No será necesario acreditar el requisito de empadronamiento en el caso de pertenecer a una Familia Numerosa.\n\nLa solicitud puede tramitarse a través de una de estas dos vías:",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 124,
+        "chunk_size": 174,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "* De forma presencial, acudiendo a una de las Oficinas de Gestión de la Tarjeta Transporte Público con función de recuperación del saldo. Es imprescindible que acuda con un documento de identidad en vigor. El Consorcio Regional de Transportes de Madrid, a instancias del interesado y tras consultar el estado de los títulos contenidos en la tarjeta extraviada o robada, bloqueará su uso y en el",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 125,
+        "chunk_size": 394,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "extraviada o robada, bloqueará su uso y en el plazo máximo de cinco días hábiles procederá a emitir una nueva tarjeta con los títulos contenidos en la tarjeta desaparecida. En el caso de que el usuario no tuviese títulos en la tarjeta extraviada o robada, o renunciara a la recuperación del contenido de la misma, la tarjeta se le entregará en el acto.",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 126,
+        "chunk_size": 352,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "* Online, entrando en la web, y haciendo click en el botón \"Robo/extravío sin recuperación de saldo\". En este caso, la tarjeta se enviará sin ningún título cargado al domicilio del usuario.",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 127,
+        "chunk_size": 189,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "Si el título cargado en la tarjeta fuese un Abono Anual, solo podrá solicitar el bloqueo y duplicado de la misma de forma presencial. La emisión de una nueva tarjeta por extravío o robo tendrá un coste de 6 euros.\n\n## Deterioro de la tarjeta",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 128,
+        "chunk_size": 241,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "## Deterioro de la tarjeta\n\nEl periodo de garantía de la tarjeta, tres años, da derecho a la sustitución sin coste alguno de las tarjetas defectuosas, siempre que los desperfectos no sean debidos al mal uso de la tarjeta.",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 129,
+        "chunk_size": 221,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "Para solicitar el duplicado por deterioro, será necesario aportar un certificado o volante de empadronamiento en vigor que acredite la residencia en la Comunidad de Madrid o en alguno de los municipios de Castilla-La Mancha y Castilla y León relacionados en este enlace.\n\n🚩Si estás empadronado en la Comunidad de Madrid, puedes autorizar su consulta digital.",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 130,
+        "chunk_size": 358,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "No será necesario acreditar el requisito de empadronamiento en el caso de pertenecer a una Familia Numerosa.\n\nSi la tarjeta está deteriorada y ha transcurrido el periodo de garantía, el usuario podrá solicitar una nueva tarjeta, cuya emisión tendrá un coste de 6 euros.\n\n## He solicitado mi Tarjeta Transporte Público Personal pero no la he recibido aún",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 131,
+        "chunk_size": 353,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "Si superado el plazo para el envío de la Tarjeta, ésta no ha llegado (el plazo es una semana), puedes acudir a una de las Oficinas de Gestión (excepto la oficina de EMT) con el documento de identidad del titular de la tarjeta y el resguardo de solicitud. En la Oficina se le informará del estado de su solicitud o se realizará un duplicado sin coste que anulará la anterior en caso de que no haya",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 132,
+        "chunk_size": 396,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "que anulará la anterior en caso de que no haya llegado al domicilio.",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 133,
+        "chunk_size": 68,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "## He recibido mi Tarjeta Transporte Público Personal pero tiene datos incorrectos",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 134,
+        "chunk_size": 82,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "Si al recibir tu Tarjeta Transporte Público Personal tiene datos que no son correctos (nombre o fotografía) debes acudir, junto con tu documento de identidad, a cualquiera de las Oficinas de Gestión de la Tarjeta Transporte Público para que te realicen una nueva Tarjeta. La modificación no tiene coste y se realiza en el acto.\n\n## Quiero cambiar mi perfil de usuario",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 135,
+        "chunk_size": 367,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "En el caso de modificación de las circunstancias personales que dan derecho a la aplicación de tarifas especiales (familias numerosas o discapacidad igual o superior al 65%), el usuario podrá acudir con la documentación acreditativa de dichas circunstancias a una oficina de gestión, donde se le actualizará en el acto y sin coste la memoria de la tarjeta con el fin de poder cargar los títulos con",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 136,
+        "chunk_size": 398,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "con el fin de poder cargar los títulos con la bonificación correspondiente.",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 137,
+        "chunk_size": 75,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "## Me he equivocado al comprar un título ¿Qué puedo hacer?\n\nPuedes anular el título y recuperar el importe.\n\nA continuación, te decimos cómo y en qué condiciones:\n\nDepende de dónde compraste el título:",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 138,
+        "chunk_size": 201,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "* Si lo compraste en Metro: avisa a un agente de Metro.\n* Si compraste un cambio de zona, ve a cualquier Oficina de Gestión del CRTM (excepto EMT, Valdemoro o Parla).\n* Si fue en una Oficina de Gestión del CRTM: ve a la misma Oficina de Gestión en la que lo compraste.\n* En otro caso (aplicaciones CRTM, estancos…): acude a cualquier Oficina de Gestión del CRTM (excepto EMT, Valdemoro o Parla).",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 139,
+        "chunk_size": 395,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "Las condiciones que se tienen que cumplir son:\n\n* Títulos 10 viajes: debes resolverlo antes de 24 horas y no haberlo utilizado.\n* Títulos 30 días, turísticos, y anuales: debes resolverlo antes de 24 horas y puedes haberlo utilizado durante esas 24 horas, salvo el abono turístico de 1 día, que no puede haberse utilizado.\n\nPara esta gestión no es necesario cita previa.",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 140,
+        "chunk_size": 369,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "Para esta gestión no es necesario cita previa.\n\n## Me han cobrado pero el título no está en la tarjeta. ¿Qué puedo hacer?\n\nPuedes completar la carga.\n\nA continuación, te decimos cómo y en qué condiciones:\n\nDepende de dónde hiciste la carga:",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 141,
+        "chunk_size": 240,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "* Si lo compraste en Metro o Renfe: avisa en el momento a un agente de la estación para que complete el proceso de carga. Si no es posible, acude a una Oficina de Gestión del CRTM (a excepción de EMT).",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 142,
+        "chunk_size": 201,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "* Si fue utilizando nuestras aplicaciones y han pasado 72 horas desde que te cobraron el título: ponte en contacto con nosotros a través del formulario de incidencias o acude a una Oficina de Gestión del CRTM (a excepción de EMT).\n* Si fue en un estanco: acude a una Oficina de Gestión del CRTM (a excepción de EMT).",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 143,
+        "chunk_size": 316,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "Tienes un año para poder notificar esta incidencia.\n\nPara esta gestión no es necesario cita previa.\n\n## Me han cobrado varias veces la misma carga. ¿Qué puedo hacer?\n\nPuedes solicitar la devolución de los cobros.\n\nA continuación, te decimos cómo y en qué condiciones:",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 144,
+        "chunk_size": 267,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "* Acude al lugar donde hiciste la compra y solicita la devolución de los cobros.\n* Si el cobro ha sido en nuestras aplicaciones: ponte en contacto con nosotros a través del formulario de incidencias o acude a una Oficina de Gestión del CRTM.\n\nPara esta gestión no es necesario cita previa.\n\n## Mi tarjeta ha fallado. He tenido que comprar un billete sencillo ¿Qué puedo hacer?",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 145,
+        "chunk_size": 376,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "Se te puede compensar.\nPara ello debes acudir a una Oficina de Gestión del CRTM (a excepción de EMT) con tu Tarjeta de Transporte Público y el billete sencillo adquirido, en el plazo máximo de 15 días naturales.",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 146,
+        "chunk_size": 211,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "* Si tienes cargado un título no personal (10 viajes): te compensamos con 3 viajes.\n* Si tienes cargado un abono 30 días: te compensamos con 3 viajes o 1 día adicional, a tu elección.\n* Si tienes cargado un abono anual, turístico, o cualquier título gratuito: te devolvemos el importe del billete sencillo.\n\nPara esta gestión no es necesario cita previa.",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 147,
+        "chunk_size": 354,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "Para esta gestión no es necesario cita previa.\n\n## Al validar se han descontado más viajes de los que he realizado. ¿Qué tengo que hacer?\n\nSe te puede compensar, pero para ello deberás avisar del problema en el momento.",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 148,
+        "chunk_size": 219,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "* Si te descuentan más de un viaje al viajar en Metro: avisa a un agente de Metro, quien comprobará los viajes de tu tarjeta y podrá reponerlos al momento.",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 149,
+        "chunk_size": 155,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "* Si te descuentan más de un viaje al viajar en autobús: avisa en el momento al conductor, quien deberá confirmar que la incidencia se ha producido. Con el justificante que te entregará tienes 15 días naturales para acudir a una Oficina de Gestión.",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 150,
+        "chunk_size": 248,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "Para esta gestión no es necesario cita previa.\n\n## He renovado mi Título de Familia Numerosa/Discapacidad pero al recargar la Tarjeta Transporte Público Personal no se aplica el descuento. ¿Qué tengo que hacer?",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 151,
+        "chunk_size": 210,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "Puedes actualizar tu Tarjeta para disponer del descuento y solicitar una regularización. Acude a una Oficina de Gestión del CRTM, con el Título de Familia Numerosa/Discapacidad renovado o el certificado que acredite la condición de familia numerosa. La actualización no es automática.\n\nTienes un mes desde la renovación para solicitar la regulación de los pagos no bonificados.",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 152,
+        "chunk_size": 377,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "## Quiero solicitar la Tarjeta Transporte Público Personal para mi hijo menor de 14 años pero no tiene DNI\n\nSi el menor no tiene DNI, los padres/tutores deben rellenar y firmar la solicitud de Tarjeta para menores de 14 años sin DNI.\n\nEste documento debe ir acompañado del certificado de nacimiento o del Libro de Familia y el DNI del tutor legal.\n\n## Quiero una factura a mi nombre de mis cargas",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 153,
+        "chunk_size": 396,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "* Si eres una persona física: solicita por Registro -electrónico o presencial- la factura de canje de las facturas simplificadas correspondientes a los títulos de transporte adquiridos desde el 1 de enero de 2019, por Registro. También puedes solicitarla personalmente en las Oficinas de Gestión del CRTM.",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 154,
+        "chunk_size": 305,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "* Si eres una persona jurídica: realiza la solicitud por Registro electrónico, firmada digitalmente mediante un certificado de representante válido.",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 155,
+        "chunk_size": 148,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "## ¿Qué debo hacer si tengo alguna incidencia con la Tarjeta Transporte Público Turística?\n\nAcude a cualquier Oficina de Gestión que tenga la funcionalidad de recuperación de saldo (todas menos la de EMT).\n\n## Quiero cambiar mis datos personales de la tarjeta (teléfono, dirección, correo electrónico).",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 156,
+        "chunk_size": 302,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "Si deseas modificar alguno de los datos personales que figuran en tu tarjeta, acude a cualquiera de las Oficinas de Gestión para comunicar el cambio y los datos serán actualizados en el momento.\n\n## ¿Qué es la Tarjeta Azul?",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 157,
+        "chunk_size": 223,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "## ¿Qué es la Tarjeta Azul?\n\nLa Tarjeta Azul es un título de transporte destinado a ciudadanos empadronados en el municipio de Madrid, con características de edad, discapacidad o un límite de renta. Se solicita a través del Ayuntamiento de Madrid y es válida en Metro de Madrid y EMT.\n\n## Mi tarjeta va a caducar. ¿Cómo la renuevo?",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 158,
+        "chunk_size": 331,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "## Mi tarjeta va a caducar. ¿Cómo la renuevo?\n\nNo es necesario que esperes a que la tarjeta caduque para renovarla, ya que puedes solicitar una nueva hasta dos meses antes de la fecha de caducidad.",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 159,
+        "chunk_size": 197,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "Para ello, deberás acudir a una Oficina de Gestión con tu documento de identidad, la tarjeta a renovar y un certificado o volante de empadronamiento en vigor que acredite tu residencia en la Comunidad de Madrid o en alguno de los municipios de Castilla-La Mancha y Castilla y León relacionados en este enlace.",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 160,
+        "chunk_size": 309,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "🚩Si estás empadronado en la Comunidad de Madrid, puedes autorizar la consulta digital de esta condición.\n\nNo será necesario que acredites el requisito de empadronamiento si perteneces a una Familia Numerosa.\n\nEste trámite no necesita cita previa y tiene un coste de 4€.\n\n## ¿Y las familias numerosas y personas con discapacidad?",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 161,
+        "chunk_size": 328,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "Para poder beneficiarse de los descuentos establecidos en los billetes de diez viajes o billetes sencillos, los miembros de familias numerosas o personas con una discapacidad igual o mayor al 65% deben obtener una Tarjeta Transporte Público Personal, en la que podrán cargar estos billetes.\n\n## Ya tengo el Abono Transporte, ¿puedo cargar otro billete en mi tarjeta?",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 162,
+        "chunk_size": 366,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "En tu Tarjeta Transporte Público Personal puedes cargar un abono de transporte personal y dos títulos no personales, o tres títulos no personales.\n\n## ¿Y si tengo un billete turístico?",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 163,
+        "chunk_size": 184,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "El billete turístico constituye una excepción, ya que, una vez consumido, la Tarjeta Transporte Público Multi en la que se alberga sí puede cargar billetes sencillos y de diez viajes. Ejemplo: una Tarjeta Transporte Público Multi adquirida en las máquinas de Metro de Madrid y cargada con un billete turístico de dos días para la zona A, podrá cargar un metrobús una vez agotado el plazo de validez",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 164,
+        "chunk_size": 398,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "un metrobús una vez agotado el plazo de validez del billete turístico.",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 165,
+        "chunk_size": 70,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "## Deterioro en la tarjeta\n\nEl periodo de garantía de la tarjeta, tres años, da derecho a la sustitución sin coste alguno de las tarjetas defectuosas, siempre que los desperfectos no sean debidos al mal uso de la tarjeta. Una vez transcurridos más de tres años desde la adquisición, dicha sustitución de la tarjeta tendrá un coste de 2,50€.",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 166,
+        "chunk_size": 340,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "## Me he equivocado al comprar un título, ¿qué puedo hacer?",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 167,
+        "chunk_size": 59,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "Puedes anular el título y recuperar el importe.\nLos pasos a seguir dependen de dónde compraste el título:\n- Si lo compraste en Metro: avisa a un agente de Metro, salvo si adquiriste un cambio de zona (en ese caso, acude a cualquier Oficina de Gestión del CRTM excepto EMT)\n- Si fue en una Oficina de Gestión del CRTM: ve a la misma Oficina de Gestión en la que lo compraste.",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 168,
+        "chunk_size": 374,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "- En otro caso (aplicaciones CRTM, estancos…): acude a cualquier Oficina de Gestión del CRTM (excepto EMT).\nLas condiciones que se tienen que cumplir son:\n- Títulos 10 viajes: debes resolverlo antes de 24 horas y no haberlo utilizado.",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 169,
+        "chunk_size": 234,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "- Títulos 30 días, turísticos, y anuales: debes resolverlo antes de 24 horas, puedes haberlo utilizado durante esas 24 horas, salvo el abono turístico de 1 día, que no puede haberse utilizado. Para esta gestión no es necesario cita previa.",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 170,
+        "chunk_size": 239,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "Puedes consultar más información aquí: crtm.es/normativa.\n\n## Me han cobrado pero el título no está en la tarjeta. ¿Qué puedo hacer?\n\nPuedes completar la carga.\n\nA continuación, te decimos cómo y en qué condiciones:\n\nDepende de dónde hiciste la carga:",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 171,
+        "chunk_size": 251,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "* Si lo compraste en Metro o Renfe: avisa en el momento a un agente de la estación para que complete el proceso de carga. Si no es posible, acude a una Oficina de Gestión del CRTM (a excepción de EMT).",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 172,
+        "chunk_size": 201,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "* Si fue utilizando nuestras aplicaciones y han pasado 72 horas desde que te cobraron el título: ponte en contacto con nosotros a través del formulario de incidencias o acude a una Oficina de Gestión del CRTM (a excepción de EMT).\n* Si fue en un estanco: acude a una Oficina de Gestión del CRTM (a excepción de EMT).",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 173,
+        "chunk_size": 316,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "Tienes un año para poder notificar esta incidencia.\n\nPara esta gestión no es necesario cita previa.\n\n## Me han cobrado varias veces la misma carga. ¿Qué puedo hacer?\n\nPuedes solicitar la devolución de los cobros.\n\nA continuación, te decimos cómo y en qué condiciones:",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 174,
+        "chunk_size": 267,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "* Acude al lugar donde hiciste la compra y solicita la devolución de los cobros.\n* Si el cobro ha sido en nuestras aplicaciones: ponte en contacto con nosotros a través del formulario de incidencias o acude a una Oficina de Gestión del CRTM.\n\nPara esta gestión no es necesario cita previa.\n\n## Mi tarjeta ha fallado. He tenido que comprar un billete sencillo. ¿Qué puedo hacer?",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 175,
+        "chunk_size": 377,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "Se te puede compensar. A continuación, te decimos cómo y en qué condiciones:\n\n* Acude a una oficina de gestión del CRTM (a excepción de EMT, Valdemoro y Parla) con tu Tarjeta de Transporte Público y el billete sencillo adquirido.",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 176,
+        "chunk_size": 229,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "* + Si tienes cargado un título no personal (10 viajes): te compensamos con 3 viajes.\n+ Si tienes cargado un abono 30 días: te compensamos con 3 viajes o 1 día adicional, a tu elección.\n+ Si tienes cargado un abono anual, turístico, o cualquier título gratuito: te devolvemos el importe del billete sencillo, mediante un procedimiento de pago diferido que se realizará por transferencia bancaria.",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 177,
+        "chunk_size": 396,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "Tienes un plazo de 15 días naturales para notificar la incidencia. Para esta gestión no es necesario cita previa.\n\nPuedes consultar más información aquí: crtm.es/normativa\n\n## Al validar se han descontado más viajes de los que he realizado. ¿Qué tengo que hacer?\n\nSe te puede compensar, pero para ello deberás avisar del problema en el momento.",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 178,
+        "chunk_size": 344,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "* Si te descuentan más de un viaje al viajar en Metro: avisa a un agente de Metro, quien comprobará los viajes de tu tarjeta y podrá reponerlos al momento.",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 179,
+        "chunk_size": 155,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "* Si te descuentan más de un viaje al viajar en autobús: avisa en el momento al conductor, quien deberá confirmar que la incidencia se ha producido. Con el justificante que te entregará tienes 15 días naturales para acudir a una Oficina de Gestión.",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 180,
+        "chunk_size": 248,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "Para esta gestión no es necesario cita previa.\n\n## ¿Y si me la roban?\n\nNo se efectuará reembolso ni reedición en los casos de pérdida o sustracción de las tarjetas, así que deberás comprar una nueva en las máquinas automáticas de Metro y Metro Ligero, o en la red de estancos y otros establecimientos comerciales autorizados al precio de 2,50€.\n\n## Mi Tarjeta Transporte",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 181,
+        "chunk_size": 370,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "## Mi Tarjeta Transporte\n\nPuedes consultar tus dudas sobre la app Mi Tarjeta Transporte en sus distintas secciones:\n\n* Preguntas Frecuentes: funcionalidades de la Tarjeta Física\n* Preguntas Frecuentes: funcionalidades de la Tarjeta Virtual.\n\n📝 Si has tenido alguna incidencia, puedes ponerte en contacto con nosotros a través de este formulario.\n\n## Tarjeta Transporte",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 182,
+        "chunk_size": 368,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "## Tarjeta Transporte\n\nPuedes consultar tus dudas sobre la app Tarjeta Transporte en su sección de Preguntas Frecuentes para iOS o en Preguntas Frecuentes para otros sistemas operativos.\n\n📝 Si has tenido alguna incidencia, puedes ponerte en contacto con nosotros a través de este formulario.\n\n## Tarjeta Transporte Virtual",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 183,
+        "chunk_size": 322,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "## Tarjeta Transporte Virtual\n\nLa aplicación Tarjeta Transporte Virtual ha dejado de estar disponible. Sus funcionalidades están operativas en la aplicación *Mi Tarjeta Transporte*.",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\crtm_faq.md",
+        "chunk_index": 184,
+        "chunk_size": 181,
+        "chunk_strategy": "recursive_character"
+      }
+    },
+    {
+      "text": "Tipo de transporte: Metro\nZona tarifaria: A\n\n- ID: par_4_1 | Nombre: PLAZA DE CASTILLA | Descripción: Paseo de la Castellana 189\n- ID: par_4_10 | Nombre: TRIBUNAL | Descripción: Calle de Fuencarral 81\n- ID: par_4_11 | Nombre: GRAN VIA | Descripción: Calle Gran Vía 23\n- ID: par_4_12 | Nombre: SOL | Descripción: Plaza de la Puerta del Sol 6\n- ID: par_4_13 | Nombre: TIRSO DE MOLINA | Descripción: Plaza de Tirso de Molina 7\n- ID: par_4_14 | Nombre: ANTON MARTIN | Descripción: Calle de Atocha 50",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\Paradas CRTM.csv",
+        "tipo": "paradas_crtm_bloque",
+        "tipo_transporte": "Metro",
+        "zona": "A",
+        "num_paradas": 6,
+        "bloque": 1,
+        "chunk_index": 185,
+        "chunk_size": 495,
+        "chunk_strategy": "bloque_csv"
+      }
+    },
+    {
+      "text": "Tipo de transporte: Metro\nZona tarifaria: A\n\n- ID: par_4_15 | Nombre: ESTACION DEL ARTE | Descripción: Plaza del Emperador Carlos V 11\n- ID: par_4_16 | Nombre: ATOCHA | Descripción: Avda de la Ciudad de Barcelona 2 B\n- ID: par_4_17 | Nombre: MENENDEZ PELAYO | Descripción: Avda de la Ciudad de Barcelona 23\n- ID: par_4_18 | Nombre: PACIFICO | Descripción: Avda de la Ciudad de Barcelona 79\n- ID: par_4_19 | Nombre: PUENTE DE VALLECAS | Descripción: Avda de la Albufera 1\n- ID: par_4_2 | Nombre: VALDEACEDERAS | Descripción: Calle de Bravo Murillo 332",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\Paradas CRTM.csv",
+        "tipo": "paradas_crtm_bloque",
+        "tipo_transporte": "Metro",
+        "zona": "A",
+        "num_paradas": 6,
+        "bloque": 2,
+        "chunk_index": 186,
+        "chunk_size": 550,
+        "chunk_strategy": "bloque_csv"
+      }
+    },
+    {
+      "text": "Tipo de transporte: Metro\nZona tarifaria: A\n\n- ID: par_4_20 | Nombre: NUEVA NUMANCIA | Descripción: Avda de la Albufera 70\n- ID: par_4_21 | Nombre: PORTAZGO | Descripción: Avda de la Albufera 131\n- ID: par_4_22 | Nombre: BUENOS AIRES | Descripción: Avda de la Albufera 179\n- ID: par_4_23 | Nombre: ALTO DEL ARENAL | Descripción: Calle de Santillana del Mar 21\n- ID: par_4_24 | Nombre: MIGUEL HERNANDEZ | Descripción: Calle de León Felipe 4 A\n- ID: par_4_25 | Nombre: SIERRA DE GUADALUPE | Descripción: Avda de la Democracia 1",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\Paradas CRTM.csv",
+        "tipo": "paradas_crtm_bloque",
+        "tipo_transporte": "Metro",
+        "zona": "A",
+        "num_paradas": 6,
+        "bloque": 3,
+        "chunk_index": 187,
+        "chunk_size": 525,
+        "chunk_strategy": "bloque_csv"
+      }
+    },
+    {
+      "text": "Tipo de transporte: Metro\nZona tarifaria: A\n\n- ID: par_4_26 | Nombre: VILLA DE VALLECAS | Descripción: Paseo de Federico García Lorca 2\n- ID: par_4_261 | Nombre: CHAMARTIN | Descripción: Calle de Agustín de Foxá 40\n- ID: par_4_262 | Nombre: BAMBU | Descripción: Calle del Bambú 14\n- ID: par_4_263 | Nombre: PINAR DE CHAMARTIN | Descripción: Calle de Arturo Soria 330\n- ID: par_4_27 | Nombre: CONGOSTO | Descripción: Calle del Congosto 48\n- ID: par_4_293 | Nombre: LA GAVIA | Descripción: Avda del Ensanche de Vallecas 16",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\Paradas CRTM.csv",
+        "tipo": "paradas_crtm_bloque",
+        "tipo_transporte": "Metro",
+        "zona": "A",
+        "num_paradas": 6,
+        "bloque": 4,
+        "chunk_index": 188,
+        "chunk_size": 520,
+        "chunk_strategy": "bloque_csv"
+      }
+    },
+    {
+      "text": "Tipo de transporte: Metro\nZona tarifaria: A\n\n- ID: par_4_294 | Nombre: LAS SUERTES | Descripción: Calle de Cañada del Santísimo 45\n- ID: par_4_295 | Nombre: VALDECARROS | Descripción: Avda del Ensanche de Vallecas 120 A\n- ID: par_4_3 | Nombre: TETUAN | Descripción: Calle de Bravo Murillo 264\n- ID: par_4_4 | Nombre: ESTRECHO | Descripción: Calle de Bravo Murillo 191\n- ID: par_4_5 | Nombre: ALVARADO | Descripción: Calle de Bravo Murillo 138\n- ID: par_4_6 | Nombre: CUATRO CAMINOS | Descripción: Gta de Cuatro Caminos 2",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\Paradas CRTM.csv",
+        "tipo": "paradas_crtm_bloque",
+        "tipo_transporte": "Metro",
+        "zona": "A",
+        "num_paradas": 6,
+        "bloque": 5,
+        "chunk_index": 189,
+        "chunk_size": 520,
+        "chunk_strategy": "bloque_csv"
+      }
+    },
+    {
+      "text": "Tipo de transporte: Metro\nZona tarifaria: A\n\n- ID: par_4_7 | Nombre: RIOS ROSAS | Descripción: Calle de Ríos Rosas 22\n- ID: par_4_8 | Nombre: IGLESIA | Descripción: Gta del Pintor Sorolla 2\n- ID: par_4_9 | Nombre: BILBAO | Descripción: Calle de Sagasta 2\n- ID: est_90_21 | Nombre: Intercambiador de Plaza de Castilla | Descripción: Paseo de la Castellana 189\n- ID: est_90_25 | Nombre: Chamartín | Descripción: Calle de Agustín de Foxá 40\n- ID: est_90_54 | Nombre: Atocha-Renfe | Descripción: Avda de la Ciudad de Barcelona 2 B",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\Paradas CRTM.csv",
+        "tipo": "paradas_crtm_bloque",
+        "tipo_transporte": "Metro",
+        "zona": "A",
+        "num_paradas": 6,
+        "bloque": 6,
+        "chunk_index": 190,
+        "chunk_size": 526,
+        "chunk_strategy": "bloque_csv"
+      }
+    },
+    {
+      "text": "Tipo de transporte: Metro\nZona tarifaria: A\n\n- ID: est_90_58 | Nombre: Puerta del Sol | Descripción: Plaza de la Puerta del Sol 6\n- ID: est_4_10 | Nombre: TRIBUNAL | Descripción: Calle de Fuencarral 81\n- ID: est_4_11 | Nombre: GRAN VIA | Descripción: Calle Gran Vía 23\n- ID: est_4_13 | Nombre: TIRSO DE MOLINA | Descripción: Plaza de Tirso de Molina 7",
+      "metadata": {
+        "source": "C:\\Users\\Rubén\\Documents\\01-Estudios\\Bootcamp IA\\00 - Repos\\MadridRumbo-v2\\data\\Paradas CRTM.csv",
+        "tipo": "paradas_crtm_bloque",
+        "tipo_transporte": "Metro",
+        "zona": "A",
+        "num_paradas": 4,
+        "bloque": 7,
+        "chunk_index": 191,
+        "chunk_size": 351,
+        "chunk_strategy": "bloque_csv"
+      }
+    }
+  ]
+}

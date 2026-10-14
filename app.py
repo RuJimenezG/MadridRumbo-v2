@@ -6,7 +6,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import streamlit as st
-from src.responder import responder
+from rag.responder import responder
 from config import GENERATION_MODEL
 
 st.set_page_config(page_title="MadridRumbo", page_icon="assets/icono.png")
