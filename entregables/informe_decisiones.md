@@ -58,15 +58,35 @@ Todas viven en `src/tools/` y se ejecutan a través de `ejecutar_tool(nombre, ar
 
 **Demo prevista.** «Según la imagen, ¿cuánto cuestan 3 billetes sencillos EMT y 1 Exprés Aeropuerto?» → `describir_imagen` y después `calculadora` con `3*1,50+5,00`, que da **9,50 €**.
 
-**Qué devolvió la tool.** `[PENDIENTE]` Aún no se ha ejecutado contra la API real de Gemini. Los tests usan un cliente falso y por tanto no demuestran que el modelo lea bien las cifras. Al ejecutar la demo, pegar aquí el texto devuelto, la traza y si el total coincide con 9,50 €.
+**Qué devolvió la tool.** Ejecutada el 2026-10-14 contra la API real de Gemini con el modelo `gemini-3.8-flash`, `describir_imagen` leyó los cuatro precios sin errores ni cifras inventadas:
 
-## 5. Tres fallos conocidos y siguientes pasos
+```
+Los precios que aparecen en la imagen son los siguientes:
+* Billete sencillo EMT: 1,50 €
+* Billete sencillo TransBus: 1,80 €
+* Billete Exprés Aeropuerto: 5,00 €
+* Metrobús 10 viajes: 7,30 €
+```
 
-1. **La lectura de cifras no está verificada con el modelo real.** Los 75 tests pasan sin llamar a ninguna API. Un fallo del modelo al leer «1,50» o «5,00» llevaría a un total incorrecto. *Siguiente paso:* ejecutar la demo real, comparar con la imagen y añadir una comprobación cruzada (por ejemplo, mostrar los importes leídos en la nota para que el humano los valide en el HITL).
-2. **`hora_actual` no conoce los festivos.** Solo distingue laborable, sábado y domingo, así que un festivo se trata como un día laborable y el especialista podría dar un horario equivocado. *Siguiente paso:* incorporar un calendario de festivos como dato (CSV) o consultarlo al RAG.
-3. **El bucle depende de que el LLM cumpla el protocolo JSON** (`{"tool","args"}` o `{"final"}`). Si no lo cumple, el especialista devuelve una nota de error controlada, pero la pregunta queda sin responder. *Siguiente paso:* pasar a `bind_tools` de LangChain o validar y reintentar una vez antes de rendirse; en MLOps, medir la tasa de respuestas no interpretables.
+Después `calculadora` con `3*1,50+5,00` devolvió **9,50**, el total correcto. La traza muestra las dos llamadas en este orden, ambas con estado «ok».
 
-**Otras limitaciones.** La `rag_ask` real depende de integrar `feature/tools-rag`; `elegir_rol_por_palabras` y los especialistas no están todavía conectados a un grafo; y las palabras clave del fallback pueden solaparse con las de otros especialistas, por lo que el orden de las reglas del supervisor debe acordarse.
+**Qué no demuestra esta prueba.** La expresión `3*1,50+5,00` la escribió el script de la demo; no la construyó un LLM a partir del texto de la imagen. El flujo completo del especialista `tarifas` (el LLM leyendo la imagen y proponiendo él mismo la operación) sigue sin probarse con un modelo real, porque falta el grafo y el cliente LLM de los especialistas.
+
+**Incidencias durante la demo.** Antes de que funcionara hubo tres fallos externos al código, todos con el mismo mensaje genérico de la tool:
+- `gemini-3.6-flash` (el modelo configurado en el proyecto) devolvió `503 UNAVAILABLE` por demanda alta.
+- `gemini-2.5-flash` devolvió `404`: Google lo ha retirado para cuentas nuevas.
+- Una primera clave mal configurada dio `400 API_KEY_INVALID`.
+
+Con `gemini-3.8-flash` funcionó a la primera llamada válida.
+
+## 5. Fallos conocidos y siguientes pasos
+
+1. **La tool oculta la causa de los errores del modelo y no reintenta.** Durante la demo, un `503` pasajero, un `404` por modelo retirado y una clave inválida produjeron exactamente el mismo mensaje («el modelo no pudo describir la imagen»), y hizo falta un script de diagnóstico para ver la causa real. *Siguiente paso:* registrar la causa en un log, reintentar una vez ante `503`/`429` y dejar un modelo de respaldo configurable. Es un cambio de comportamiento, así que primero hay que añadirlo a la spec 002.
+2. **La lectura de cifras solo se ha verificado en una imagen.** Con la captura de cuatro precios el modelo acertó, pero no hay garantía en imágenes más densas o de peor calidad: un error al leer «1,50» o «5,00» llevaría a un total incorrecto. *Siguiente paso:* mostrar los importes leídos en la nota para que el humano los valide en el HITL y probar con más imágenes.
+3. **`hora_actual` no conoce los festivos.** Solo distingue laborable, sábado y domingo, así que un festivo se trata como un día laborable y el especialista podría dar un horario equivocado. *Siguiente paso:* incorporar un calendario de festivos como dato (CSV) o consultarlo al RAG.
+4. **El bucle depende de que el LLM cumpla el protocolo JSON** (`{"tool","args"}` o `{"final"}`). Si no lo cumple, el especialista devuelve una nota de error controlada, pero la pregunta queda sin responder. *Siguiente paso:* pasar a `bind_tools` de LangChain o validar y reintentar una vez antes de rendirse; en MLOps, medir la tasa de respuestas no interpretables.
+
+**Otras limitaciones.** El modelo configurado en el proyecto (`gemini-3.6-flash`) no respondió en la demo por saturación; con `gemini-3.8-flash` sí. La `rag_ask` real depende de integrar `feature/tools-rag`; `elegir_rol_por_palabras` y los especialistas no están todavía conectados a un grafo; y las palabras clave del fallback pueden solaparse con las de otros especialistas, por lo que el orden de las reglas del supervisor debe acordarse.
 
 ## 6. Trabajo con SDD
 

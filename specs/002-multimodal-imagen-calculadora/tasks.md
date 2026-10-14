@@ -22,7 +22,7 @@
       Hecho cuando: los tests existen y fallan.
 - [x] T10. Añadir al prompt del especialista asignado la instrucción del flujo y comprobar que el nodo respeta allowlist y tope de pasos. (RF-21–23)
        Hecho cuando: `pytest tests/test_flujo_imagen_calculo.py` en verde.
-- [ ] T11. (Omitida por decisión del equipo: gasta API) Ejecutar una vez la demo real con la imagen y la pregunta de ejemplo y guardar el resultado para el informe. ⚠️ gasta API. (RF-1, RF-21, RF-22)
+- [x] T11. (Hecha a nivel de tools, 2026-10-14) Ejecutar una vez la demo real con la imagen y la pregunta de ejemplo y guardar el resultado para el informe. ⚠️ gasta API. (RF-1, RF-21, RF-22)
        Hecho cuando: la traza muestra `describir_imagen` y `calculadora`, y el total coincide con el cálculo a mano.
 - [ ] T12. (Parcial: falta demo real) Validación final RF por RF (`/sdd-validar`). (Todos)
        Hecho cuando: `validacion.md` con veredicto «Sí».
