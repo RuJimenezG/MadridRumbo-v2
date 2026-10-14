@@ -1,9 +1,13 @@
 """Tool planificar_ruta (spec 004): ruta en transporte público CRTM con zona y precio del RAG.
 
-De momento solo contiene las funciones puras del ámbito de cobertura, la hora de salida y el título.
+De momento solo contiene las funciones puras del ámbito de cobertura, la hora de salida, el título y el cliente Nominatim.
 """
+import json
 import re
+import time
+import urllib.request
 from datetime import datetime, timedelta, timezone
+from urllib.parse import urlencode
 from zoneinfo import ZoneInfo
 
 import config
@@ -106,3 +110,73 @@ def cabecera(hora: "datetime | str", titulo: str, es_ahora: bool = False) -> str
     else:
         salida = f"{hora:%d/%m/%Y %H:%M}"
     return f"Salida: {salida} · Título: {titulo}."
+
+
+# Instante (time.monotonic) de la última petición a Nominatim, para respetar su límite de 1 petición/s.
+_ultima_peticion_nominatim = None
+
+
+def _http_json(url: str, *, headers: dict | None = None, body: dict | None = None, timeout: float = 10):
+    """Hace una petición HTTP (GET, o POST con cuerpo JSON) y devuelve el JSON de la respuesta.
+
+    Es el único punto que sale a la red: los tests lo sustituyen. Lanza la excepción de
+    urllib ante cualquier error (conexión, timeout, error HTTP, JSON inválido).
+    """
+    datos = json.dumps(body).encode("utf-8") if body is not None else None
+    peticion = urllib.request.Request(url, data=datos, headers=headers or {})
+    if datos is not None:
+        peticion.add_header("Content-Type", "application/json")
+    with urllib.request.urlopen(peticion, timeout=timeout) as respuesta:
+        return json.loads(respuesta.read().decode("utf-8"))
+
+
+def geocodificar(direccion: str) -> dict:
+    """Busca una dirección en Nominatim y devuelve `{"estado", "candidatos"}`.
+
+    `estado` es "ok" (aunque no haya candidatos) o "geocodificacion_fallida" si Nominatim
+    falla por error, timeout, error HTTP, límite de peticiones o respuesta inválida (RF-40).
+    No lanza esas excepciones: la orquestación decide qué hacer con el fallo.
+    """
+    global _ultima_peticion_nominatim
+    # Política de uso de Nominatim: se espera lo que falte hasta cumplir el intervalo mínimo.
+    if _ultima_peticion_nominatim is not None:
+        falta = config.NOMINATIM_INTERVALO_S - (time.monotonic() - _ultima_peticion_nominatim)
+        if falta > 0:
+            time.sleep(falta)
+
+    parametros = {
+        "q": direccion,
+        "format": "jsonv2",
+        "countrycodes": config.NOMINATIM_PAIS,
+        "viewbox": viewbox_nominatim(),
+        "bounded": 1,
+        "addressdetails": 1,
+        "limit": config.NOMINATIM_LIMIT,
+        "accept-language": "es",
+    }
+    try:
+        respuesta = _http_json(
+            f"{config.NOMINATIM_URL}?{urlencode(parametros)}",
+            headers={"User-Agent": config.NOMINATIM_USER_AGENT},
+            timeout=config.NOMINATIM_TIMEOUT_S,
+        )
+    except (OSError, ValueError):  # URLError, HTTPError y timeout son OSError; JSON inválido, ValueError
+        respuesta = None
+    _ultima_peticion_nominatim = time.monotonic()
+
+    # Ante un error Nominatim a veces responde un dict en lugar de una lista de resultados.
+    if not isinstance(respuesta, list):
+        return {"estado": "geocodificacion_fallida", "candidatos": []}
+    candidatos = []
+    for r in respuesta:
+        try:
+            lugar = r.get("address", {})
+            candidatos.append({
+                "direccion": r["display_name"],
+                "lat": float(r["lat"]),
+                "lon": float(r["lon"]),
+                "municipio": next((lugar[k] for k in ("city", "town", "village", "municipality") if k in lugar), None),
+            })
+        except (KeyError, TypeError, ValueError, AttributeError):
+            continue  # un resultado mal formado se descarta sin tumbar la consulta
+    return {"estado": "ok", "candidatos": candidatos}
