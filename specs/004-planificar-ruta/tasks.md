@@ -7,7 +7,7 @@
       Hecho cuando: `python -c "import src.agents.base, src.tools, src.tools.hora_actual, config; print(config.ZONA_HORARIA, config.TOOLS_POR_ESPECIALISTA)"` imprime sin error y `python -m pytest` queda en verde.
 - [x] T2. Tests y configuración: constantes nuevas en `config.py` (ámbito, Nominatim, Google, títulos, preguntas, `FRASE_ABSTENCION`, antelación, `TOOLS_POR_ESPECIALISTA["rutas"]`) y los nombres `GOOGLE_ROUTES_API_KEY` y `NOMINATIM_CONTACTO` en `.env.example` sin valores. Los valores marcados "a verificar" llevan ese comentario. (RF-2, RF-25, RNF Secretos)
       Hecho cuando: `tests/test_planificar_ruta_rnf.py::test_clave_solo_del_entorno` y `tests/test_planificar_ruta_ambito.py::test_ambito_definido_en_config` en verde; `FRASE_ABSTENCION in rag.prompt.PROMPT_TEMPLATE` comprobado por test; `.env.example` contiene ambos nombres sin valor (`grep` manual).
-- [ ] T3. Tests primero y `src/reloj.py` con `ahora()` en `ZONA_HORARIA`, única fuente de la hora. (RF-14)
+- [x] T3. Tests primero y `src/reloj.py` con `ahora()` en `ZONA_HORARIA`, única fuente de la hora. (RF-14)
       Hecho cuando: `tests/test_reloj.py::test_ahora_en_zona_madrid` en verde (devuelve `datetime` con zona `Europe/Madrid`; parcheable).
 - [ ] T4. Tests primero y funciones puras de ámbito en `src/tools/planificar_ruta.py`: `dentro_de_ambito` y `viewbox_nominatim` (longitud primero). (RF-2, RF-3)
       Hecho cuando: `tests/test_planificar_ruta_ambito.py::test_sol_dentro_barcelona_fuera_y_borde` y `::test_viewbox_longitud_primero` en verde.
