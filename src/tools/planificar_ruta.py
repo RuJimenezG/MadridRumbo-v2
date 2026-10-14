@@ -1,8 +1,13 @@
 """Tool planificar_ruta (spec 004): ruta en transporte público CRTM con zona y precio del RAG.
 
-De momento solo contiene las funciones puras del ámbito de cobertura.
+De momento solo contiene las funciones puras del ámbito de cobertura y de la hora de salida.
 """
+import re
+from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
+
 import config
+from src.reloj import ahora
 
 
 def dentro_de_ambito(lat: float, lon: float, ambito: tuple | None = None) -> bool:
@@ -19,3 +24,53 @@ def viewbox_nominatim(ambito: tuple | None = None) -> str:
     """
     lat_min, lon_min, lat_max, lon_max = ambito or config.AMBITO_COBERTURA
     return f"{lon_min},{lat_max},{lon_max},{lat_min}"
+
+
+def _parsear_hora(texto) -> datetime | None:
+    """Convierte un ISO 8601 con fecha y hora a hora de Madrid, o None si no se puede interpretar."""
+    # Se exige hora (HH:MM): una fecha sola o una hora sola no bastan para planificar.
+    if not isinstance(texto, str) or not re.search(r"\d{2}:\d{2}", texto):
+        return None
+    try:
+        hora = datetime.fromisoformat(texto.strip())
+    except ValueError:
+        return None
+    zona = ZoneInfo(config.ZONA_HORARIA)
+    if hora.tzinfo is not None:
+        return hora.astimezone(zona)
+    hora = hora.replace(tzinfo=zona)
+    # Una hora sin zona que no existe (salto a horario de verano) no cambia al ir a UTC y volver.
+    if hora.astimezone(timezone.utc).astimezone(zona).replace(tzinfo=None) != hora.replace(tzinfo=None):
+        return None
+    return hora
+
+
+def validar_hora(hora_salida, hora_llegada=None) -> dict:
+    """Valida la hora pedida y devuelve `estado`, la hora `considerada` y la hora para Google.
+
+    `estado` es "ok" o el de rechazo: hora_llegada_no_admitida, hora_no_interpretable,
+    hora_pasada u hora_demasiado_lejana. Sin hora de salida se considera la actual y
+    `salida_rfc3339` es None (Google calcula con salida inmediata).
+    """
+    actual = ahora()
+    resultado = {"estado": "ok", "considerada": actual, "salida_rfc3339": None}
+
+    if hora_llegada and str(hora_llegada).strip():
+        return {**resultado, "estado": "hora_llegada_no_admitida"}
+    if hora_salida is None or (isinstance(hora_salida, str) and not hora_salida.strip()):
+        return resultado
+
+    salida = _parsear_hora(hora_salida)
+    if salida is None:
+        return {**resultado, "estado": "hora_no_interpretable"}
+    # La comparación es a nivel de minuto: pedir "ahora mismo" no cuenta como hora pasada.
+    minuto_actual = actual.replace(second=0, microsecond=0)
+    if salida < minuto_actual:
+        return {**resultado, "estado": "hora_pasada"}
+    if salida > minuto_actual + timedelta(days=config.ANTELACION_MAX_DIAS):
+        return {**resultado, "estado": "hora_demasiado_lejana"}
+    return {
+        "estado": "ok",
+        "considerada": salida,
+        "salida_rfc3339": salida.isoformat(timespec="seconds"),
+    }
