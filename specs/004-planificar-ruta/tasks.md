@@ -3,9 +3,9 @@
 > Una tarea cada vez: `/sdd-implementar Tn`. Tests primero. Marca `[x]` al terminar.
 > Cada tarea termina con `python -m pytest` en verde (sin API). Las marcadas ⚠️ gastan API y solo se ejecutan si se piden.
 
-- [ ] T1. Comprobar que el código de la rama `feature/tools-auxiliar-multimodal` ya está en `develop` y rebasar esta rama sobre él. Sin ese merge no existen `ejecutar_especialista`, `ejecutar_tool`, `hora_actual` ni `config.ZONA_HORARIA`. (Prerrequisito del plan)
+- [x] T1. Comprobar que el código de la rama `feature/tools-auxiliar-multimodal` ya está en `develop` y rebasar esta rama sobre él. Sin ese merge no existen `ejecutar_especialista`, `ejecutar_tool`, `hora_actual` ni `config.ZONA_HORARIA`. (Prerrequisito del plan)
       Hecho cuando: `python -c "import src.agents.base, src.tools, src.tools.hora_actual, config; print(config.ZONA_HORARIA, config.TOOLS_POR_ESPECIALISTA)"` imprime sin error y `python -m pytest` queda en verde.
-- [ ] T2. Tests y configuración: constantes nuevas en `config.py` (ámbito, Nominatim, Google, títulos, preguntas, `FRASE_ABSTENCION`, antelación, `TOOLS_POR_ESPECIALISTA["rutas"]`) y los nombres `GOOGLE_ROUTES_API_KEY` y `NOMINATIM_CONTACTO` en `.env.example` sin valores. Los valores marcados "a verificar" llevan ese comentario. (RF-2, RF-25, RNF Secretos)
+- [x] T2. Tests y configuración: constantes nuevas en `config.py` (ámbito, Nominatim, Google, títulos, preguntas, `FRASE_ABSTENCION`, antelación, `TOOLS_POR_ESPECIALISTA["rutas"]`) y los nombres `GOOGLE_ROUTES_API_KEY` y `NOMINATIM_CONTACTO` en `.env.example` sin valores. Los valores marcados "a verificar" llevan ese comentario. (RF-2, RF-25, RNF Secretos)
       Hecho cuando: `tests/test_planificar_ruta_rnf.py::test_clave_solo_del_entorno` y `tests/test_planificar_ruta_ambito.py::test_ambito_definido_en_config` en verde; `FRASE_ABSTENCION in rag.prompt.PROMPT_TEMPLATE` comprobado por test; `.env.example` contiene ambos nombres sin valor (`grep` manual).
 - [ ] T3. Tests primero y `src/reloj.py` con `ahora()` en `ZONA_HORARIA`, única fuente de la hora. (RF-14)
       Hecho cuando: `tests/test_reloj.py::test_ahora_en_zona_madrid` en verde (devuelve `datetime` con zona `Europe/Madrid`; parcheable).
