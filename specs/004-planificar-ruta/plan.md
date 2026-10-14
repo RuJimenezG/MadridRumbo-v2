@@ -1,4 +1,4 @@
-# Plan técnico — Spec 003 (Planificar ruta en transporte público)
+# Plan técnico — Spec 004 (Planificar ruta en transporte público)
 
 > Basado en `spec.md` (estado: Aprobada, con RF-40 y RF-41 añadidos por `/sdd-cambio`). No añade comportamiento que no esté en la spec.
 

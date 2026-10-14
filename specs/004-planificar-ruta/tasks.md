@@ -1,4 +1,4 @@
-# Tareas — Spec 003
+# Tareas — Spec 004
 
 > Una tarea cada vez: `/sdd-implementar Tn`. Tests primero. Marca `[x]` al terminar.
 > Cada tarea termina con `python -m pytest` en verde (sin API). Las marcadas ⚠️ gastan API y solo se ejecutan si se piden.

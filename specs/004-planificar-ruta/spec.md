@@ -1,4 +1,4 @@
-# Spec 003 — Planificar ruta en transporte público
+# Spec 004 — Planificar ruta en transporte público
 
 > Estado: Aprobada · Fecha: 2026-10-14
 
