@@ -139,3 +139,70 @@ def test_http_json_usa_urllib_sin_salir_a_la_red(monkeypatch):
     peticion = vistas[1][0]
     assert peticion.get_method() == "POST" and json.loads(peticion.data) == {"a": 1}
     assert peticion.get_header("Content-type") == "application/json"
+
+
+def lugar(nombre, lat, lon):
+    """Candidato ya normalizado, como lo devuelve `geocodificar`."""
+    return {"direccion": nombre, "lat": lat, "lon": lon, "municipio": "Madrid"}
+
+
+# Puntos de referencia: cuatro dentro del ámbito y uno claramente fuera.
+SOL_C = lugar("Puerta del Sol", 40.4169, -3.7035)
+ATOCHA = lugar("Estación de Atocha", 40.4065, -3.6895)
+BERNABEU_C = lugar("Estadio Santiago Bernabéu", 40.4531, -3.6883)
+RETIRO = lugar("Parque del Retiro", 40.4153, -3.6845)
+BARCELONA_C = lugar("Calle Mayor, Barcelona", 41.3874, 2.1686)
+
+
+def test_sin_resultados_pide_direccion_precisa():
+    # RF-6: sin ningún resultado de Nominatim la dirección se clasifica como no encontrada.
+    r = pr.clasificar_candidatos([])
+    assert r["estado"] == "no_encontrada" and r["elegido"] is None and r["candidatos"] == []
+
+
+def test_solo_fuera_de_ambito_rechaza():
+    # RF-4: con resultados, pero todos fuera del ámbito, la dirección está fuera de cobertura.
+    r = pr.clasificar_candidatos([BARCELONA_C])
+    assert r["estado"] == "fuera_cobertura" and r["elegido"] is None
+
+
+def test_un_candidato_continua_e_indica_direccion():
+    # RF-7: un único candidato dentro del ámbito se elige sin preguntar, con su dirección identificada.
+    r = pr.clasificar_candidatos([SOL_C])
+    assert r["estado"] == "ok" and r["elegido"] == SOL_C
+    assert r["elegido"]["direccion"] == "Puerta del Sol"
+    # RF-3: un homónimo fuera del ámbito se descarta y el de dentro basta para continuar.
+    r = pr.clasificar_candidatos([BARCELONA_C, SOL_C])
+    assert r["estado"] == "ok" and r["elegido"] == SOL_C
+
+
+def test_varios_candidatos_limita_y_no_calcula(monkeypatch):
+    # RF-8: varios candidatos dentro del ámbito: no se elige ninguno y se muestran como mucho MAX_CANDIDATOS_MOSTRAR.
+    cuatro = [SOL_C, ATOCHA, BERNABEU_C, RETIRO]
+    r = pr.clasificar_candidatos([BARCELONA_C] + cuatro)
+    assert r["estado"] == "ambigua" and r["elegido"] is None
+    assert r["candidatos"] == cuatro[:config.MAX_CANDIDATOS_MOSTRAR]
+    monkeypatch.setattr(config, "MAX_CANDIDATOS_MOSTRAR", 2)
+    assert pr.clasificar_candidatos(cuatro)["candidatos"] == [SOL_C, ATOCHA]
+
+
+def test_duplicados_cercanos_no_cuentan_como_ambiguedad():
+    # Plan, Decisiones: resultados a menos de RADIO_MISMA_UBICACION_M son el mismo lugar (edificio + calle)
+    # y se conserva el primero, que es el mejor clasificado por Nominatim.
+    cerca = lugar("Puerta del Sol, calle", 40.41715, -3.70350)   # a unos 25 m
+    r = pr.clasificar_candidatos([SOL_C, cerca])
+    assert r["estado"] == "ok" and r["elegido"] == SOL_C
+    # Un lugar a más del radio sí es otro candidato.
+    assert pr.clasificar_candidatos([SOL_C, ATOCHA])["estado"] == "ambigua"
+
+
+def test_misma_ubicacion_no_calcula():
+    # RF-10: origen y destino a menos de RADIO_MISMA_UBICACION_M se consideran la misma ubicación.
+    assert pr.misma_ubicacion(SOL_C, lugar("Sol, otra entrada", 40.4172, -3.7035))   # unos 33 m
+    assert not pr.misma_ubicacion(SOL_C, ATOCHA)
+    assert pr.distancia_m(40.4169, -3.7035, 40.4169, -3.7035) == 0
+    assert 1000 < pr.distancia_m(*SOL_C_COORDS, *ATOCHA_COORDS) < 3000
+
+
+SOL_C_COORDS = (SOL_C["lat"], SOL_C["lon"])
+ATOCHA_COORDS = (ATOCHA["lat"], ATOCHA["lon"])

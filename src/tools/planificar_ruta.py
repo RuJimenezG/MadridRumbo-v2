@@ -1,8 +1,9 @@
 """Tool planificar_ruta (spec 004): ruta en transporte público CRTM con zona y precio del RAG.
 
-De momento solo contiene las funciones puras del ámbito de cobertura, la hora de salida, el título y el cliente Nominatim.
+De momento solo contiene las funciones puras del ámbito de cobertura, la hora de salida, el título, el cliente Nominatim y la clasificación de candidatos.
 """
 import json
+import math
 import re
 import time
 import urllib.request
@@ -180,3 +181,41 @@ def geocodificar(direccion: str) -> dict:
         except (KeyError, TypeError, ValueError, AttributeError):
             continue  # un resultado mal formado se descarta sin tumbar la consulta
     return {"estado": "ok", "candidatos": candidatos}
+
+
+def distancia_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Distancia en metros entre dos coordenadas (fórmula de haversine)."""
+    radio_tierra_m = 6_371_000
+    f1, f2 = math.radians(lat1), math.radians(lat2)
+    a = math.sin((f2 - f1) / 2) ** 2 + math.cos(f1) * math.cos(f2) * math.sin(math.radians(lon2 - lon1) / 2) ** 2
+    return 2 * radio_tierra_m * math.asin(math.sqrt(a))
+
+
+def misma_ubicacion(a: dict, b: dict) -> bool:
+    """Indica si dos candidatos están a menos de RADIO_MISMA_UBICACION_M (RF-10)."""
+    return distancia_m(a["lat"], a["lon"], b["lat"], b["lon"]) <= config.RADIO_MISMA_UBICACION_M
+
+
+def clasificar_candidatos(candidatos: list[dict]) -> dict:
+    """Clasifica los resultados de Nominatim de una dirección.
+
+    Devuelve `{"estado", "elegido", "candidatos"}` con `estado`:
+    - "no_encontrada": Nominatim no devolvió nada (RF-6).
+    - "fuera_cobertura": hay resultados pero ninguno dentro del ámbito (RF-4).
+    - "ok": un único candidato dentro del ámbito, en `elegido` (RF-7).
+    - "ambigua": varios dentro; `candidatos` lleva como mucho MAX_CANDIDATOS_MOSTRAR (RF-8).
+    """
+    if not candidatos:
+        return {"estado": "no_encontrada", "elegido": None, "candidatos": []}
+    dentro = [c for c in candidatos if dentro_de_ambito(c["lat"], c["lon"])]
+    if not dentro:
+        return {"estado": "fuera_cobertura", "elegido": None, "candidatos": []}
+    # Resultados casi en el mismo punto (edificio y calle) son un solo lugar: se queda el primero,
+    # que es el mejor clasificado por Nominatim.
+    distintos = []
+    for c in dentro:
+        if not any(misma_ubicacion(c, previo) for previo in distintos):
+            distintos.append(c)
+    if len(distintos) == 1:
+        return {"estado": "ok", "elegido": distintos[0], "candidatos": distintos}
+    return {"estado": "ambigua", "elegido": None, "candidatos": distintos[:config.MAX_CANDIDATOS_MOSTRAR]}
