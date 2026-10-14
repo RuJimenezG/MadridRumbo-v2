@@ -57,3 +57,29 @@ MAX_CHUNKS = 25000
 # --- Generación (Gemini) ---
 GENERATION_MODEL = "gemini-3.6-flash" # "gemini-3.1-flash-lite" | "gemini-3.6-flash"
 TEMPERATURE = 0.0
+
+
+# --- Tools auxiliares y especialistas (PB2) ---
+# Zona horaria que usa la tool hora_actual.
+ZONA_HORARIA = "Europe/Madrid"
+
+# Tope de llamadas a tools por turno de un especialista (límite decidido en Python).
+MAX_STEPS_ESPECIALISTA = 3
+
+# Allowlist de tools que puede pedir cada especialista.
+TOOLS_POR_ESPECIALISTA = {
+    "horarios": ["hora_actual", "rag_ask"],
+    "tarifas": ["describir_imagen", "calculadora", "rag_ask"],
+}
+
+# --- Tool multimodal describir_imagen ---
+# Carpeta autorizada: la tool no lee imágenes fuera de ella.
+IMAGENES_DIR = BASE_DIR / "assets"
+# Imagen que se usa cuando no se indica ruta (nombre relativo a IMAGENES_DIR).
+IMAGEN_DEMO = "imagen_demo.jpg"
+IMAGEN_MAX_MB = 4
+EXTENSIONES_IMAGEN = {".jpg", ".jpeg", ".png"}
+MODELO_VISION = GENERATION_MODEL
+
+# --- Tool calculadora ---
+CALC_MAX_CARACTERES = 200
