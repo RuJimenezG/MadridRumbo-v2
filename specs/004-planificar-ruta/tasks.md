@@ -9,7 +9,7 @@
       Hecho cuando: `tests/test_planificar_ruta_rnf.py::test_clave_solo_del_entorno` y `tests/test_planificar_ruta_ambito.py::test_ambito_definido_en_config` en verde; `FRASE_ABSTENCION in rag.prompt.PROMPT_TEMPLATE` comprobado por test; `.env.example` contiene ambos nombres sin valor (`grep` manual).
 - [x] T3. Tests primero y `src/reloj.py` con `ahora()` en `ZONA_HORARIA`, única fuente de la hora. (RF-14)
       Hecho cuando: `tests/test_reloj.py::test_ahora_en_zona_madrid` en verde (devuelve `datetime` con zona `Europe/Madrid`; parcheable).
-- [ ] T4. Tests primero y funciones puras de ámbito en `src/tools/planificar_ruta.py`: `dentro_de_ambito` y `viewbox_nominatim` (longitud primero). (RF-2, RF-3)
+- [x] T4. Tests primero y funciones puras de ámbito en `src/tools/planificar_ruta.py`: `dentro_de_ambito` y `viewbox_nominatim` (longitud primero). (RF-2, RF-3)
       Hecho cuando: `tests/test_planificar_ruta_ambito.py::test_sol_dentro_barcelona_fuera_y_borde` y `::test_viewbox_longitud_primero` en verde.
 - [ ] T5. Tests primero y validación de hora de salida: ISO 8601, hora pasada (a minuto), antelación máxima, `hora_llegada`, conversión a RFC 3339 con el desplazamiento de Madrid (cambio horario) y hora considerada por defecto. Funciones puras. (RF-14, RF-31, RF-32, RF-33, RF-34, RF-39)
       Hecho cuando: en `tests/test_planificar_ruta_hora_titulo.py` pasan `test_sin_hora_usa_momento_de_consulta`, `test_hora_rfc3339_con_desplazamiento_de_madrid`, `test_hora_pasada_no_calcula`, `test_hora_no_interpretable_no_calcula`, `test_hora_demasiado_lejana` y `test_hora_llegada_no_calcula` (a nivel de función de validación).
