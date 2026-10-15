@@ -1,6 +1,6 @@
 """Tool planificar_ruta (spec 004): ruta en transporte público CRTM con zona y precio del RAG.
 
-De momento solo contiene las funciones puras del ámbito de cobertura, la hora de salida, el título, el cliente Nominatim y la clasificación de candidatos.
+De momento solo contiene las funciones puras del ámbito de cobertura, la hora de salida, el título, el cliente Nominatim la clasificación de candidatos y la petición a Google Routes.
 """
 import json
 import math
@@ -219,3 +219,43 @@ def clasificar_candidatos(candidatos: list[dict]) -> dict:
     if len(distintos) == 1:
         return {"estado": "ok", "elegido": distintos[0], "candidatos": distintos}
     return {"estado": "ambigua", "elegido": None, "candidatos": distintos[:config.MAX_CANDIDATOS_MOSTRAR]}
+
+
+def consultar_google(origen: dict, destino: dict, salida_rfc3339: str | None = None) -> dict:
+    """Pide a Google Routes una ruta en transporte público y devuelve `{"estado", "respuesta"}`.
+
+    `estado` es "ok" (con el JSON de Google en `respuesta`, que puede venir sin rutas) o
+    "ruta_no_calculada" si falta la clave, hay error, falta de conexión o la respuesta no es
+    válida (RF-16). Hace como mucho una llamada, sin reintentos ni rutas alternativas.
+    El texto de los errores no se propaga: podría contener datos sensibles.
+    """
+    clave = config.GOOGLE_ROUTES_API_KEY
+    if not clave or not clave.strip():
+        return {"estado": "ruta_no_calculada", "respuesta": None}
+
+    def punto(lugar: dict) -> dict:
+        return {"location": {"latLng": {"latitude": lugar["lat"], "longitude": lugar["lon"]}}}
+
+    cuerpo = {
+        "origin": punto(origen),
+        "destination": punto(destino),
+        "travelMode": "TRANSIT",
+        "transitPreferences": {"allowedTravelModes": config.MODOS_GOOGLE},
+        "computeAlternativeRoutes": False,
+        "languageCode": "es",
+    }
+    # Sin hora pedida no se envía departureTime: Google calcula con salida inmediata.
+    if salida_rfc3339:
+        cuerpo["departureTime"] = salida_rfc3339
+    try:
+        respuesta = _http_json(
+            config.GOOGLE_ROUTES_URL,
+            headers={"X-Goog-Api-Key": clave, "X-Goog-FieldMask": config.GOOGLE_FIELD_MASK},
+            body=cuerpo,
+            timeout=config.GOOGLE_TIMEOUT_S,
+        )
+    except (OSError, ValueError):  # URLError, HTTPError y timeout son OSError; JSON inválido, ValueError
+        return {"estado": "ruta_no_calculada", "respuesta": None}
+    if not isinstance(respuesta, dict):
+        return {"estado": "ruta_no_calculada", "respuesta": None}
+    return {"estado": "ok", "respuesta": respuesta}
