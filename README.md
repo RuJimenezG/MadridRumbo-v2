@@ -66,19 +66,12 @@ La segunda debe imprimir `9,50`.
 ### Multimodal con la API real (⚠️ gasta una llamada)
 
 1. Consigue una clave gratuita en [Google AI Studio](https://aistudio.google.com/apikey).
-2. Crea un archivo `.env` en la raíz con **una sola** línea `=` (sin comillas ni espacios; ojo, la plantilla `.env.example` trae `==` por error):
+2. Crea un archivo `.env` 
 
    ```
    GEMINI_API_KEY=tu_clave
    ```
 
-   El `.env` está en `.gitignore`: nunca se sube. Si no existe, `model_auth.py` pide la clave por consola con entrada oculta.
-3. Lanza la demo (en PowerShell, el primer comando evita que se rompan el `€` y los acentos):
-
-   ```powershell
-   $env:PYTHONIOENCODING = "utf-8"
-   python -c "from src.tools import ejecutar_tool; t=[]; print(ejecutar_tool('describir_imagen', {'pregunta': 'Lista todos los precios'}, t)); print(t)"
-   ```
 
 Debe listar los cuatro precios de la imagen demo (1,50 €, 1,80 €, 5,00 €, 7,30 €) y la traza con estado `ok`. Si falla con `ERROR: el modelo no pudo describir la imagen`, la causa puede ser una clave inválida, un modelo saturado (503) o no disponible (404): la tool no muestra el motivo.
 
