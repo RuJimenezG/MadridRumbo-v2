@@ -1,6 +1,6 @@
 """Tool planificar_ruta (spec 004): ruta en transporte público CRTM con zona y precio del RAG.
 
-De momento solo contiene las funciones puras del ámbito de cobertura, la hora de salida, el título, el cliente Nominatim, la clasificación de candidatos, la petición a Google Routes y la interpretación de su respuesta.
+De momento solo contiene las funciones puras del ámbito de cobertura, la hora de salida, el título, el cliente Nominatim, la clasificación de candidatos, la petición a Google Routes, la interpretación de su respuesta y la consulta de zona y precio al RAG.
 """
 import json
 import math
@@ -314,3 +314,40 @@ def interpretar_respuesta_google(respuesta: dict) -> dict:
         "parada_subida": paradas[0][0],
         "parada_bajada": paradas[-1][1],
     }
+
+
+def consultar_rag(pregunta: str) -> str:
+    """Pregunta al RAG y devuelve su texto. Las excepciones se dejan pasar: las trata `consultar_tarifa`."""
+    # Importación perezosa: cargar el RAG arrastra ChromaDB y los clientes del LLM, y así los tests lo sustituyen.
+    from rag.responder import rag_ask
+    return rag_ask(pregunta)
+
+
+def _dato_rag(pregunta: str) -> dict:
+    """Consulta un dato al RAG y lo clasifica: ok, sin_evidencia (abstención o respuesta inútil) o error."""
+    try:
+        texto = consultar_rag(pregunta)
+    except Exception:  # cualquier fallo del RAG (Chroma, LLM, red) deja el dato sin determinar, sin detalle (RF-41)
+        return {"estado": "error", "texto": None, "fuente": "RAG"}
+    if not isinstance(texto, str) or not texto.strip() or config.FRASE_ABSTENCION in texto:
+        return {"estado": "sin_evidencia", "texto": None, "fuente": "RAG"}
+    return {"estado": "ok", "texto": texto, "fuente": "RAG"}  # texto del RAG sin tocar (RF-23)
+
+
+def consultar_tarifa(origen: str | None, destino: str | None, titulo=None) -> dict:
+    """Consulta al RAG la zona y el precio del título y devuelve `{"zona", "precio"}`.
+
+    `origen` y `destino` son las paradas de subida y bajada de Google o, si Google falló, los
+    municipios de Nominatim (RF-20). Cada dato es `{"estado", "texto", "fuente": "RAG"}` con estado
+    ok, sin_evidencia, error u omitida (sin consulta). Si falta origen o destino no se consulta nada.
+    Un título fuera de la lista cerrada consulta solo la zona y omite el precio (RF-36).
+    """
+    omitida = {"estado": "omitida", "texto": None, "fuente": "RAG"}
+    if not (origen and origen.strip() and destino and destino.strip()):
+        return {"zona": dict(omitida), "precio": dict(omitida)}
+    titulo_considerado, en_lista = resolver_titulo(titulo)
+    zona = _dato_rag(config.PREGUNTA_ZONA.format(origen=origen, destino=destino))
+    if not en_lista:
+        return {"zona": zona, "precio": dict(omitida)}
+    precio = _dato_rag(config.PREGUNTA_PRECIO.format(titulo=titulo_considerado, origen=origen, destino=destino))
+    return {"zona": zona, "precio": precio}
