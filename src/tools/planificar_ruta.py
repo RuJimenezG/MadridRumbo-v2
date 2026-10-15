@@ -1,6 +1,6 @@
 """Tool planificar_ruta (spec 004): ruta en transporte público CRTM con zona y precio del RAG.
 
-De momento solo contiene las funciones puras del ámbito de cobertura, la hora de salida, el título, el cliente Nominatim la clasificación de candidatos y la petición a Google Routes.
+De momento solo contiene las funciones puras del ámbito de cobertura, la hora de salida, el título, el cliente Nominatim, la clasificación de candidatos, la petición a Google Routes y la interpretación de su respuesta.
 """
 import json
 import math
@@ -259,3 +259,58 @@ def consultar_google(origen: dict, destino: dict, salida_rfc3339: str | None = N
     if not isinstance(respuesta, dict):
         return {"estado": "ruta_no_calculada", "respuesta": None}
     return {"estado": "ok", "respuesta": respuesta}
+
+
+def _minutos(duracion) -> int | None:
+    """Convierte la duración de Google ("1320s") a minutos redondeados, o None si no es válida."""
+    if not isinstance(duracion, str) or not re.fullmatch(r"\d+(\.\d+)?s", duracion):
+        return None
+    return round(float(duracion[:-1]) / 60)
+
+
+def interpretar_respuesta_google(respuesta: dict) -> dict:
+    """Extrae tiempo, tramos y paradas de la respuesta de Google, o `sin_ruta` si no es válida.
+
+    Devuelve `{"estado", "ruta", "parada_subida", "parada_bajada"}`. Es `sin_ruta` (RF-17) si no hay
+    ruta, ningún tramo de transporte (solo a pie, RF-13) o algún tramo tiene un tipo de vehículo fuera
+    de TIPOS_VEHICULO_ACEPTADOS (RF-12). Nada se estima (RF-18): cualquier duración que falte o
+    no se pueda leer descarta la ruta en lugar de rellenarse.
+    """
+    sin_ruta = {"estado": "sin_ruta", "ruta": None, "parada_subida": None, "parada_bajada": None}
+    try:
+        ruta = respuesta["routes"][0]
+        total = _minutos(ruta["duration"])
+        pasos = ruta["legs"][0]["steps"]
+        if total is None or not pasos:
+            return sin_ruta
+        tramos, paradas = [], []
+        for paso in pasos:
+            minutos = _minutos(paso["staticDuration"])
+            if minutos is None:
+                return sin_ruta
+            if paso["travelMode"] == "WALK":
+                tramos.append({"modo": "A pie", "linea": None, "desde": None, "hasta": None, "duracion_min": minutos})
+            elif paso["travelMode"] == "TRANSIT":
+                detalle = paso["transitDetails"]
+                tipo = detalle["transitLine"]["vehicle"]["type"]
+                if tipo not in config.TIPOS_VEHICULO_ACEPTADOS:
+                    return sin_ruta
+                linea = detalle["transitLine"]
+                parada = detalle.get("stopDetails", {})
+                desde = parada.get("departureStop", {}).get("name")
+                hasta = parada.get("arrivalStop", {}).get("name")
+                paradas.append((desde, hasta))
+                tramos.append({"modo": tipo, "linea": linea.get("nameShort") or linea.get("name"),
+                               "desde": desde, "hasta": hasta, "duracion_min": minutos})
+            else:
+                return sin_ruta  # cualquier otro modo (coche, bici...) queda fuera de alcance
+    except (KeyError, IndexError, TypeError, AttributeError):
+        return sin_ruta
+    if not paradas:
+        return sin_ruta
+    return {
+        "estado": "ok",
+        "ruta": {"duracion_min": total, "tramos": tramos, "fuente": "Google Routes"},
+        "parada_subida": paradas[0][0],
+        "parada_bajada": paradas[-1][1],
+    }

@@ -109,3 +109,86 @@ def test_google_falla_informa(google, fallo):
     assert resultado == {"estado": "ruta_no_calculada", "respuesta": None}
     assert CLAVE not in repr(resultado)
     assert len(google.peticiones) == 1
+
+
+# --- T10: interpretación de la respuesta de Google (RF-12, RF-13, RF-15, RF-17 y RF-18) ---
+
+def _paso_transito(tipo, linea, desde, hasta, segundos):
+    return {
+        "travelMode": "TRANSIT", "staticDuration": f"{segundos}s",
+        "transitDetails": {
+            "stopDetails": {"departureStop": {"name": desde}, "arrivalStop": {"name": hasta}},
+            "transitLine": {"nameShort": linea, "vehicle": {"type": tipo}},
+        },
+    }
+
+
+def _paso_a_pie(segundos):
+    return {"travelMode": "WALK", "staticDuration": f"{segundos}s"}
+
+
+def _ruta(*pasos, duracion="1320s"):
+    return {"routes": [{"duration": duracion, "legs": [{"steps": list(pasos)}]}]}
+
+
+RUTA_METRO = _ruta(
+    _paso_a_pie(180),
+    _paso_transito("SUBWAY", "1", "Sol", "Chamartín", 900),
+    _paso_transito("BUS", "27", "Chamartín", "Plaza de Castilla", 240),
+    _paso_a_pie(60),
+)
+
+
+def test_devuelve_tiempo_y_tramos():
+    # RF-15: tiempo total y trayecto tramo a tramo, más las paradas de subida y bajada para el RAG.
+    r = pr.interpretar_respuesta_google(RUTA_METRO)
+    assert r["estado"] == "ok"
+    assert r["parada_subida"] == "Sol" and r["parada_bajada"] == "Plaza de Castilla"
+    ruta = r["ruta"]
+    assert ruta["duracion_min"] == 22 and ruta["fuente"] == "Google Routes"
+    assert ruta["tramos"] == [
+        {"modo": "A pie", "linea": None, "desde": None, "hasta": None, "duracion_min": 3},
+        {"modo": "SUBWAY", "linea": "1", "desde": "Sol", "hasta": "Chamartín", "duracion_min": 15},
+        {"modo": "BUS", "linea": "27", "desde": "Chamartín", "hasta": "Plaza de Castilla", "duracion_min": 4},
+        {"modo": "A pie", "linea": None, "desde": None, "hasta": None, "duracion_min": 1},
+    ]
+
+
+@pytest.mark.parametrize("tipo", sorted(config.TIPOS_VEHICULO_ACEPTADOS))
+def test_modos_aceptados_dan_ruta(tipo):
+    # RF-12: todo tipo de vehículo de la lista configurada es válido.
+    assert pr.interpretar_respuesta_google(_ruta(_paso_transito(tipo, "C3", "A", "B", 600)))["estado"] == "ok"
+
+
+@pytest.mark.parametrize("tipo", ["HIGH_SPEED_TRAIN", "LONG_DISTANCE_TRAIN", "FERRY", "CABLE_CAR", None])
+def test_modos_permitidos_y_tipo_no_aceptado(tipo):
+    # RF-12: un solo tramo con tipo fuera de lista (o sin tipo) invalida la ruta, aunque los demás valgan.
+    r = pr.interpretar_respuesta_google(_ruta(
+        _paso_transito("SUBWAY", "1", "Sol", "Atocha", 300),
+        _paso_transito(tipo, "AVE", "Atocha", "Sevilla", 9000),
+    ))
+    assert r == {"estado": "sin_ruta", "ruta": None, "parada_subida": None, "parada_bajada": None}
+
+
+def test_solo_a_pie_es_sin_ruta():
+    # RF-13: caminar solo es un tramo de una ruta en transporte público, nunca la ruta entera.
+    assert pr.interpretar_respuesta_google(_ruta(_paso_a_pie(900)))["estado"] == "sin_ruta"
+
+
+@pytest.mark.parametrize("respuesta", [{}, {"routes": []}, {"routes": [{}]}, {"routes": [{"duration": "60s"}]},
+                                       {"routes": ["x"]}, {"routes": [{"duration": "60s", "legs": []}]}])
+def test_sin_ruta_no_da_zona_ni_precio(respuesta):
+    # RF-17: vacío o incompleto → sin_ruta; sin paradas, así que no hay nada con lo que preguntar zona o precio.
+    r = pr.interpretar_respuesta_google(respuesta)
+    assert r == {"estado": "sin_ruta", "ruta": None, "parada_subida": None, "parada_bajada": None}
+
+
+def test_no_estima_tiempos_ni_trayectos():
+    # RF-18: sin duración total válida no se suma ni se estima a partir de los tramos.
+    for duracion in (None, "", "abc"):
+        resp = _ruta(_paso_transito("SUBWAY", "1", "Sol", "Atocha", 300), duracion=duracion)
+        assert pr.interpretar_respuesta_google(resp)["estado"] == "sin_ruta"
+    # Un tramo sin duración propia tampoco se rellena: se descarta la ruta entera.
+    paso = _paso_transito("SUBWAY", "1", "Sol", "Atocha", 300)
+    del paso["staticDuration"]
+    assert pr.interpretar_respuesta_google(_ruta(paso))["estado"] == "sin_ruta"
