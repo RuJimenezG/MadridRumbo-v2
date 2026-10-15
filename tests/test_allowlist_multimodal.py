@@ -29,8 +29,16 @@ def carpeta(tmp_path, monkeypatch):
 
 
 def test_imagen_en_allowlist():
-    # RF-9
+    # RF-15 y RF-44: tarifas solo recibe la tool de imagen en el grafo.
     assert callable(TOOLS_PERMITIDAS.get("describir_imagen"))
+    assert config.TOOLS_POR_ESPECIALISTA["tarifas"] == ["describir_imagen"]
+
+
+def test_tarifas_no_recibe_calculadora_ni_rag_directo():
+    """RF-44: calcular y consultar el corpus pertenecen a otros especialistas."""
+    permitidas = config.TOOLS_POR_ESPECIALISTA["tarifas"]
+    assert "calculadora" not in permitidas
+    assert "rag_ask" not in permitidas
 
 
 def test_traza_imagen(carpeta):

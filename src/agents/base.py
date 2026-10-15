@@ -1,19 +1,51 @@
-"""Mini-bucle común de los especialistas: el LLM propone, el código decide qué se ejecuta.
+"""Mini-bucle común y ejecutor compartido de los especialistas.
 
-El LLM devuelve {"tool", "args"} para pedir una tool o {"final"} para dar la nota.
-Aquí se aplican la lista de tools del especialista y el tope de pasos (ambos en Python).
-Un especialista nunca decide `done`; eso corresponde al grafo y al humano (HITL).
+El modelo propone una tool, pero Python aplica la allowlist y el límite local.
+El ejecutor transversal se inyecta desde el grafo para que todos los nodos usen
+la misma vía de auditoría; los límites globales se aplicarán sobre esa vía.
 """
+from __future__ import annotations
+
+from typing import Any, Callable
+
 import config
 
 
-def ejecutar_especialista(nombre: str, prompt: str, estado: dict, llm, ejecutar) -> dict:
-    """Ejecuta el especialista `nombre` y devuelve `{"notas": [...], "traza": [...]}`.
+EjecutorTool = Callable[[str, dict[str, Any], list[dict[str, Any]]], str]
 
-    `llm(mensajes)` devuelve {"tool", "args"} o {"final"}; `ejecutar(nombre, args, traza)`
-    es la ejecución controlada de tools (normalmente `src.tools.ejecutar_tool`).
-    Las tools permitidas salen de `config.TOOLS_POR_ESPECIALISTA[nombre]`.
-    """
+
+def crear_ejecutor_transversal(ejecutar: EjecutorTool) -> EjecutorTool:
+    """Envuelve un ejecutor inyectado sin alterar la traza ni el límite local."""
+    def ejecutar_compartido(nombre: str, args: dict[str, Any], traza: list[dict[str, Any]]) -> str:
+        argumentos = dict(args) if isinstance(args, dict) else {}
+        return ejecutar(nombre, argumentos, traza)
+
+    return ejecutar_compartido
+
+
+def crear_ejecutor_acotado(ejecutar: EjecutorTool, tools_usadas: object = 0) -> EjecutorTool:
+    """Aplica el presupuesto global a una secuencia de llamadas de un especialista."""
+    usadas = tools_usadas if isinstance(tools_usadas, int) and tools_usadas >= 0 else 0
+
+    def ejecutar_acotado(nombre: str, args: dict[str, Any], traza: list[dict[str, Any]]) -> str:
+        nonlocal usadas
+        if usadas >= config.MAX_CICLOS_TOOLS:
+            return "ERROR: se alcanzó el máximo de tools permitido para este turno."
+        usadas += 1
+        argumentos = dict(args) if isinstance(args, dict) else {}
+        return ejecutar(nombre, argumentos, traza)
+
+    return ejecutar_acotado
+
+
+def ejecutar_especialista(
+    nombre: str,
+    prompt: str,
+    estado: dict[str, Any],
+    llm: Callable[[list[dict[str, str]]], Any],
+    ejecutar: EjecutorTool,
+) -> dict[str, Any]:
+    """Ejecuta un especialista y devuelve notas y traza conservando su máximo local."""
     notas = list(estado.get("notas", []))
     traza = list(estado.get("traza", []))
     permitidas = config.TOOLS_POR_ESPECIALISTA[nombre]
@@ -21,28 +53,27 @@ def ejecutar_especialista(nombre: str, prompt: str, estado: dict, llm, ejecutar)
         {"role": "system", "content": prompt},
         {"role": "user", "content": estado["mensaje"]},
     ]
-    obtenido = []  # resultados de tools, por si se alcanza el límite de pasos
+    obtenido = []
 
-    def terminar(texto: str) -> dict:
+    def terminar(texto: str) -> dict[str, Any]:
         return {"notas": notas + [f"[{nombre}] {texto}"], "traza": traza}
 
     for _ in range(config.MAX_STEPS_ESPECIALISTA):
         try:
-            resp = llm(mensajes)
-        except Exception as exc:  # un fallo del LLM no debe tumbar el grafo
+            respuesta = llm(mensajes)
+        except Exception as exc:
             return terminar(f"ERROR: el modelo no respondió ({exc}).")
 
-        if not isinstance(resp, dict):
+        if not isinstance(respuesta, dict):
             return terminar("ERROR: respuesta del modelo no interpretable.")
-        if isinstance(resp.get("final"), str):
-            return terminar(resp["final"])
-        tool = resp.get("tool")
+        if isinstance(respuesta.get("final"), str):
+            return terminar(respuesta["final"])
+        tool = respuesta.get("tool")
         if not isinstance(tool, str):
             return terminar("ERROR: respuesta del modelo no interpretable.")
 
-        args = resp.get("args") if isinstance(resp.get("args"), dict) else {}
+        args = respuesta.get("args") if isinstance(respuesta.get("args"), dict) else {}
         if tool not in permitidas:
-            # Fuera de la lista del especialista: no se ejecuta, solo se registra.
             aviso = f"ERROR: tool no permitida: {tool}"
             traza.append({"tool": tool, "args": args, "status": "bloqueada", "preview": aviso})
             mensajes.append({"role": "tool", "content": aviso})
