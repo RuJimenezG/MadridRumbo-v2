@@ -29,7 +29,7 @@
       Hecho cuando: pasan `test_fuera_de_cobertura_no_llama_a_google`, `test_aclaracion_en_respuesta_sin_pausa`, `test_mensaje_etiqueta_google_y_rag`, `test_todos_los_estados_incluyen_hora_y_titulo` y `test_planificar_ruta_rnf.py::test_maximo_2_nominatim_y_1_google`.
 - [x] T13. Tests primero y robustez: un único `try/except` externo que devuelve `error_interno` en español, sin excepción, sin detalles internos y con cabecera. Revisar que los mensajes están en español. (RF-42, RNF Idioma)
       Hecho cuando: pasan `tests/test_planificar_ruta_rnf.py::test_error_inesperado_da_error_interno` y `::test_mensajes_en_espanol`.
-- [ ] T14. Tests primero y capa de registro: `planificar_ruta_texto` (JSON con `estado` primero) registrada en `TOOLS_PERMITIDAS` en `src/tools/__init__.py` (archivo compartido: cambio mínimo y coordinado). (RF-30, RF-42)
+- [x] T14. Tests primero y capa de registro: `planificar_ruta_texto` (JSON con `estado` primero) registrada en `TOOLS_PERMITIDAS` en `src/tools/__init__.py` (archivo compartido: cambio mínimo y coordinado). (RF-30, RF-42)
       Hecho cuando: pasan `tests/test_tool_rutas_traza.py::test_traza_refleja_estado` y `::test_error_interno_queda_en_traza`, y los tests de allowlist ya existentes siguen en verde.
 - [ ] T15. Tests primero y especialista: `construir_prompt(ahora_dt)` (fecha y hora, títulos, reglas) y `nodo_rutas` sobre `ejecutar_especialista`. (RF-25, RF-26, RF-27, RF-28, RF-29, RF-31, RF-35)
       Hecho cuando: pasan todos los tests de `tests/test_especialista_rutas.py` (`test_especialista_registrado_con_su_tool`, `test_falta_dato_no_invoca_tool`, `test_prompt_prohibe_ubicacion_por_defecto`, `test_mensaje_combinado_no_repite_peticion`, `test_no_es_ruta_no_invoca_tool`) con LLM y ejecutor falsos.

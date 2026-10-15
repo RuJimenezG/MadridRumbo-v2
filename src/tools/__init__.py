@@ -6,6 +6,7 @@ Para añadir una tool nueva basta con registrarla en TOOLS_PERMITIDAS.
 from src.tools.calculadora import calculadora
 from src.tools.describir_imagen import describir_imagen
 from src.tools.hora_actual import hora_actual
+from src.tools.planificar_ruta import planificar_ruta_texto
 
 
 
@@ -25,6 +26,7 @@ TOOLS_PERMITIDAS = {
     "rag_ask": rag_ask,
     "describir_imagen": describir_imagen,
     "calculadora": calculadora,
+    "planificar_ruta": planificar_ruta_texto,
 }
 
 # Longitud máxima del extracto del resultado que se guarda en la traza.

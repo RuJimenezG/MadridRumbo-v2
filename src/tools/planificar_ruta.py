@@ -2,6 +2,7 @@
 
 Contiene las funciones puras (ámbito, hora de salida, título, clasificación de candidatos), los clientes de Nominatim, Google Routes y RAG, y la orquestación `planificar_ruta`.
 """
+import inspect
 import json
 import logging
 import math
@@ -528,3 +529,18 @@ def _planificar_ruta(origen, destino, hora_salida, hora_llegada, titulo) -> dict
     texto = (f"{trayecto}: {ruta['duracion_min']} min (Google Routes). Trayecto: {trayecto_txt}. "
              + _mensaje_tarifa(tarifa, titulo_considerado, en_lista))
     return salir("ok", texto, **identificados, ruta=ruta, **tarifa)
+
+
+def planificar_ruta_texto(**args) -> str:
+    """Capa de registro de la allowlist: `planificar_ruta` serializada a JSON, con `estado` como primera clave.
+
+    Nunca lanza excepción. Los argumentos que la tool no declara se ignoran y los que faltan llegan como
+    None, lo que da `faltan_datos`. Un `error_interno` es un fallo controlado: el JSON empieza por
+    {"estado": "error_interno" y `ejecutar_tool` lo registra con status "ok" (solo marca "error" si el
+    texto empieza por "ERROR"); el error se ve en el extracto de la traza.
+    """
+    conocidos = inspect.signature(planificar_ruta).parameters
+    datos = {k: v for k, v in args.items() if k in conocidos}
+    datos.setdefault("origen", None)
+    datos.setdefault("destino", None)
+    return json.dumps(planificar_ruta(**datos), ensure_ascii=False, default=str)
