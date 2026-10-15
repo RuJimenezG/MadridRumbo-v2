@@ -12,6 +12,10 @@ import pytest
 
 import config
 from src.tools import planificar_ruta as pr
+from tests.dobles_ruta import (
+    ATOCHA as ATOCHA_RAW, BARCELONA as BARCELONA_RAW, BERNABEU as BERNABEU_RAW,
+    RETIRO as RETIRO_RAW, SOL as SOL_RAW, Escenario,
+)
 
 # Respuestas de ejemplo de Nominatim (jsonv2 con addressdetails), reducidas a lo que usa el cliente.
 SOL = {
@@ -206,3 +210,59 @@ def test_misma_ubicacion_no_calcula():
 
 SOL_C_COORDS = (SOL_C["lat"], SOL_C["lon"])
 ATOCHA_COORDS = (ATOCHA["lat"], ATOCHA["lon"])
+
+
+# --- T12: orquestación (RF-6, RF-8, RF-9, RF-10, RF-40) ---
+
+
+@pytest.fixture
+def esc(monkeypatch):
+    return Escenario(monkeypatch)
+
+
+def test_aclaracion_en_respuesta_sin_pausa(esc):
+    # RF-8 y RF-9: varios candidatos → la aclaración va en la respuesta (un dict normal), sin pausa HITL ni cálculo.
+    esc.nominatim = [[SOL_RAW, ATOCHA_RAW, RETIRO_RAW, BERNABEU_RAW], [BERNABEU_RAW]]
+    r = pr.planificar_ruta("Madrid centro", "Bernabéu")
+    assert isinstance(r, dict) and list(r)[0] == "estado" and r["estado"] == "ambigua"
+    assert len(r["candidatos"]["origen"]) == config.MAX_CANDIDATOS_MOSTRAR and r["candidatos"]["destino"] == []
+    assert "Puerta del Sol" in r["mensaje"] and "cuál" in r["mensaje"]
+    assert esc.orden == ["nominatim", "nominatim"]          # ni Google ni RAG
+    assert "interrupt" not in open(pr.__file__, encoding="utf-8").read()
+
+
+def test_direccion_no_encontrada_pide_una_mas_precisa(esc):
+    # RF-6: sin resultados se informa y se pide una dirección más precisa; no se calcula nada.
+    esc.nominatim = [[], [BERNABEU_RAW]]
+    r = pr.planificar_ruta("calle inexistente", "Bernabéu")
+    assert r["estado"] == "direccion_no_encontrada" and "más precisa" in r["mensaje"]
+    assert esc.orden == ["nominatim", "nominatim"]
+
+
+def test_prioridad_fuera_de_cobertura_sobre_ambigua(esc):
+    # Plan: con varios problemas, el estado es fuera > no encontrada > ambigua y el mensaje los lista todos.
+    esc.nominatim = [[SOL_RAW, ATOCHA_RAW], [BARCELONA_RAW]]
+    r = pr.planificar_ruta("Sol o Atocha", "Calle Mayor, Barcelona")
+    assert r["estado"] == "fuera_cobertura"
+    assert "destino" in r["mensaje"] and "origen" in r["mensaje"]
+
+
+def test_misma_ubicacion_no_llama_a_google(esc):
+    # RF-10: origen y destino en el mismo sitio → se informa y no se calcula.
+    esc.nominatim = [[SOL_RAW], [SOL_RAW]]
+    r = pr.planificar_ruta("Sol", "Puerta del Sol")
+    assert r["estado"] == "misma_ubicacion" and esc.orden == ["nominatim", "nominatim"]
+
+
+@pytest.mark.parametrize("fallo", [urllib.error.URLError("sin red"), TimeoutError("t"), {"error": "429"}])
+def test_nominatim_falla_se_detiene_sin_google_ni_rag(esc, fallo):
+    # RF-40: tras un fallo de Nominatim no hay ninguna llamada más (ni al otro extremo, ni a Google ni al RAG).
+    esc.nominatim = [fallo, [BERNABEU_RAW]]
+    r = pr.planificar_ruta("Sol", "Bernabéu")
+    assert r["estado"] == "geocodificacion_fallida" and "más tarde" in r["mensaje"]
+    assert esc.orden == ["nominatim"]
+    # El fallo en el destino también detiene el proceso antes de Google y del RAG.
+    esc.orden.clear()
+    esc.nominatim = [[SOL_RAW], fallo]
+    assert pr.planificar_ruta("Sol", "Bernabéu")["estado"] == "geocodificacion_fallida"
+    assert esc.orden == ["nominatim", "nominatim"]

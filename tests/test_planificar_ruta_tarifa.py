@@ -10,6 +10,7 @@ import pytest
 
 import config
 from src.tools import planificar_ruta as pr
+from tests.dobles_ruta import Escenario
 
 ZONA = "Zona A según la tabla tarifaria."
 PRECIO = "El billete sencillo cuesta 1,50 €."
@@ -151,3 +152,49 @@ def test_consultar_rag_usa_rag_ask_importado_al_llamar(rag):
     rag.guion = {"hola": RuntimeError("fallo")}
     with pytest.raises(RuntimeError):
         pr.consultar_rag("hola mundo")
+
+
+# --- T12: mensaje y ruta de extremo a extremo (RF-24, RF-41) ---
+
+@pytest.fixture
+def esc(monkeypatch):
+    return Escenario(monkeypatch)
+
+
+def test_mensaje_etiqueta_google_y_rag(esc):
+    # RF-24: el mensaje distingue qué dato viene de Google (ruta) y cuál del RAG (zona y precio).
+    r = pr.planificar_ruta("Sol", "Bernabéu")
+    m = r["mensaje"]
+    assert r["estado"] == "ok"
+    assert "(Google Routes)" in m and "22 min" in m
+    assert f"Zona (RAG): {ZONA}" in m and f"Precio (RAG): {PRECIO}" in m
+    # Los datos de cada fuente solo aparecen bajo su etiqueta: lo del RAG no se mezcla con la ruta.
+    assert m.index("(Google Routes)") < m.index("Zona (RAG)")
+    assert r["ruta"]["fuente"] == "Google Routes" and r["zona"]["fuente"] == r["precio"]["fuente"] == "RAG"
+    # Se indica la dirección identificada (RF-7) y el trayecto tramo a tramo (RF-15).
+    assert "Puerta del Sol, Madrid" in m and "Estadio Santiago Bernabéu, Madrid" in m
+    assert "Plaza de Castilla" in m and "A pie" in m
+
+
+def test_rag_falla_la_ruta_se_conserva(esc):
+    # RF-41, de extremo a extremo: el RAG falla → sigue siendo ok, con la ruta y zona/precio en error y sin valores propios.
+    esc.rag = {"zona tarifaria": RuntimeError("Chroma caído"), "precio": ConnectionError("Gemini")}
+    r = pr.planificar_ruta("Sol", "Bernabéu")
+    assert r["estado"] == "ok" and r["ruta"]["duracion_min"] == 22
+    assert r["zona"]["estado"] == r["precio"]["estado"] == "error"
+    assert "no se pudo consultar" in r["mensaje"] and "22 min" in r["mensaje"]
+    assert "Chroma" not in repr(r) and "Gemini" not in repr(r)
+
+
+def test_rag_sin_evidencia_se_declara_en_el_mensaje(esc):
+    # RF-21 y RF-22: dato por dato; solo se declara como no determinado el que falta.
+    esc.rag["precio"] = config.FRASE_ABSTENCION
+    r = pr.planificar_ruta("Sol", "Bernabéu")
+    assert f"Zona (RAG): {ZONA}" in r["mensaje"]
+    assert "Precio (RAG): no se pudo determinar" in r["mensaje"]
+    assert PRECIO not in r["mensaje"]
+
+
+def test_billete_10_viajes_de_extremo_a_extremo(esc):
+    r = pr.planificar_ruta("Sol", "Bernabéu", titulo="Billete de 10 viajes")
+    assert "billete de 10 viajes" in esc.preguntas[1] and "Título: billete de 10 viajes." in r["mensaje"]

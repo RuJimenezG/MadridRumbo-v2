@@ -110,3 +110,132 @@ def test_los_tests_no_hacen_peticiones_reales():
 
     with pytest.raises(AssertionError):
         urllib.request.urlopen("http://ejemplo.test")
+
+
+def test_maximo_2_nominatim_y_1_google(monkeypatch):
+    # RNF Coste: una consulta hace como mucho 2 llamadas a Nominatim y 1 a Google (y 2 al RAG: zona y precio),
+    # sea cual sea el camino: éxito, Google caído, sin ruta, ambigua, título no disponible o Nominatim caído.
+    from src.tools import planificar_ruta as pr
+    from tests.dobles_ruta import ATOCHA, BERNABEU, SOL, Escenario
+
+    casos = [
+        ({}, {}),
+        ({"google": TimeoutError("t")}, {}),
+        ({"google": {}}, {}),
+        ({"nominatim": [[SOL, ATOCHA], [BERNABEU]]}, {}),
+        ({}, {"titulo": "abono"}),
+        ({"nominatim": [TimeoutError("t")]}, {}),
+    ]
+    for cambios, args in casos:
+        esc = Escenario(monkeypatch)
+        for k, v in cambios.items():
+            setattr(esc, k, v)
+        pr.planificar_ruta("Sol", "Bernabéu", **args)
+        assert esc.cuantas("nominatim") <= 2 and esc.cuantas("google") <= 1 and esc.cuantas("rag") <= 2, cambios
+    esc = Escenario(monkeypatch)
+    pr.planificar_ruta("Sol", "Bernabéu")
+    assert (esc.cuantas("nominatim"), esc.cuantas("google"), esc.cuantas("rag")) == (2, 1, 2)
+
+
+# --- T13: error_interno (RF-42) y mensajes en español ---
+import logging
+import re
+
+from tests.dobles_ruta import Escenario as _Escenario
+
+SECRETO = "CLAVE-SECRETA-XYZ"
+TEXTO_EXCEPCION = f"fallo interno con clave {SECRETO} en C:/datos/privado.json"
+
+
+@pytest.fixture
+def esc(monkeypatch):
+    return _Escenario(monkeypatch)
+
+
+def _fallar(*_args, **_kwargs):
+    raise RuntimeError(TEXTO_EXCEPCION)
+
+
+# Punto donde revienta la herramienta → llamadas externas que pueden haberse hecho ya (nominatim, google, rag).
+PUNTOS_DE_FALLO = {
+    "geocodificar": (0, 0, 0),
+    "clasificar_candidatos": (1, 0, 0),   # falla al clasificar el origen, antes de geocodificar el destino
+    "consultar_google": (2, 0, 0),
+    "interpretar_respuesta_google": (2, 1, 0),
+    "consultar_tarifa": (2, 1, 0),
+}
+
+
+@pytest.mark.parametrize("punto", PUNTOS_DE_FALLO)
+def test_error_inesperado_da_error_interno(esc, monkeypatch, punto):
+    # RF-42: cualquier excepción inesperada → error_interno, sin lanzar, con cabecera y mensaje genérico en español.
+    from src.tools import planificar_ruta as pr
+
+    monkeypatch.setattr(pr, punto, _fallar)
+    r = pr.planificar_ruta("Sol", "Bernabéu", titulo="billete de 10 viajes")
+    assert list(r)[0] == "estado" and r["estado"] == "error_interno"
+    assert r["mensaje"].startswith("Salida: ahora (15/10/2026 08:12) · Título: billete de 10 viajes. ")
+    assert "Ocurrió un error inesperado" in r["mensaje"]
+    assert r["ruta"] is None and r["origen"] is None
+    # Ni el texto de la excepción, ni la clave, ni rutas o nombres internos llegan a la persona.
+    texto = repr(r)
+    for prohibido in (SECRETO, TEXTO_EXCEPCION, "privado.json", "RuntimeError", "Traceback", "CLAVE-DE-TEST"):
+        assert prohibido not in texto
+    # Tras el error no se hace ninguna llamada posterior: solo las que ya se habían hecho.
+    asumidas = PUNTOS_DE_FALLO[punto]
+    assert (esc.cuantas("nominatim"), esc.cuantas("google"), esc.cuantas("rag")) == asumidas
+
+
+def test_error_interno_se_registra_solo_en_el_log(esc, monkeypatch, caplog):
+    # RF-42: la excepción completa (tipo, texto y traza) va al registro interno y solo allí.
+    from src.tools import planificar_ruta as pr
+
+    monkeypatch.setattr(pr, "consultar_google", _fallar)
+    with caplog.at_level(logging.ERROR, logger=pr.logger.name):
+        r = pr.planificar_ruta("Sol", "Bernabéu")
+    registros = [x for x in caplog.records if x.name == pr.logger.name]
+    assert len(registros) == 1 and registros[0].levelno == logging.ERROR
+    tipo, valor, _ = registros[0].exc_info
+    assert tipo is RuntimeError and str(valor) == TEXTO_EXCEPCION
+    assert TEXTO_EXCEPCION not in r["mensaje"] and TEXTO_EXCEPCION not in repr(r)
+
+
+def test_error_interno_aunque_falle_el_reloj(monkeypatch):
+    # Si lo que falla es la propia fuente de la hora, el error sigue controlado y el mensaje sigue empezando por «Salida:».
+    from src.tools import planificar_ruta as pr
+
+    monkeypatch.setattr(pr, "ahora", _fallar)
+    r = pr.planificar_ruta("Sol", "Bernabéu")
+    assert r["estado"] == "error_interno" and r["mensaje"].startswith("Salida: ")
+    assert " · Título: billete sencillo." in r["mensaje"]
+    assert TEXTO_EXCEPCION not in repr(r)
+
+
+def test_error_interno_con_hora_pedida_la_conserva_en_la_cabecera(esc, monkeypatch):
+    # La cabecera del error refleja la hora pedida, no una hora inventada.
+    from src.tools import planificar_ruta as pr
+
+    monkeypatch.setattr(pr, "geocodificar", _fallar)
+    r = pr.planificar_ruta("Sol", "Bernabéu", hora_salida="2026-10-16T09:30")
+    assert r["mensaje"].startswith("Salida: 16/10/2026 09:30 · ")
+
+
+def test_mensajes_en_espanol(esc, monkeypatch):
+    # RNF Idioma: todos los mensajes (incluido el de error interno) están en español y sin jerga técnica en inglés.
+    from src.tools import planificar_ruta as pr
+    from tests.test_planificar_ruta_hora_titulo import ESTADOS
+
+    mensajes = {}
+    for estado, (configurar, args) in ESTADOS.items():
+        escenario = _Escenario(monkeypatch)
+        configurar(escenario)
+        mensajes[estado] = pr.planificar_ruta(**{"origen": "Sol", "destino": "Bernabéu", **args})["mensaje"]
+    monkeypatch.setattr(pr, "geocodificar", _fallar)
+    mensajes["error_interno"] = pr.planificar_ruta("Sol", "Bernabéu")["mensaje"]
+
+    ingles = re.compile(r"\b(the|failed|not found|timeout|exception|route|invalid|unavailable|please)\b", re.I)
+    for estado, mensaje in mensajes.items():
+        # «Google Routes» es un nombre propio del servicio; se quita antes de buscar palabras en inglés.
+        limpio = mensaje.replace("Google Routes", "")
+        assert not ingles.search(limpio), f"{estado}: {mensaje}"
+        assert re.search(r"\b(de|la|el|no|se|una|que|hora|ruta|dirección|indica|inténtalo)\b", limpio), estado

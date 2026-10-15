@@ -1,8 +1,9 @@
 """Tool planificar_ruta (spec 004): ruta en transporte público CRTM con zona y precio del RAG.
 
-De momento solo contiene las funciones puras del ámbito de cobertura, la hora de salida, el título, el cliente Nominatim, la clasificación de candidatos, la petición a Google Routes, la interpretación de su respuesta y la consulta de zona y precio al RAG.
+Contiene las funciones puras (ámbito, hora de salida, título, clasificación de candidatos), los clientes de Nominatim, Google Routes y RAG, y la orquestación `planificar_ruta`.
 """
 import json
+import logging
 import math
 import re
 import time
@@ -13,6 +14,9 @@ from zoneinfo import ZoneInfo
 
 import config
 from src.reloj import ahora
+
+# Registro interno: aquí va la excepción completa de los errores inesperados, nunca a la persona.
+logger = logging.getLogger(__name__)
 
 
 def dentro_de_ambito(lat: float, lon: float, ambito: tuple | None = None) -> bool:
@@ -351,3 +355,176 @@ def consultar_tarifa(origen: str | None, destino: str | None, titulo=None) -> di
         return {"zona": zona, "precio": dict(omitida)}
     precio = _dato_rag(config.PREGUNTA_PRECIO.format(titulo=titulo_considerado, origen=origen, destino=destino))
     return {"zona": zona, "precio": precio}
+
+
+# Nombre en español del tipo de vehículo de Google para mostrar cada tramo.
+_NOMBRE_MODO = {
+    "SUBWAY": "Metro", "METRO_RAIL": "Metro", "TRAM": "Metro ligero/tranvía", "LIGHT_RAIL": "Metro ligero/tranvía",
+    "BUS": "Autobús", "TROLLEYBUS": "Autobús",
+    "COMMUTER_TRAIN": "Cercanías", "HEAVY_RAIL": "Cercanías", "RAIL": "Cercanías", "TRAIN": "Cercanías",
+}
+
+
+def _texto_tramo(tramo: dict) -> str:
+    """Una línea por tramo de la ruta: modo, línea, paradas y minutos (solo datos de Google)."""
+    if tramo["modo"] == "A pie":
+        return f"A pie {tramo['duracion_min']} min"
+    texto = _NOMBRE_MODO.get(tramo["modo"], tramo["modo"])
+    if tramo["linea"]:
+        texto += f" línea {tramo['linea']}"
+    if tramo["desde"] and tramo["hasta"]:
+        texto += f" de {tramo['desde']} a {tramo['hasta']}"
+    return f"{texto} {tramo['duracion_min']} min"
+
+
+def _texto_dato_rag(nombre: str, dato: dict, titulo_no_disponible: str | None = None) -> str:
+    """Frase etiquetada con la fuente (RAG) de la zona o el precio, según su estado."""
+    if dato["estado"] == "ok":
+        return f"{nombre} (RAG): {dato['texto']}"
+    if dato["estado"] == "error":
+        return f"{nombre} (RAG): no se pudo consultar."
+    if titulo_no_disponible:  # RF-36: el título pedido no está en la lista cerrada
+        return titulo_no_disponible
+    return f"{nombre} (RAG): no se pudo determinar con el corpus."
+
+
+def _mensaje_tarifa(tarifa: dict, titulo: str, en_lista: bool) -> str:
+    """Zona y precio etiquetados con el RAG, y los títulos disponibles si el pedido no existe (RF-36)."""
+    no_disponible = None
+    if not en_lista:
+        no_disponible = (f"Precio: el título «{titulo}» no está disponible. "
+                         f"Títulos disponibles: {', '.join(config.TITULOS_TRANSPORTE)}.")
+    return " ".join([_texto_dato_rag("Zona", tarifa["zona"]), _texto_dato_rag("Precio", tarifa["precio"], no_disponible)])
+
+
+def _respuesta(estado: str, mensaje: str, hora: str, titulo: str, **extra) -> dict:
+    """Construye el dict de salida con `estado` como primera clave y todos los campos del contrato."""
+    omitida = {"estado": "omitida", "texto": None, "fuente": "RAG"}
+    resultado = {
+        "estado": estado, "mensaje": mensaje, "hora_salida": hora, "titulo": titulo,
+        "origen": None, "destino": None, "ruta": None, "zona": dict(omitida), "precio": dict(omitida),
+    }
+    resultado.update(extra)
+    return resultado
+
+
+def _problema_direccion(rol: str, texto: str, clasificada: dict) -> str:
+    """Frase de un extremo que no se pudo resolver a un único lugar (RF-4, RF-6, RF-8)."""
+    if clasificada["estado"] == "fuera_cobertura":
+        return f"La dirección de {rol} «{texto}» está fuera de la cobertura de MadridRumbo."
+    if clasificada["estado"] == "no_encontrada":
+        return f"No he encontrado la dirección de {rol} «{texto}». Indica una más precisa."
+    lista = "; ".join(f"{i}) {c['direccion']}" for i, c in enumerate(clasificada["candidatos"], 1))
+    return f"La dirección de {rol} «{texto}» es ambigua. Opciones: {lista}. Indica cuál es o concreta más."
+
+
+def _encabezado(validacion: dict, hora_salida, titulo_considerado: str) -> tuple[str, str]:
+    """Devuelve (cabecera, hora para el campo `hora_salida`): la hora pedida, aunque se rechace, o la actual."""
+    estado_hora = validacion["estado"]
+    if estado_hora == "hora_no_interpretable":
+        hora, es_ahora = str(hora_salida), False
+    elif estado_hora in ("hora_pasada", "hora_demasiado_lejana"):
+        hora, es_ahora = _parsear_hora(hora_salida), False
+    else:
+        hora, es_ahora = validacion["considerada"], validacion["salida_rfc3339"] is None
+    hora_txt = hora if isinstance(hora, str) else hora.isoformat(timespec="minutes")
+    return cabecera(hora, titulo_considerado, es_ahora), hora_txt
+
+
+def planificar_ruta(origen: str, destino: str, hora_salida: str | None = None,
+                    hora_llegada: str | None = None, titulo: str | None = None) -> dict:
+    """Ruta en transporte público CRTM con zona y precio del RAG. Devuelve siempre un dict con `estado` primero.
+
+    Nunca lanza excepciones: un fallo inesperado (RF-42) se registra en el log interno y se devuelve como
+    `error_interno` con un mensaje genérico en español, sin el texto de la excepción ni datos internos.
+    """
+    try:
+        return _planificar_ruta(origen, destino, hora_salida, hora_llegada, titulo)
+    except Exception:
+        logger.exception("Error inesperado en planificar_ruta")
+    # La cabecera se rehace aparte: si el fallo vino de la propia hora o del título, no debe repetirse aquí.
+    try:
+        titulo_considerado, _ = resolver_titulo(titulo)
+        encabezado, hora_txt = _encabezado(validar_hora(hora_salida, hora_llegada), hora_salida, titulo_considerado)
+    except Exception:
+        titulo_considerado, hora_txt = config.TITULO_POR_DEFECTO, "ahora"
+        encabezado = f"Salida: ahora · Título: {titulo_considerado}."
+    return _respuesta("error_interno", f"{encabezado} Ocurrió un error inesperado y no se pudo planificar la ruta. "
+                                       "Inténtalo de nuevo más tarde.", hora_txt, titulo_considerado)
+
+
+def _planificar_ruta(origen, destino, hora_salida, hora_llegada, titulo) -> dict:
+    """Cuerpo de `planificar_ruta`: validar hora y datos (sin red) → geocodificar → Google Routes → RAG.
+
+    Si un paso falla, los siguientes no se ejecutan. Como mucho 2 llamadas a Nominatim, 1 a Google y 2 al RAG.
+    """
+    validacion = validar_hora(hora_salida, hora_llegada)
+    titulo_considerado, en_lista = resolver_titulo(titulo)
+    estado_hora = validacion["estado"]
+    encabezado, hora_txt = _encabezado(validacion, hora_salida, titulo_considerado)
+
+    def salir(estado: str, texto: str, **extra) -> dict:
+        return _respuesta(estado, f"{encabezado} {texto}", hora_txt, titulo_considerado, **extra)
+
+    # 1) Validaciones baratas, sin red.
+    faltan = [rol for rol, valor in (("origen", origen), ("destino", destino))
+              if not isinstance(valor, str) or not valor.strip()]
+    if faltan:
+        return salir("faltan_datos", f"Falta indicar {' y '.join('el ' + f for f in faltan)}.")
+    rechazos = {
+        "hora_llegada_no_admitida": "Solo se admite hora de salida, no de llegada. Indica a qué hora quieres salir.",
+        "hora_no_interpretable": "No he podido interpretar la hora de salida. Indícala de nuevo (por ejemplo, 2026-10-15T08:30).",
+        "hora_pasada": "Esa hora de salida ya ha pasado. Indica otra hora.",
+        "hora_demasiado_lejana": f"La hora de salida supera la antelación máxima de {config.ANTELACION_MAX_DIAS} días. Indica otra hora.",
+    }
+    if estado_hora in rechazos:
+        return salir(estado_hora, rechazos[estado_hora])
+
+    # 2) Geocodificación: se resuelven los dos extremos (máx. 2 llamadas); un fallo de Nominatim detiene todo.
+    clasificadas = {}
+    for rol, texto in (("origen", origen), ("destino", destino)):
+        geo = geocodificar(texto)
+        if geo["estado"] != "ok":
+            return salir("geocodificacion_fallida",
+                         "No he podido localizar las direcciones ahora mismo. Inténtalo de nuevo más tarde.")
+        clasificadas[rol] = clasificar_candidatos(geo["candidatos"])
+
+    problemas = {rol: c for rol, c in clasificadas.items() if c["estado"] != "ok"}
+    if problemas:
+        # Prioridad del estado: fuera de cobertura > no encontrada > ambigua. El mensaje lista cada problema (RF-5).
+        estado = next(e for e in ("fuera_cobertura", "no_encontrada", "ambigua")
+                      if any(c["estado"] == e for c in problemas.values()))
+        textos = {"origen": origen, "destino": destino}
+        candidatos = {rol: [{"direccion": c["direccion"]} for c in clasificadas[rol]["candidatos"]]
+                      if clasificadas[rol]["estado"] == "ambigua" else [] for rol in textos}
+        extra = {"candidatos": candidatos} if estado == "ambigua" else {}
+        mensaje = " ".join(_problema_direccion(rol, textos[rol], c) for rol, c in problemas.items())
+        return salir("direccion_no_encontrada" if estado == "no_encontrada" else estado, mensaje, **extra)
+
+    lugar_o, lugar_d = clasificadas["origen"]["elegido"], clasificadas["destino"]["elegido"]
+    identificados = {"origen": {"direccion": lugar_o["direccion"]}, "destino": {"direccion": lugar_d["direccion"]}}
+    if misma_ubicacion(lugar_o, lugar_d):
+        return salir("misma_ubicacion", f"El origen y el destino son la misma ubicación («{lugar_o['direccion']}»). "
+                                        "No hay ruta que calcular.", **identificados)
+
+    # 3) Ruta con Google (máx. 1 llamada).
+    trayecto = f"De «{lugar_o['direccion']}» a «{lugar_d['direccion']}»"
+    google = consultar_google(lugar_o, lugar_d, validacion["salida_rfc3339"])
+    if google["estado"] != "ok":
+        # RF-16 y RF-20: sin ruta, pero ambos puntos están en el ámbito: se consulta el RAG con los municipios.
+        tarifa = consultar_tarifa(lugar_o["municipio"], lugar_d["municipio"], titulo)
+        texto = (f"{trayecto}: no se pudo calcular la ruta con Google Routes. Inténtalo de nuevo más tarde. "
+                 + _mensaje_tarifa(tarifa, titulo_considerado, en_lista))
+        return salir("ruta_no_calculada", texto, **identificados, **tarifa)
+    interpretada = interpretar_respuesta_google(google["respuesta"])
+    if interpretada["estado"] != "ok":
+        return salir("sin_ruta", f"{trayecto}: no hay ruta disponible en transporte público de la red del CRTM. "
+                                 "No se indica zona ni precio.", **identificados)
+
+    # 4) Zona y precio con el RAG (máx. 2 llamadas); sus fallos no tumban la ruta (RF-41).
+    ruta = interpretada["ruta"]
+    tarifa = consultar_tarifa(interpretada["parada_subida"], interpretada["parada_bajada"], titulo)
+    trayecto_txt = "; ".join(_texto_tramo(t) for t in ruta["tramos"])
+    texto = (f"{trayecto}: {ruta['duracion_min']} min (Google Routes). Trayecto: {trayecto_txt}. "
+             + _mensaje_tarifa(tarifa, titulo_considerado, en_lista))
+    return salir("ok", texto, **identificados, ruta=ruta, **tarifa)

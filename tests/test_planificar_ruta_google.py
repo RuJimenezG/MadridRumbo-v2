@@ -9,6 +9,7 @@ import pytest
 
 import config
 from src.tools import planificar_ruta as pr
+from tests.dobles_ruta import BARCELONA, BERNABEU, Escenario
 
 CLAVE = "CLAVE-SECRETA-123"
 ORIGEN = {"direccion": "Puerta del Sol", "lat": 40.4169, "lon": -3.7035, "municipio": "Madrid"}
@@ -192,3 +193,60 @@ def test_no_estima_tiempos_ni_trayectos():
     paso = _paso_transito("SUBWAY", "1", "Sol", "Atocha", 300)
     del paso["staticDuration"]
     assert pr.interpretar_respuesta_google(_ruta(paso))["estado"] == "sin_ruta"
+
+
+# --- T12: orquestación (RF-5, RF-11, RF-16, RF-17, RF-20) ---
+
+@pytest.fixture
+def esc(monkeypatch):
+    return Escenario(monkeypatch)
+
+
+def test_fuera_de_cobertura_no_llama_a_google(esc):
+    # RF-5: con el origen fuera de cobertura no se llama a Google ni al RAG (y sí se geocodifican ambos extremos).
+    esc.nominatim = [[BARCELONA], [BERNABEU]]
+    r = pr.planificar_ruta("Calle Mayor, Barcelona", "Estadio Santiago Bernabéu")
+    assert r["estado"] == "fuera_cobertura" and r["ruta"] is None
+    assert "origen" in r["mensaje"] and "fuera de la cobertura" in r["mensaje"]
+    assert esc.orden == ["nominatim", "nominatim"]
+
+
+def test_secuencia_nominatim_google_rag(esc):
+    # Orden de los pasos: geocodificar origen y destino → Google → RAG (zona y precio).
+    r = pr.planificar_ruta("Sol", "Bernabéu")
+    assert r["estado"] == "ok"
+    assert esc.orden == ["nominatim", "nominatim", "google", "rag", "rag"]
+    # RF-11: Google recibe las coordenadas de los candidatos elegidos.
+    cuerpo = esc.cuerpos_google[0]
+    assert cuerpo["origin"]["location"]["latLng"] == {"latitude": 40.4169, "longitude": -3.7035}
+    assert "departureTime" not in cuerpo                  # RF-14: sin hora pedida
+    # La ruta y las paradas de Google alimentan al RAG (T10 → T11).
+    assert r["ruta"]["duracion_min"] == 22
+    assert "Sol" in esc.preguntas[0] and "Plaza de Castilla" in esc.preguntas[0]
+
+
+def test_hora_pedida_llega_a_google_en_rfc3339(esc):
+    pr.planificar_ruta("Sol", "Bernabéu", hora_salida="2026-10-16T08:30")
+    assert esc.cuerpos_google[0]["departureTime"] == "2026-10-16T08:30:00+02:00"
+
+
+@pytest.mark.parametrize("fallo", [urllib.error.URLError("sin red"), TimeoutError("t"), ["lista"]])
+def test_google_falla_consulta_rag_con_municipios_de_nominatim(esc, fallo):
+    # RF-16 y RF-20: Google falla → ruta_no_calculada, pero se consulta el RAG con los municipios de Nominatim.
+    esc.google = fallo
+    r = pr.planificar_ruta("Sol", "Bernabéu")
+    assert r["estado"] == "ruta_no_calculada" and r["ruta"] is None
+    assert esc.orden == ["nominatim", "nominatim", "google", "rag", "rag"]
+    assert "Madrid" in esc.preguntas[0]
+    assert r["zona"]["estado"] == "ok" and r["precio"]["estado"] == "ok"
+
+
+@pytest.mark.parametrize("respuesta", [{}, {"routes": []}])
+def test_sin_ruta_no_da_zona_ni_precio_ni_consulta_al_rag(esc, respuesta):
+    # RF-17: Google responde sin ruta → sin_ruta, zona y precio omitidos y sin consultar al RAG.
+    esc.google = respuesta
+    r = pr.planificar_ruta("Sol", "Bernabéu")
+    assert r["estado"] == "sin_ruta" and r["ruta"] is None
+    assert r["zona"]["estado"] == r["precio"]["estado"] == "omitida"
+    assert esc.cuantas("rag") == 0
+    assert "Zona (RAG)" not in r["mensaje"] and "Precio (RAG)" not in r["mensaje"]

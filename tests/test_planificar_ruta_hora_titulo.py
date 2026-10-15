@@ -9,6 +9,7 @@ import pytest
 
 import config
 from src.tools import planificar_ruta as pr
+from tests.dobles_ruta import ATOCHA, BARCELONA, BERNABEU, SOL, Escenario
 
 MADRID = ZoneInfo("Europe/Madrid")
 
@@ -135,3 +136,86 @@ def test_cabecera_con_hora_no_interpretable_muestra_el_texto_recibido():
     assert pr.cabecera("mañana a las 8", "billete sencillo") == (
         "Salida: «mañana a las 8» · Título: billete sencillo."
     )
+
+
+# --- T12: orquestación, hora y título en todos los mensajes (RF-14, RF-32 a RF-34, RF-38, RF-39) ---
+
+@pytest.fixture
+def esc(monkeypatch):
+    return Escenario(monkeypatch)
+
+
+def _con(**cambios):
+    """Configura el escenario con los atributos indicados (p. ej. nominatim=..., google=...)."""
+    # Las listas se copian: el escenario las consume y la tabla ESTADOS se reutiliza en cada caso.
+    return lambda esc: [setattr(esc, k, list(v) if isinstance(v, list) else v) for k, v in cambios.items()]
+
+
+# estado esperado: (configuración del escenario, argumentos de planificar_ruta)
+ESTADOS = {
+    "ok": (_con(), {}),
+    "faltan_datos": (_con(), {"origen": "", "destino": "  "}),
+    "hora_llegada_no_admitida": (_con(), {"hora_llegada": "2026-10-15T09:00"}),
+    "hora_no_interpretable": (_con(), {"hora_salida": "mañana por la tarde"}),
+    "hora_pasada": (_con(), {"hora_salida": "2026-10-15T07:00"}),
+    "hora_demasiado_lejana": (_con(), {"hora_salida": "2027-01-01T08:00"}),
+    "geocodificacion_fallida": (_con(nominatim=[TimeoutError("t")]), {}),
+    "direccion_no_encontrada": (_con(nominatim=[[], [BERNABEU]]), {}),
+    "fuera_cobertura": (_con(nominatim=[[BARCELONA], [BERNABEU]]), {}),
+    "ambigua": (_con(nominatim=[[SOL, ATOCHA], [BERNABEU]]), {}),
+    "misma_ubicacion": (_con(nominatim=[[SOL], [SOL]]), {}),
+    "ruta_no_calculada": (_con(google=TimeoutError("t")), {}),
+    "sin_ruta": (_con(google={}), {}),
+}
+
+
+@pytest.mark.parametrize("estado", ESTADOS)
+@pytest.mark.parametrize("titulo", [None, "billete de 10 viajes", "abono joven"])
+def test_todos_los_estados_incluyen_hora_y_titulo(esc, estado, titulo):
+    # RF-38: en toda respuesta, `estado` es la primera clave y el mensaje empieza por «Salida: … · Título: …».
+    configurar, args = ESTADOS[estado]
+    configurar(esc)
+    r = pr.planificar_ruta(**{"origen": "Sol", "destino": "Bernabéu", "titulo": titulo, **args})
+    assert r["estado"] == estado and list(r)[0] == "estado"
+    assert r["mensaje"].startswith("Salida: ") and " · Título: " in r["mensaje"]
+    assert r["titulo"] == (titulo or "billete sencillo")
+    assert f"Título: {r['titulo']}." in r["mensaje"]
+    assert isinstance(r["hora_salida"], str)
+
+
+def test_cabecera_con_hora_actual_y_con_hora_pedida(esc):
+    # RF-14: sin hora se indica «ahora» con la hora de reloj.ahora(); con hora pedida, esa hora.
+    assert pr.planificar_ruta("Sol", "Bernabéu")["mensaje"].startswith("Salida: ahora (15/10/2026 08:12) · ")
+    esc.nominatim = [[SOL], [BERNABEU]]
+    r = pr.planificar_ruta("Sol", "Bernabéu", hora_salida="2026-10-16T09:30")
+    assert r["mensaje"].startswith("Salida: 16/10/2026 09:30 · ") and r["hora_salida"] == "2026-10-16T09:30+02:00"
+
+
+def test_hora_no_interpretable_muestra_el_texto_recibido(esc):
+    r = pr.planificar_ruta("Sol", "Bernabéu", hora_salida="cuando salga el sol")
+    assert "«cuando salga el sol»" in r["mensaje"]
+
+
+@pytest.mark.parametrize("estado", ["hora_llegada_no_admitida", "hora_no_interpretable", "hora_pasada",
+                                    "hora_demasiado_lejana", "faltan_datos"])
+def test_validaciones_de_entrada_no_usan_la_red(esc, estado):
+    # Orden: las validaciones baratas van primero; con una entrada rechazada no se llama a nada externo.
+    configurar, args = ESTADOS[estado]
+    pr.planificar_ruta(**{"origen": "Sol", "destino": "Bernabéu", **args})
+    assert esc.orden == []
+
+
+def test_la_hora_actual_solo_sale_de_reloj_ahora():
+    # La herramienta no lee el reloj del sistema por su cuenta: toda hora pasa por `ahora()` (src/reloj.py).
+    codigo = open(pr.__file__, encoding="utf-8").read()
+    assert "datetime.now" not in codigo and "time.time(" not in codigo and "date.today" not in codigo
+    assert "from src.reloj import ahora" in codigo
+
+
+def test_titulo_no_disponible_lista_los_disponibles(esc):
+    # RF-36: ruta y zona sí; el precio se omite y se muestran los títulos disponibles.
+    r = pr.planificar_ruta("Sol", "Bernabéu", titulo="abono joven")
+    assert r["estado"] == "ok" and r["precio"]["estado"] == "omitida" and r["zona"]["estado"] == "ok"
+    assert "abono joven" in r["mensaje"] and "no está disponible" in r["mensaje"]
+    assert all(t in r["mensaje"] for t in config.TITULOS_TRANSPORTE)
+    assert esc.cuantas("rag") == 1
