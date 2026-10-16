@@ -56,8 +56,8 @@ def test_limites_y_listas_de_config():
     assert config.MAX_CANDIDATOS_MOSTRAR >= 1
     assert config.ANTELACION_MAX_DIAS >= 1
     assert config.RADIO_MISMA_UBICACION_M > 0
-    assert config.TITULO_POR_DEFECTO in config.TITULOS_TRANSPORTE
-    assert set(config.TITULOS_TRANSPORTE) == {"billete sencillo", "billete de 10 viajes"}
+    assert config.TITULO_POR_DEFECTO == "billete sencillo" and not hasattr(config, "TITULOS_TRANSPORTE")
+    assert config.TITULO_LONGITUD_MAX == 60 >= len(config.TITULO_POR_DEFECTO)
     assert set(config.MODOS_GOOGLE) == {"SUBWAY", "LIGHT_RAIL", "BUS", "TRAIN"}
     assert config.TIPOS_VEHICULO_ACEPTADOS
     # Las plantillas de pregunta al RAG aceptan los datos de la ruta.

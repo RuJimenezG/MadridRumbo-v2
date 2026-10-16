@@ -60,19 +60,28 @@ def test_google_falla_consulta_rag_con_municipios(rag):
     assert r["zona"]["estado"] == r["precio"]["estado"] == "ok"
 
 
-def test_billete_10_viajes_consulta_su_precio(rag):
-    # RF-35: el título de la lista cerrada sustituye al billete sencillo en la pregunta de precio.
-    pr.consultar_tarifa("Sol", "Atocha", "Billete de 10  viajes")
-    assert rag.preguntas[1] == config.PREGUNTA_PRECIO.format(
-        titulo="billete de 10 viajes", origen="Sol", destino="Atocha")
+def test_titulo_libre_consulta_su_precio(rag):
+    # RF-35: cualquier título (sin lista cerrada) sustituye al billete sencillo en la pregunta de precio.
+    for titulo in ("Billete de 10 viajes", "abono joven"):
+        rag.preguntas.clear()
+        r = pr.consultar_tarifa("Sol", "Atocha", titulo)
+        assert rag.preguntas[1] == config.PREGUNTA_PRECIO.format(titulo=titulo, origen="Sol", destino="Atocha")
+        assert r["precio"]["estado"] == "ok" and len(rag.preguntas) == 2
 
 
-def test_titulo_no_disponible_entrega_ruta_y_zona(rag):
-    # RF-36: título fuera de lista → se consulta la zona (no depende del título) y el precio se omite sin preguntar.
-    r = pr.consultar_tarifa("Sol", "Atocha", "abono joven")
+def test_titulo_demasiado_largo_consulta_solo_la_zona(rag):
+    # RF-48: título que supera el máximo → se consulta la zona y el precio se omite sin preguntar.
+    r = pr.consultar_tarifa("Sol", "Atocha", "x" * (config.TITULO_LONGITUD_MAX + 1))
     assert len(rag.preguntas) == 1 and "zona tarifaria" in rag.preguntas[0]
     assert r["zona"]["estado"] == "ok"
     assert r["precio"] == {"estado": "omitida", "texto": None, "fuente": "RAG"}
+
+
+def test_titulo_que_el_corpus_no_conoce_se_abstiene(rag):
+    # RF-37 con título libre: sin precio en el corpus no se sustituye por el de otro título.
+    rag.guion["precio"] = config.FRASE_ABSTENCION
+    r = pr.consultar_tarifa("Sol", "Atocha", "abono turístico de 3 meses")
+    assert r["precio"] == {"estado": "sin_evidencia", "texto": None, "fuente": "RAG"} and PRECIO not in repr(r)
 
 
 def test_rag_sin_evidencia_entrega_ruta(rag):
@@ -195,6 +204,7 @@ def test_rag_sin_evidencia_se_declara_en_el_mensaje(esc):
     assert PRECIO not in r["mensaje"]
 
 
-def test_billete_10_viajes_de_extremo_a_extremo(esc):
+def test_titulo_libre_de_extremo_a_extremo(esc):
+    # RF-35, RF-38: el título pedido (tal cual, sin forma canónica) va al RAG y a la cabecera.
     r = pr.planificar_ruta("Sol", "Bernabéu", titulo="Billete de 10 viajes")
-    assert "billete de 10 viajes" in esc.preguntas[1] and "Título: billete de 10 viajes." in r["mensaje"]
+    assert "Billete de 10 viajes" in esc.preguntas[1] and "Título: Billete de 10 viajes." in r["mensaje"]

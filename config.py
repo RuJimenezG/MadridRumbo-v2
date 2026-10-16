@@ -133,9 +133,11 @@ TIPOS_VEHICULO_ACEPTADOS = {
 # Hora de salida pedida: antelación máxima en días (valor provisional).
 ANTELACION_MAX_DIAS = 7
 
-# Títulos de transporte admitidos (lista cerrada) y el que se aplica si no se indica ninguno.
-TITULOS_TRANSPORTE = ("billete sencillo", "billete de 10 viajes")
+# Título de transporte que se aplica si no se indica ninguno. Cualquier otro título es texto libre
+# (no hay lista cerrada): el RAG es la fuente y se abstiene si no lo conoce.
 TITULO_POR_DEFECTO = "billete sencillo"
+# Longitud máxima (caracteres, ya sin saltos de línea) de un título para interpretarlo y preguntarlo al RAG.
+TITULO_LONGITUD_MAX = 60
 
 # Preguntas al RAG, construidas con datos de la ruta (paradas o municipios).
 PREGUNTA_ZONA = "¿Qué zona tarifaria corresponde a un trayecto entre {origen} y {destino}?"
