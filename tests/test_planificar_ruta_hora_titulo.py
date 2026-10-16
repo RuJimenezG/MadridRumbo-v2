@@ -89,13 +89,35 @@ def test_hora_demasiado_lejana(ahora_invierno):
     assert pr.validar_hora(mas_alla.strftime("%Y-%m-%dT%H:%M"))["estado"] == "hora_demasiado_lejana"
 
 
-def test_hora_llegada_no_calcula(ahora_invierno):
-    # RF-39: si se pide hora de llegada no se calcula nada, aunque la hora de salida sea válida o no.
-    assert pr.validar_hora(None, "2026-01-12T09:00")["estado"] == "hora_llegada_no_admitida"
-    assert pr.validar_hora("2026-01-12T08:30", "2026-01-12T09:00")["estado"] == "hora_llegada_no_admitida"
-    assert pr.validar_hora("rara", "9:00")["estado"] == "hora_llegada_no_admitida"
+def test_hora_llegada_valida_se_acepta(ahora_invierno):
+    # RF-39: la hora de llegada se admite; es la hora considerada y se envía a Google en RFC 3339 (no como salida).
+    r = pr.validar_hora(None, "2026-01-15T09:00")
+    assert r["estado"] == "ok" and r["tipo"] == "llegada"
+    assert r["considerada"] == datetime(2026, 1, 15, 9, 0, tzinfo=MADRID)
+    assert r["llegada_rfc3339"] == "2026-01-15T09:00:00+01:00"
+    assert r["salida_rfc3339"] is None
     # Una hora de llegada vacía equivale a no haberla pedido.
-    assert pr.validar_hora("2026-01-12T08:30", "  ")["estado"] == "ok"
+    assert pr.validar_hora("2026-01-12T08:30", "  ")["tipo"] == "salida"
+    assert pr.validar_hora(None, "")["llegada_rfc3339"] is None
+
+
+def test_salida_y_llegada_a_la_vez_no_calcula(ahora_invierno):
+    # RF-43: con salida y llegada a la vez se rechaza, sea cual sea su validez.
+    assert pr.validar_hora("2026-01-12T08:30", "2026-01-12T09:00")["estado"] == "horas_incompatibles"
+    assert pr.validar_hora("rara", "9:00")["estado"] == "horas_incompatibles"
+
+
+@pytest.mark.parametrize("llegada, estado", [
+    ("2026-01-10T09:59", "hora_pasada"),                 # RF-32
+    ("mañana a las 8", "hora_no_interpretable"),         # RF-33
+    ("2026-01-12", "hora_no_interpretable"),             # RF-33: falta la hora
+    ("2027-01-01T08:00", "hora_demasiado_lejana"),       # RF-34
+])
+def test_llegada_rechazada_con_las_mismas_reglas_que_la_salida(ahora_invierno, llegada, estado):
+    # RF-32, RF-33, RF-34: la hora de llegada se valida igual que la de salida (misma función, mismos estados).
+    assert pr.validar_hora(None, llegada)["estado"] == estado
+    assert pr.validar_hora(llegada)["estado"] == estado
+    assert pr.validar_hora(None, llegada)["llegada_rfc3339"] is None
 
 
 def test_titulo_vacio_aplica_billete_sencillo():
@@ -155,7 +177,7 @@ def _con(**cambios):
 ESTADOS = {
     "ok": (_con(), {}),
     "faltan_datos": (_con(), {"origen": "", "destino": "  "}),
-    "hora_llegada_no_admitida": (_con(), {"hora_llegada": "2026-10-15T09:00"}),
+    "horas_incompatibles": (_con(), {"hora_salida": "2026-10-15T09:00", "hora_llegada": "2026-10-15T10:00"}),
     "hora_no_interpretable": (_con(), {"hora_salida": "mañana por la tarde"}),
     "hora_pasada": (_con(), {"hora_salida": "2026-10-15T07:00"}),
     "hora_demasiado_lejana": (_con(), {"hora_salida": "2027-01-01T08:00"}),
@@ -196,13 +218,45 @@ def test_hora_no_interpretable_muestra_el_texto_recibido(esc):
     assert "«cuando salga el sol»" in r["mensaje"]
 
 
-@pytest.mark.parametrize("estado", ["hora_llegada_no_admitida", "hora_no_interpretable", "hora_pasada",
+@pytest.mark.parametrize("estado", ["horas_incompatibles", "hora_no_interpretable", "hora_pasada",
                                     "hora_demasiado_lejana", "faltan_datos"])
 def test_validaciones_de_entrada_no_usan_la_red(esc, estado):
     # Orden: las validaciones baratas van primero; con una entrada rechazada no se llama a nada externo.
     configurar, args = ESTADOS[estado]
     pr.planificar_ruta(**{"origen": "Sol", "destino": "Bernabéu", **args})
     assert esc.orden == []
+
+
+def test_salida_y_llegada_a_la_vez_rechaza_sin_llamar_a_nada(esc):
+    # RF-43: informa de que no se pueden combinar y pide elegir una; ni Nominatim ni Google ni el RAG.
+    r = pr.planificar_ruta("Sol", "Bernabéu", hora_salida="2026-10-16T08:00", hora_llegada="2026-10-16T09:00")
+    assert r["estado"] == "horas_incompatibles" and list(r)[0] == "estado"
+    assert "no se pueden combinar" in r["mensaje"].lower() and "elige una" in r["mensaje"].lower()
+    assert r["mensaje"].startswith("Salida: ") and " · Título: billete sencillo." in r["mensaje"]
+    assert r["ruta"] is None and esc.orden == []
+
+
+@pytest.mark.parametrize("llegada, estado", [
+    ("2026-10-15T07:00", "hora_pasada"),
+    ("cuando salga el sol", "hora_no_interpretable"),
+    ("2027-01-01T08:00", "hora_demasiado_lejana"),
+])
+def test_llegada_rechazada_no_usa_la_red_y_lleva_cabecera(esc, llegada, estado):
+    # RF-32, RF-33, RF-34 con hora de llegada: no se llama a nada y el mensaje lleva la hora de llegada y el título.
+    r = pr.planificar_ruta("Sol", "Bernabéu", hora_llegada=llegada)
+    assert r["estado"] == estado and esc.orden == []
+    assert r["mensaje"].startswith("Llegada: ") and " · Título: billete sencillo." in r["mensaje"]
+    assert "llegada" in r["mensaje"].split(". ", 1)[1]        # el rechazo habla de la hora de llegada
+    assert r["hora_llegada"] is not None and r["salida_resultante"] is None
+
+
+def test_cabecera_de_llegada_indica_la_hora_de_llegada_considerada(esc):
+    # RF-38: con hora de llegada la cabecera lleva la hora considerada (de llegada) y el título.
+    esc.nominatim = [[SOL], [BERNABEU]]
+    r = pr.planificar_ruta("Sol", "Bernabéu", hora_llegada="2026-10-16T09:30")
+    assert r["estado"] == "ok"
+    assert r["mensaje"].startswith("Llegada: 16/10/2026 09:30 · Título: billete sencillo. ")
+    assert r["hora_llegada"] == "2026-10-16T09:30+02:00"
 
 
 def test_la_hora_actual_solo_sale_de_reloj_ahora():

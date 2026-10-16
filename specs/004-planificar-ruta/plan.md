@@ -71,9 +71,12 @@ Devuelve siempre un `dict` y nunca lanza excepciones. `estado` es la primera cla
           | "misma_ubicacion" | "ruta_no_calculada" | "sin_ruta"
           | "error_interno",       # fallo inesperado: mensaje en español, sin excepción
   "mensaje": str,                  # español, fijado por Python; incluye siempre hora de salida y título (RF-38)
-  "hora_salida": str,              # la considerada (por defecto, la actual); con hora de llegada: la que devuelve Google (RF-44)
-  "hora_llegada": str | None,      # la pedida, si la hubo (RF-39)
-  "salida_resultante": str | None, # solo con hora de llegada; None si Google no la devuelve (RF-45)
+  "hora_salida": str | None,       # sin hora de llegada: la considerada (por defecto, la actual).
+                                   # CON hora de llegada: la salida que devuelve Google, o null si no la devuelve (RF-44, RF-45)
+  "hora_llegada": str | None,      # la hora de llegada pedida (también si se rechaza); null si no se pidió (RF-39)
+  "salida_resultante": str | None, # solo con llegada; igual que hora_salida en ese caso. Es la hora a la que sale el
+                                   # PRIMER TRANSPORTE desde su parada (stopDetails.departureTime del primer tramo de
+                                   # transporte), no la salida desde el origen. Null si Google no la devuelve (RF-45)
   "titulo": str,                   # el considerado, ya saneado
   "origen": {"direccion": str} | None,    # dirección identificada (RF-7)
   "destino": {"direccion": str} | None,
@@ -144,6 +147,8 @@ planificar_ruta(origen, destino, hora_salida, hora_llegada, titulo):
       # arrivalTime con nuestra configuración y horas de salida en GOOGLE_FIELD_MASK:
       #   A VERIFICAR EN T16. Con llegada: si Google devuelve la salida -> RF-44;
       #   si no -> salida_resultante = None y mensaje según RF-45 (sin estimar, RF-18).
+      # Mensaje RF-44: "El primer transporte sale el dd/mm/aaaa a las HH:MM desde <parada> (Google Routes)."
+      # Cabecera con llegada: "Llegada: … · Título: …" (RF-38). Contrato JSON: RF-39, RF-44, RF-45.
   si error / sin clave / sin conexión -> ruta_no_calculada (RF-16);
        aun así consulta RAG con los municipios de Nominatim (RF-20)
   si sin rutas, sin tramo de transporte, o algún tramo con tipo fuera de
