@@ -99,3 +99,62 @@ def test_rutas_bloquea_una_segunda_planificacion_en_el_mismo_nodo():
 
     assert len(ejecutor.llamadas) == 1
     assert "una sola vez" in salida["notas"][-1].lower()
+
+
+# --- T15 (spec 004): fecha y hora actuales en el prompt, formato ISO 8601 y consulta que no es de rutas ---
+
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
+from src.agents import rutas
+
+MADRID = ZoneInfo("Europe/Madrid")
+
+
+def _prompt_de(monkeypatch, instante, mensaje="¿Cómo llego de Atocha a Sol mañana?"):
+    """Ejecuta el nodo con `ahora()` fijado y devuelve el contenido del mensaje de sistema que recibió el LLM."""
+    monkeypatch.setattr(rutas, "ahora", lambda: instante)
+    llm = LLMFalso([{"final": "Nota."}])
+    nodo_rutas(_estado(mensaje), llm, EjecutorFalso({}))
+    return llm.llamadas[0][0]["content"]
+
+
+def test_prompt_lleva_fecha_y_hora_de_ahora(monkeypatch):
+    """RF-50: el prompt lleva la fecha y la hora que da ahora() (src/reloj.py), para entender «mañana»."""
+    prompt = _prompt_de(monkeypatch, datetime(2026, 10, 17, 7, 30, tzinfo=MADRID))
+    assert "17/10/2026" in prompt and "07:30" in prompt and "sábado" in prompt
+    assert PROMPT_RUTAS in prompt           # lo de Rubén sigue entero dentro del prompt
+
+
+def test_prompt_lee_la_hora_en_cada_llamada(monkeypatch):
+    """RF-50: la hora se lee en cada llamada a nodo_rutas, no al importar el módulo (no queda vieja)."""
+    primero = _prompt_de(monkeypatch, datetime(2026, 10, 17, 7, 30, tzinfo=MADRID))
+    segundo = _prompt_de(monkeypatch, datetime(2026, 12, 3, 18, 45, tzinfo=MADRID))
+    assert primero != segundo
+    assert "07:30" in primero and "18:45" not in primero
+    assert "03/12/2026" in segundo and "18:45" in segundo and "17/10/2026" not in segundo
+
+
+def test_prompt_indica_formato_iso_8601_con_hora(monkeypatch):
+    """RF-50b: las horas se pasan a la herramienta en ISO 8601 con hora, con un ejemplo."""
+    prompt = _prompt_de(monkeypatch, datetime(2026, 10, 17, 7, 30, tzinfo=MADRID))
+    assert "ISO 8601" in prompt and "2026-10-17T08:00" in prompt
+    assert "hora_salida" in prompt and "hora_llegada" in prompt
+
+
+def test_prompt_sin_lista_de_titulos(monkeypatch):
+    """RF-35, RF-50: no hay lista cerrada de títulos en el prompt; el título es texto libre del usuario."""
+    prompt = _prompt_de(monkeypatch, datetime(2026, 10, 17, 7, 30, tzinfo=MADRID)).lower()
+    for texto in ("billete de 10 viajes", "billete sencillo", "abono", "títulos disponibles", "lista cerrada"):
+        assert texto not in prompt
+
+
+def test_rutas_consulta_que_no_es_de_rutas_no_invoca_la_tool():
+    """RF-29: una consulta que no es de rutas no invoca la herramienta y lo dice en la nota."""
+    llm = LLMFalso([{"final": "No es una consulta de rutas: no puedo planificar un trayecto con eso."}])
+    ejecutor = EjecutorFalso({"planificar_ruta": json.dumps(RUTA_OK, ensure_ascii=False)})
+
+    salida = nodo_rutas(_estado("¿Qué tiempo hará mañana en Madrid?"), llm, ejecutor)
+
+    assert ejecutor.llamadas == [] and salida["traza"] == []
+    assert "no es una consulta de rutas" in salida["notas"][-1].lower()

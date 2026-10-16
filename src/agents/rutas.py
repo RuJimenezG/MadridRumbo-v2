@@ -6,7 +6,11 @@ dentro del mismo procesamiento.
 """
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any, Callable, Mapping
+
+from src.reloj import ahora
+from src.tools.hora_actual import hora_actual
 
 
 PROMPT_RUTAS = """Eres el especialista de rutas de MadridRumbo.
@@ -22,6 +26,9 @@ Reglas:
 - No inventes ni supongas origen o destino. Si falta alguno, responde con una
   nota que pida exactamente el dato pendiente y no pidas la tool.
 - Para una ruta con ambos extremos, solicita planificar_ruta una sola vez.
+- Las horas (hora_salida y hora_llegada) se pasan a la tool en ISO 8601 con hora, por
+  ejemplo 2026-10-17T08:00; la tool rechaza cualquier otro formato. Usa la fecha y hora
+  actuales indicadas abajo para convertir "mañana" o "dentro de una hora".
 - Conserva el JSON, las aclaraciones y los errores que devuelva la tool.
 - No consultes directamente el RAG ni otra tool.
 - Responde SOLO con un JSON por mensaje:
@@ -30,9 +37,14 @@ Reglas:
 """
 
 
+def construir_prompt(ahora_dt: datetime) -> str:
+    """Prompt del especialista con la fecha y hora actuales, que se recalculan en cada llamada (RF-50)."""
+    return f"{PROMPT_RUTAS}\n{hora_actual(ahora_dt)}\n"
+
+
 def _mensajes_rutas(estado: Mapping[str, Any]) -> list[dict[str, str]]:
     """Copia el historial textual válido y añade el mensaje del turno actual."""
-    mensajes: list[dict[str, str]] = [{"role": "system", "content": PROMPT_RUTAS}]
+    mensajes: list[dict[str, str]] = [{"role": "system", "content": construir_prompt(ahora())}]
     historial = estado.get("historial", [])
     if isinstance(historial, list):
         for entrada in historial:
