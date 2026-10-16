@@ -33,15 +33,15 @@ No se modifican `rag/` ni `app.py`.
 
 | Constante | Valor inicial | Nota |
 |---|---|---|
-| `AMBITO_COBERTURA` | `(39.88, -4.58, 41.17, -3.05)` = (lat_min, lon_min, lat_max, lon_max) | **A VERIFICAR.** Caja aproximada de la Comunidad de Madrid; comprobar sobre el mapa antes de implementar. |
+| `AMBITO_COBERTURA` | `(39.88, -4.58, 41.17, -3.05)` = (lat_min, lon_min, lat_max, lon_max) | **Comprobado en T16 (2026-10-16):** Sol, Bernabéu y Segovia-Guiomar dentro; Barcelona y Toledo fuera (con `bounded=1` Nominatim los devolvía vacíos; se quitó, ver Riesgos). Caja aproximada de la Comunidad de Madrid; comprobar sobre el mapa antes de implementar. |
 | `NOMINATIM_URL`, `NOMINATIM_PAIS` (`"es"`), `NOMINATIM_LIMIT` (10), `NOMINATIM_TIMEOUT_S`, `NOMINATIM_INTERVALO_S` (1.0) | | Uso responsable (RNF). |
 | `NOMINATIM_USER_AGENT` | `"MadridRumbo/1.0"` + contacto leído de `os.getenv("NOMINATIM_CONTACTO")` | El contacto no se escribe en el código. |
 | `MAX_CANDIDATOS_MOSTRAR` | 3 | RF-8. |
 | `RADIO_MISMA_UBICACION_M` | 100 | RF-10 y deduplicado de candidatos. |
 | `GOOGLE_ROUTES_URL`, `GOOGLE_ROUTES_API_KEY = os.getenv(...)`, `GOOGLE_TIMEOUT_S` | | RF-11, RNF Secretos. |
-| `GOOGLE_FIELD_MASK` | campos mínimos (duración, tramos, `transitDetails`) | **A VERIFICAR en T16** contra respuesta real, y además: **si devuelve las horas de salida** (necesarias para RF-44; si no, RF-45). No se añaden campos de hora hasta verificarlo. |
+| `GOOGLE_FIELD_MASK` | campos mínimos (duración, tramos, `transitDetails`) | **Verificado en T16 (2026-10-16): sin cambios**, la máscara actual devuelve `stopDetails.departureTime` (y `arrivalTime`) de cada tramo de transporte. Antes se pedía comprobar contra respuesta real, y además: **si devuelve las horas de salida** (necesarias para RF-44; si no, RF-45). No se añaden campos de hora hasta verificarlo. |
 | `MODOS_GOOGLE` | `["SUBWAY", "LIGHT_RAIL", "BUS", "TRAIN"]` | RF-12. |
-| `TIPOS_VEHICULO_ACEPTADOS` | tipos de `transitDetails.transitLine.vehicle.type` aceptados (metro, metro ligero, tranvía, autobús, Cercanías) | **A VERIFICAR con una respuesta real** si Google distingue Cercanías de larga distancia/alta velocidad; si lo hace, estos últimos quedan excluidos. |
+| `TIPOS_VEHICULO_ACEPTADOS` | tipos de `transitDetails.transitLine.vehicle.type` aceptados (metro, metro ligero, tranvía, autobús, Cercanías) | **Verificado en T16 (2026-10-16):** se aceptan `SUBWAY` y `HEAVY_RAIL` (Cercanías y Avant, sin distinguirse; limitación conocida de RF-12). Sin comprobar: TRAM, LIGHT_RAIL, BUS y el resto. |
 | `ANTELACION_MAX_DIAS` | 7 | RF-34; se aplica a la hora de salida **y** a la de llegada. Valor a confirmar. |
 | ~~`TITULOS_TRANSPORTE`~~ | **OBSOLETO**: se elimina (RF-36 obsoleto). Hay que retirar la constante y sus usos. | |
 | `TITULO_POR_DEFECTO` | `"billete sencillo"` | RF-19. Se mantiene. |
@@ -130,7 +130,7 @@ planificar_ruta(origen, destino, hora_salida, hora_llegada, titulo):
   si no: t = None (Google usa "ahora"), hora_considerada = ahora_dt  # RF-14
   # 2) geocodificación: máx. 2 llamadas, >= 1 s entre ellas
   para extremo en (origen, destino):
-      resultados = nominatim(extremo)  # countrycodes=es, viewbox+bounded, addressdetails
+      resultados = nominatim(extremo)  # countrycodes=es, viewbox (solo preferencia, sin bounded), addressdetails
       si falla -> geocodificacion_fallida y PARA (sin Google ni RAG)   # RF-40
       cand = deduplicar([r for r in resultados si dentro_de_ambito(r)])# RF-3
       clasificar: 0 resultados -> no_encontrada (RF-6)
@@ -146,7 +146,7 @@ planificar_ruta(origen, destino, hora_salida, hora_llegada, titulo):
       # incompatible con departureTime: nunca se envían los dos). No se calcula la
       # salida por nuestra cuenta (RF-39).
       # arrivalTime con nuestra configuración y horas de salida en GOOGLE_FIELD_MASK:
-      #   A VERIFICAR EN T16. Con llegada: si Google devuelve la salida -> RF-44;
+      #   Verificado en T16 (2026-10-16). Con llegada: si Google devuelve la salida -> RF-44;
       #   si no -> salida_resultante = None y mensaje según RF-45 (sin estimar, RF-18).
       # Mensaje RF-44: "El primer transporte sale el dd/mm/aaaa a las HH:MM desde <parada> (Google Routes)."
       # Cabecera con llegada: "Llegada: … · Título: …" (RF-38). Contrato JSON: RF-39, RF-44, RF-45.
@@ -184,7 +184,7 @@ ISO 8601 con hora, p. ej. `2026-10-17T08:00` (RF-50b; la herramienta rechaza otr
 RF-33). Sin lista de títulos. Cualquier otra regla nueva del prompt NO está en la spec y no se añade.
 ```
 
-Nominatim: `GET {URL}/search?q=...&format=jsonv2&countrycodes=es&viewbox=<lon_min>,<lat_max>,<lon_max>,<lat_min>&bounded=1&addressdetails=1&limit=N`. El `viewbox` de Nominatim es `x1,y1,x2,y2` (longitud primero, esquinas superior izquierda e inferior derecha), mientras que `AMBITO_COBERTURA` está en `(lat_min, lon_min, lat_max, lon_max)`: una función `viewbox_nominatim()` hace la conversión en un solo sitio. con `User-Agent` y espera de `NOMINATIM_INTERVALO_S` desde la última petición (reloj monotónico a nivel de módulo). Google: `POST` a `computeRoutes` con `travelMode=TRANSIT`, `transitPreferences.allowedTravelModes=MODOS_GOOGLE`, `languageCode=es`, `departureTime` solo si la persona pidió hora de salida, o `arrivalTime` solo si pidió hora de llegada (nunca ambos; ver Decisiones) (en RFC 3339 con el desplazamiento de Madrid de esa fecha, teniendo en cuenta el cambio horario), sin rutas alternativas, `X-Goog-FieldMask=GOOGLE_FIELD_MASK`, clave en cabecera `X-Goog-Api-Key`.
+Nominatim: `GET {URL}/search?q=...&format=jsonv2&countrycodes=es&viewbox=<lon_min>,<lat_max>,<lon_max>,<lat_min>&addressdetails=1&limit=N`. El `viewbox` de Nominatim es `x1,y1,x2,y2` (longitud primero, esquinas superior izquierda e inferior derecha), mientras que `AMBITO_COBERTURA` está en `(lat_min, lon_min, lat_max, lon_max)`: una función `viewbox_nominatim()` hace la conversión en un solo sitio. con `User-Agent` y espera de `NOMINATIM_INTERVALO_S` desde la última petición (reloj monotónico a nivel de módulo). Google: `POST` a `computeRoutes` con `travelMode=TRANSIT`, `transitPreferences.allowedTravelModes=MODOS_GOOGLE`, `languageCode=es`, `departureTime` solo si la persona pidió hora de salida, o `arrivalTime` solo si pidió hora de llegada (nunca ambos; ver Decisiones) (en RFC 3339 con el desplazamiento de Madrid de esa fecha, teniendo en cuenta el cambio horario), sin rutas alternativas, `X-Goog-FieldMask=GOOGLE_FIELD_MASK`, clave en cabecera `X-Goog-Api-Key`.
 
 ## Decisiones técnicas
 
@@ -213,7 +213,7 @@ Nominatim: `GET {URL}/search?q=...&format=jsonv2&countrycodes=es&viewbox=<lon_mi
 
 Todos con `pytest`, sin red ni LLM. **Dobles:** `_http_json` (Nominatim y Google, con respuestas de ejemplo guardadas como dicts en el test; cuenta llamadas), `consultar_rag` / `rag_ask` (devuelve texto, `FRASE_ABSTENCION` o lanza), `ahora` (hora fija, parcheada en `src.tools.planificar_ruta` y `src.agents.rutas`), `time.sleep`/`time.monotonic` (límite de 1 s), un `LLMFalso` y `EjecutorFalso` como en `tests/test_especialista_horarios.py`. Se parchea donde se usa (`docs/tests_sin_api.md`).
 
-- **Ámbito (RF-2, 3):** función pura con Puerta del Sol (dentro), otra ciudad española distinta, p. ej. Barcelona (fuera), y un punto de borde (en el límite exacto de la caja, dentro). Un resultado homónimo fuera junto con otro dentro: se descarta el de fuera. Test del `viewbox`: con una `AMBITO_COBERTURA` de prueba `(1, 2, 3, 4)`, `viewbox_nominatim()` devuelve `"2,3,4,1"` (longitud primero), y la petición a Nominatim lo lleva con `bounded=1`.
+- **Ámbito (RF-2, 3):** función pura con Puerta del Sol (dentro), otra ciudad española distinta, p. ej. Barcelona (fuera), y un punto de borde (en el límite exacto de la caja, dentro). Un resultado homónimo fuera junto con otro dentro: se descarta el de fuera. Test del `viewbox`: con una `AMBITO_COBERTURA` de prueba `(1, 2, 3, 4)`, `viewbox_nominatim()` devuelve `"2,3,4,1"` (longitud primero), y la petición a Nominatim lo lleva como preferencia, sin `bounded`.
 - **Geocodificación (RF-1, 4 a 10, 40):** una petición por extremo con `countrycodes`, `viewbox` y `User-Agent`; un candidato continúa y muestra la dirección; varios devuelven `ambigua` con tope; cero resultados; solo fuera; misma ubicación; excepción/timeout/HTTP 429 → `geocodificacion_fallida` sin llamar a Google ni al RAG. RF-9: el resultado es un `dict` con `estado`/`mensaje`, sin pausa ni `interrupt`.
 - **Google (RF-5, 11 a 18):** cuerpo con coordenadas y `allowedTravelModes`; no se llama si hay fuera de cobertura; sin hora no hay `departureTime`; ruta feliz con tiempo y tramos; error/sin conexión/sin clave → `ruta_no_calculada`; `{}` o solo tramos a pie o tipo de vehículo no aceptado → `sin_ruta` sin zona ni precio; nada estimado.
 - **Zona y precio (RF-19 a 24, 35, 37, 41, 46, 49):** dos preguntas, **en orden** zona → precio, la segunda con el título (cualquier texto, p. ej. abono) y la zona; con paradas de Google; con Google caído, con municipios (RF-20); abstención total y parcial; RAG que lanza excepción; el texto del RAG se reenvía sin modificar; el `mensaje` etiqueta Google/RAG; **máx. 2 llamadas al RAG** (RF-49). Título desconocido para el corpus → RF-37. *(Los casos "zona sin evidencia" y "orden para billete sencillo" esperan la resolución de las dudas; sin test hasta entonces.)*
@@ -260,6 +260,8 @@ Todos con `pytest`, sin red ni LLM. **Dobles:** `_http_json` (Nominatim y Google
 - **Cuota de Gemini.** 2 llamadas al RAG por consulta (más las del LLM del especialista) consumen cuota gratuita.
 - **Facturación de Google.** La categoría puede depender de los campos de `X-Goog-FieldMask`: revisar en la consola antes de lanzar.
 - **Tramo no permitido ⇒ "sin ruta"** aunque exista una alternativa; las alternativas están fuera de alcance. Cercanías y trenes regionales/larga distancia pueden compartir `TRAIN`.
+- **Limitación conocida (T16, decidida): RF-12.** Google devuelve `HEAVY_RAIL` tanto para Cercanías (C4b, C10) como para Renfe Avant (Atocha → Segovia-Guiomar); se acepta `HEAVY_RAIL`, así que la media distancia (Avant) también se admite. No se distingue por tipo de vehículo.
+- **Resuelto en T16 (RF-4):** se quitó `bounded=1` de la petición a Nominatim (el `viewbox` queda como preferencia); con él, una dirección fuera del ámbito (Barcelona, Toledo) devolvía 0 resultados y se informaba como «no encontrada» (RF-6). Ahora decide `dentro_de_ambito`: fuera → «fuera de cobertura» (RF-4); RF-6 queda para cuando Nominatim no devuelve nada. Efecto lateral aceptado: más candidatos fuera del ámbito en la respuesta, que el filtro descarta.
 - **Bordes del ámbito.** La caja puede incluir partes de provincias vecinas (cubierto por RF-21 y RF-22). Valores a verificar.
 - **Ambigüedad.** Nombres genéricos ("Calle Mayor") pueden generar muchos candidatos y fricción; el deduplicado y el tope lo reducen.
 - **Nominatim.** Política de uso (1 req/s, identificación): una consulta no puede superar 2 llamadas. Sin `NOMINATIM_CONTACTO` en `.env` el `User-Agent` va incompleto.

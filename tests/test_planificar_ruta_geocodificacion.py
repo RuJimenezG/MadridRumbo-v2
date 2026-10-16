@@ -86,7 +86,8 @@ def test_geocodifica_origen_y_destino_con_nominatim(red):
     p = parametros(url)
     assert p["q"] == "Puerta del Sol, Madrid"
     assert p["countrycodes"] == config.NOMINATIM_PAIS == "es"
-    assert p["viewbox"] == pr.viewbox_nominatim() and p["bounded"] == "1"
+    # RF-4: el viewbox es solo una preferencia (sin bounded=1); el filtro dentro_de_ambito decide qué entra.
+    assert p["viewbox"] == pr.viewbox_nominatim() and "bounded" not in p
     assert p["addressdetails"] == "1" and p["format"] == "jsonv2"
     assert p["limit"] == str(config.NOMINATIM_LIMIT)
     assert timeout == config.NOMINATIM_TIMEOUT_S
@@ -237,6 +238,15 @@ def test_direccion_no_encontrada_pide_una_mas_precisa(esc):
     r = pr.planificar_ruta("calle inexistente", "Bernabéu")
     assert r["estado"] == "direccion_no_encontrada" and "más precisa" in r["mensaje"]
     assert esc.orden == ["nominatim", "nominatim"]
+
+
+def test_destino_fuera_del_ambito_da_fuera_cobertura_y_no_no_encontrada(esc):
+    # RF-4 (y RF-5): un destino que Nominatim sitúa fuera del ámbito se rechaza como fuera de cobertura, no como
+    # «no encontrada» (RF-6, que queda para cuando Nominatim no devuelve nada), y sin llamar a Google ni al RAG.
+    esc.nominatim = [[SOL_RAW], [BARCELONA_RAW]]
+    r = pr.planificar_ruta("Sol", "Calle Mayor, Barcelona")
+    assert r["estado"] == "fuera_cobertura" and "destino" in r["mensaje"] and "fuera de la cobertura" in r["mensaje"]
+    assert "No he encontrado" not in r["mensaje"] and esc.orden == ["nominatim", "nominatim"]
 
 
 def test_prioridad_fuera_de_cobertura_sobre_ambigua(esc):

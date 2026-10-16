@@ -95,8 +95,8 @@ CALC_MAX_CARACTERES = 200
 
 # --- Tool planificar_ruta (spec 004) ---
 # Ámbito de cobertura (territorio del corpus CRTM) como (lat_min, lon_min, lat_max, lon_max).
-# A VERIFICAR sobre el mapa: caja aproximada de la Comunidad de Madrid; en los bordes
-# puede incluir algún trozo de provincias vecinas.
+# Caja aproximada de la Comunidad de Madrid; en los bordes puede incluir algún trozo de provincias vecinas.
+# Comprobada en T16 (2026-10-16) con Nominatim real: Sol, Bernabéu y Segovia-Guiomar dentro; Barcelona y Toledo fuera.
 AMBITO_COBERTURA = (39.88, -4.58, 41.17, -3.05)
 
 # Geocodificación con Nominatim (política de uso: 1 petición/s e identificación de la app).
@@ -117,7 +117,9 @@ RADIO_MISMA_UBICACION_M = 100
 GOOGLE_ROUTES_URL = "https://routes.googleapis.com/directions/v2:computeRoutes"
 GOOGLE_ROUTES_API_KEY = os.getenv("GOOGLE_ROUTES_API_KEY")
 GOOGLE_TIMEOUT_S = 10
-# A VERIFICAR con una respuesta real; la facturación puede depender de los campos pedidos.
+# Verificado en T16 (2026-10-16) con respuestas reales: con esta máscara llegan los tramos y, con arrivalTime,
+# también stopDetails.departureTime del primer tramo de transporte (transitDetails va entero). No se ajusta.
+# La facturación puede depender de los campos pedidos: se revisa en la consola de Google.
 GOOGLE_FIELD_MASK = (
     "routes.duration,routes.legs.steps.travelMode,"
     "routes.legs.steps.staticDuration,routes.legs.steps.transitDetails"
@@ -125,7 +127,9 @@ GOOGLE_FIELD_MASK = (
 # Modos de la red CRTM que se piden: metro, metro ligero/tranvía, autobús y Cercanías.
 MODOS_GOOGLE = ["SUBWAY", "LIGHT_RAIL", "BUS", "TRAIN"]
 # Tipos de vehículo de cada tramo que se aceptan al verificar la respuesta.
-# A VERIFICAR con una respuesta real: los trenes de larga distancia y alta velocidad quedan excluidos.
+# Vistos en T16: SUBWAY (metro) y HEAVY_RAIL (Cercanías C4b/C10 y también Renfe Avant). Google NO distingue Cercanías
+# de Avant por tipo de vehículo: se acepta HEAVY_RAIL, por lo que la media distancia (Avant) también se admite.
+# Limitación conocida (RF-12). Sin comprobar: TRAM, LIGHT_RAIL, BUS, TROLLEYBUS, COMMUTER_TRAIN, METRO_RAIL y RAIL.
 TIPOS_VEHICULO_ACEPTADOS = {
     "SUBWAY", "METRO_RAIL", "TRAM", "BUS", "TROLLEYBUS", "COMMUTER_TRAIN", "HEAVY_RAIL", "RAIL",
 }

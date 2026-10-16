@@ -166,8 +166,9 @@ def geocodificar(direccion: str) -> dict:
         "q": direccion,
         "format": "jsonv2",
         "countrycodes": config.NOMINATIM_PAIS,
+        # El viewbox solo es una preferencia (sin bounded=1): así una dirección fuera del ámbito llega y se
+        # rechaza como fuera de cobertura (RF-4) en vez de parecer "no encontrada"; decide dentro_de_ambito.
         "viewbox": viewbox_nominatim(),
-        "bounded": 1,
         "addressdetails": 1,
         "limit": config.NOMINATIM_LIMIT,
         "accept-language": "es",

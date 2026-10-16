@@ -39,7 +39,7 @@ Hoy MadridRumbo responde preguntas sobre el corpus CRTM (RAG), pero no sabe cóm
 ### Cálculo de la ruta
 
 - RF-11: CUANDO el origen y el destino están geocodificados y dentro del ámbito, EL SISTEMA calcula la ruta con Google Routes a partir de sus coordenadas.
-- RF-12: EL SISTEMA calcula la ruta considerando solo los modos de la red del CRTM: metro, metro ligero/tranvía, autobús y Cercanías.
+- RF-12: EL SISTEMA calcula la ruta considerando solo los modos de la red del CRTM: metro, metro ligero/tranvía, autobús y Cercanías. *(Limitación conocida, T16: Google clasifica igual (`HEAVY_RAIL`) a Cercanías y a Renfe Avant, así que la media distancia (Avant) también se admite; no se distingue por tipo de vehículo.)*
 - RF-13: EL SISTEMA admite el desplazamiento a pie únicamente como tramo de una ruta en transporte público.
 - RF-14: SI la persona no indica ni hora de salida ni hora de llegada, ENTONCES EL SISTEMA calcula la ruta con salida en el momento de la consulta.
 - RF-15: CUANDO Google Routes devuelve una ruta, EL SISTEMA devuelve el tiempo total y el trayecto, tramo a tramo.
@@ -149,5 +149,7 @@ Hoy MadridRumbo responde preguntas sobre el corpus CRTM (RAG), pero no sabe cóm
 
 - [A COMPROBAR EN T17: con el RAG real, que la zona entera sin saltos de línea (RF-53) produce una pregunta de precio útil, que el máximo de zona de 200 caracteres es razonable y si pasar la frase entera empeora la respuesta del precio.]
 - Cerradas el 2026-10-16: título vacío y título largo (RF-51, RF-48), zona sin evidencia o con error (RF-52), orden zona → precio para todos los títulos (RF-46), saneado de la zona (RF-53), formato ISO 8601 en el prompt (RF-50b).
-- [A VERIFICAR EN T16: si la hora de llegada de Google Routes funciona con nuestra configuración (modo transporte público con los modos del CRTM y sin hora de salida) y si el campo de respuesta configurado devuelve la hora de salida. Si no la devuelve, se aplica RF-45. Si la hora de llegada no funcionara con esa configuración, RF-39 se revisa antes de implementarlo.]
+- Cerrada en T16 (2026-10-16): se acepta `HEAVY_RAIL`; Cercanías y Renfe Avant no se distinguen por tipo de vehículo (limitación conocida de RF-12, ver su nota).
+- Cerrada en T16 (2026-10-16): la búsqueda en Nominatim ya no se restringe a la caja del ámbito; decide el filtro de ámbito, así que una dirección fuera sale como «fuera de cobertura» (RF-4) y «no encontrada» (RF-6) queda para cuando Nominatim no devuelve nada.
+- [VERIFICADO EN T16 (2026-10-16), con 3 peticiones reales: la hora de llegada funciona en modo transporte público con nuestros modos y sin hora de salida, y la máscara actual ya devuelve la hora de salida de la parada del primer tramo de transporte (RF-44 aplicable; RF-45 solo si Google la omite). Texto original de la duda: si la hora de llegada de Google Routes funciona con nuestra configuración (modo transporte público con los modos del CRTM y sin hora de salida) y si el campo de respuesta configurado devuelve la hora de salida. Si no la devuelve, se aplica RF-45. Si la hora de llegada no funcionara con esa configuración, RF-39 se revisa antes de implementarlo.]
 - Cerrada el 2026-10-16: la hora actual (RF-14, RF-32, RF-34, RF-50) la aporta una única fuente, `ahora()` en `src/reloj.py`, tanto para la herramienta como para el prompt del especialista.
