@@ -45,7 +45,7 @@ def test_consulta_zona_y_precio_sencillo(rag):
     r = pr.consultar_tarifa("Sol", "Plaza de Castilla")
     assert rag.preguntas == [
         config.PREGUNTA_ZONA.format(origen="Sol", destino="Plaza de Castilla"),
-        config.PREGUNTA_PRECIO.format(titulo="billete sencillo", origen="Sol", destino="Plaza de Castilla"),
+        config.PREGUNTA_PRECIO.format(titulo="billete sencillo", zona=ZONA),    # RF-46: el precio se pregunta con la zona
     ]
     assert r == {
         "zona": {"estado": "ok", "texto": ZONA, "fuente": "RAG"},
@@ -65,7 +65,7 @@ def test_titulo_libre_consulta_su_precio(rag):
     for titulo in ("Billete de 10 viajes", "abono joven"):
         rag.preguntas.clear()
         r = pr.consultar_tarifa("Sol", "Atocha", titulo)
-        assert rag.preguntas[1] == config.PREGUNTA_PRECIO.format(titulo=titulo, origen="Sol", destino="Atocha")
+        assert rag.preguntas[1] == config.PREGUNTA_PRECIO.format(titulo=titulo, zona=ZONA)
         assert r["precio"]["estado"] == "ok" and len(rag.preguntas) == 2
 
 
@@ -85,21 +85,23 @@ def test_titulo_que_el_corpus_no_conoce_se_abstiene(rag):
 
 
 def test_rag_sin_evidencia_entrega_ruta(rag):
-    # RF-21: si el RAG se abstiene, ambos datos son sin_evidencia y sin texto (nada inventado).
+    # RF-21, RF-52: si el RAG se abstiene en la zona, no hay texto inventado y el precio ni se consulta.
     rag.guion = {"zona tarifaria": config.FRASE_ABSTENCION, "precio": config.FRASE_ABSTENCION}
     r = pr.consultar_tarifa("Sol", "Atocha")
     assert r["zona"] == {"estado": "sin_evidencia", "texto": None, "fuente": "RAG"}
-    assert r["precio"] == {"estado": "sin_evidencia", "texto": None, "fuente": "RAG"}
+    assert r["precio"] == {"estado": "omitida", "texto": None, "fuente": "RAG"}
+    assert len(rag.preguntas) == 1
 
 
 def test_evidencia_parcial_declara_el_que_falta(rag):
-    # RF-22: zona sí y precio no (y al revés): cada dato lleva su propio estado.
+    # RF-22: zona sí y precio no: cada dato lleva su propio estado. El caso inverso (precio sin zona) ya no
+    # se da: sin zona no se consulta el precio (RF-52).
     rag.guion["precio"] = config.FRASE_ABSTENCION
     r = pr.consultar_tarifa("Sol", "Atocha")
     assert (r["zona"]["estado"], r["precio"]["estado"]) == ("ok", "sin_evidencia")
     rag.guion = {"zona tarifaria": config.FRASE_ABSTENCION, "precio": PRECIO}
     r = pr.consultar_tarifa("Sol", "Atocha")
-    assert (r["zona"]["estado"], r["precio"]["estado"]) == ("sin_evidencia", "ok")
+    assert (r["zona"]["estado"], r["precio"]["estado"]) == ("sin_evidencia", "omitida")
 
 
 def test_sin_precio_del_titulo_no_lo_sustituye(rag):
@@ -113,11 +115,13 @@ def test_sin_precio_del_titulo_no_lo_sustituye(rag):
 @pytest.mark.parametrize("respuesta", [f"{config.FRASE_ABSTENCION}", f"  {config.FRASE_ABSTENCION}\n",
                                        f"Con lo que consta: {config.FRASE_ABSTENCION}", "", "   ", None, 42])
 def test_no_inventa_zona_ni_precio(rag, respuesta):
-    # RF-23: abstención (en cualquier posición del texto), vacío o tipo inesperado → sin_evidencia, nunca un valor propio.
+    # RF-23, RF-52: abstención (en cualquier posición del texto), vacío o tipo inesperado → zona sin_evidencia y el
+    # precio no se consulta (omitida); nunca un valor propio.
     rag.guion = {"zona tarifaria": respuesta, "precio": respuesta}
     r = pr.consultar_tarifa("Sol", "Atocha")
-    for dato in r.values():
-        assert dato == {"estado": "sin_evidencia", "texto": None, "fuente": "RAG"}
+    assert r["zona"] == {"estado": "sin_evidencia", "texto": None, "fuente": "RAG"}
+    assert r["precio"] == {"estado": "omitida", "texto": None, "fuente": "RAG"}
+    assert len(rag.preguntas) == 1
 
 
 def test_texto_del_rag_sin_modificar(rag):
@@ -127,13 +131,22 @@ def test_texto_del_rag_sin_modificar(rag):
 
 
 def test_rag_con_error_entrega_ruta_sin_zona_ni_precio(rag):
-    # RF-41: una excepción del RAG no se propaga (la ruta se conserva en la orquestación): estado error por dato.
+    # RF-41, RF-52: una excepción del RAG en la zona no se propaga (la ruta se conserva): zona en error y sin
+    # precio, que ni se consulta ni se reintenta.
     rag.guion = {"zona tarifaria": RuntimeError("Chroma caído, clave abc"), "precio": ConnectionError("Gemini")}
     r = pr.consultar_tarifa("Sol", "Atocha")
     assert r["zona"] == {"estado": "error", "texto": None, "fuente": "RAG"}
-    assert r["precio"] == {"estado": "error", "texto": None, "fuente": "RAG"}
+    assert r["precio"] == {"estado": "omitida", "texto": None, "fuente": "RAG"}
     assert "abc" not in repr(r)          # el texto de la excepción no se propaga
-    assert len(rag.preguntas) == 2       # el fallo de la zona no impide intentar el precio
+    assert len(rag.preguntas) == 1
+
+
+def test_error_del_rag_en_el_precio_no_se_reintenta(rag):
+    # RF-41, RF-49: con la zona bien y el precio en error, 2 llamadas exactas (sin reintentos) y el precio en error.
+    rag.guion = {"zona tarifaria": ZONA, "precio": ConnectionError("Gemini")}
+    r = pr.consultar_tarifa("Sol", "Atocha")
+    assert r["zona"]["estado"] == "ok" and r["precio"] == {"estado": "error", "texto": None, "fuente": "RAG"}
+    assert len(rag.preguntas) == 2 and "Gemini" not in repr(r)
 
 
 @pytest.mark.parametrize("origen,destino", [(None, "Atocha"), ("Sol", None), ("", "Atocha"), ("Sol", "  "), (None, None)])
@@ -190,8 +203,9 @@ def test_rag_falla_la_ruta_se_conserva(esc):
     esc.rag = {"zona tarifaria": RuntimeError("Chroma caído"), "precio": ConnectionError("Gemini")}
     r = pr.planificar_ruta("Sol", "Bernabéu")
     assert r["estado"] == "ok" and r["ruta"]["duracion_min"] == 22
-    assert r["zona"]["estado"] == r["precio"]["estado"] == "error"
-    assert "no se pudo consultar" in r["mensaje"] and "22 min" in r["mensaje"]
+    assert (r["zona"]["estado"], r["precio"]["estado"]) == ("error", "omitida")      # RF-52: sin zona no hay precio
+    assert "Faltan la zona y el precio" in r["mensaje"] and "no se pudo consultar" in r["mensaje"]
+    assert "22 min" in r["mensaje"] and esc.cuantas("rag") == 1
     assert "Chroma" not in repr(r) and "Gemini" not in repr(r)
 
 
@@ -208,3 +222,73 @@ def test_titulo_libre_de_extremo_a_extremo(esc):
     # RF-35, RF-38: el título pedido (tal cual, sin forma canónica) va al RAG y a la cabecera.
     r = pr.planificar_ruta("Sol", "Bernabéu", titulo="Billete de 10 viajes")
     assert "Billete de 10 viajes" in esc.preguntas[1] and "Título: Billete de 10 viajes." in r["mensaje"]
+
+
+# --- T21: primero la zona, después el precio del título en esa zona (RF-46, RF-49, RF-52, RF-53) ---
+
+@pytest.mark.parametrize("titulo", [None, "billete sencillo", "abono joven"])
+def test_primero_zona_despues_precio_del_titulo(esc, titulo):
+    # RF-46: para TODOS los títulos (sencillo incluido) la zona se pregunta antes y el precio usa esa zona.
+    r = pr.planificar_ruta("Sol", "Bernabéu", titulo=titulo)
+    assert r["estado"] == "ok" and esc.orden == ["nominatim", "nominatim", "google", "rag", "rag"]
+    assert esc.preguntas[0] == config.PREGUNTA_ZONA.format(origen="Sol", destino="Plaza de Castilla")
+    assert esc.preguntas[1] == config.PREGUNTA_PRECIO.format(titulo=titulo or "billete sencillo", zona=ZONA)
+    # La pregunta de precio ya no se construye con origen y destino, y las dos siguen distinguiéndose por fragmento.
+    assert "Sol" not in esc.preguntas[1] and "Plaza de Castilla" not in esc.preguntas[1]
+    assert "zona tarifaria" in esc.preguntas[0] and "zona tarifaria" not in esc.preguntas[1]
+    assert "precio" in esc.preguntas[1] and "precio" not in esc.preguntas[0]
+
+
+def test_zona_se_sanea_antes_de_la_pregunta_de_precio(rag):
+    # RF-53: los saltos de línea de la zona se quitan en la pregunta; el texto de la zona del resultado no se toca (RF-23).
+    rag.guion = {"zona tarifaria": "Zona B1\n(ver\r\ntabla)\n", "precio": PRECIO}
+    r = pr.consultar_tarifa("Sol", "Atocha")
+    assert rag.preguntas[1] == config.PREGUNTA_PRECIO.format(titulo="billete sencillo", zona="Zona B1 (ver tabla)")
+    assert "\n" not in rag.preguntas[1] and "\r" not in rag.preguntas[1]
+    assert r["zona"]["texto"] == "Zona B1\n(ver\r\ntabla)\n"
+
+
+def test_zona_dentro_del_limite_se_pasa_entera(rag):
+    # RF-53: la zona (hasta ZONA_LONGITUD_MAX) se pasa entera, nunca cortada; justo en el límite también.
+    assert config.ZONA_LONGITUD_MAX == 200 and config.ZONA_LONGITUD_MAX != config.TITULO_LONGITUD_MAX
+    for zona in ("Zona A", "z" * config.ZONA_LONGITUD_MAX):
+        rag.preguntas.clear()
+        rag.guion = {"zona tarifaria": zona, "precio": PRECIO}
+        r = pr.consultar_tarifa("Sol", "Atocha")
+        assert zona in rag.preguntas[1] and len(rag.preguntas) == 2 and r["precio"]["estado"] == "ok"
+
+
+def test_zona_por_encima_del_limite_no_consulta_el_precio(rag):
+    # RF-53: si la zona supera ZONA_LONGITUD_MAX (ya sin saltos de línea) no se corta ni se consulta el precio.
+    zona = "z" * (config.ZONA_LONGITUD_MAX + 1)
+    rag.guion = {"zona tarifaria": zona, "precio": PRECIO}
+    r = pr.consultar_tarifa("Sol", "Atocha")
+    assert len(rag.preguntas) == 1
+    assert r["zona"] == {"estado": "ok", "texto": zona, "fuente": "RAG"}      # la zona se entrega entera
+    assert r["precio"] == {"estado": "omitida", "texto": None, "fuente": "RAG"}
+    # Los saltos de línea no cuentan: la misma zona repartida en líneas, ya saneada, cabe justo en el límite.
+    rag.preguntas.clear()
+    rag.guion = {"zona tarifaria": "z" * 100 + "\n" + "z" * 99, "precio": PRECIO}
+    pr.consultar_tarifa("Sol", "Atocha")
+    assert len(rag.preguntas) == 2 and "z" * 100 + " " + "z" * 99 in rag.preguntas[1]
+
+
+def test_zona_demasiado_larga_se_informa_en_el_mensaje(esc):
+    # RF-53: ruta y zona entregadas; el mensaje dice que no se pudo usar la zona para el precio (como RF-48).
+    zona = "z" * (config.ZONA_LONGITUD_MAX + 1)
+    esc.rag = {"zona tarifaria": zona, "precio": PRECIO}
+    r = pr.planificar_ruta("Sol", "Bernabéu")
+    assert r["estado"] == "ok" and r["ruta"]["duracion_min"] == 22 and r["zona"]["texto"] == zona
+    assert "no se pudo usar la zona" in r["mensaje"] and PRECIO not in r["mensaje"] and esc.cuantas("rag") == 1
+
+
+@pytest.mark.parametrize("respuesta", [config.FRASE_ABSTENCION, "", None, RuntimeError("Chroma caído")])
+def test_zona_sin_evidencia_o_error_no_consulta_precio(esc, respuesta):
+    # RF-52: sin zona (sin evidencia o error) no hay segunda llamada; se informa de que faltan zona y precio.
+    esc.rag = {"zona tarifaria": respuesta, "precio": PRECIO}
+    r = pr.planificar_ruta("Sol", "Bernabéu")
+    assert r["estado"] == "ok" and r["ruta"]["duracion_min"] == 22       # la ruta se entrega igualmente
+    assert esc.cuantas("rag") == 1 and "precio" not in esc.preguntas[0]
+    assert r["zona"]["estado"] in ("sin_evidencia", "error") and r["precio"]["estado"] == "omitida"
+    assert "Faltan la zona y el precio" in r["mensaje"]
+    assert PRECIO not in repr(r) and "Chroma" not in repr(r)              # nada de valores propios ni de detalles internos

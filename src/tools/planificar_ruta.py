@@ -376,21 +376,28 @@ def _dato_rag(pregunta: str) -> dict:
 
 
 def consultar_tarifa(origen: str | None, destino: str | None, titulo=None) -> dict:
-    """Consulta al RAG la zona y el precio del título y devuelve `{"zona", "precio"}`.
+    """Consulta al RAG primero la zona y después el precio del título en esa zona; devuelve `{"zona", "precio"}`.
 
     `origen` y `destino` son las paradas de subida y bajada de Google o, si Google falló, los
     municipios de Nominatim (RF-20). Cada dato es `{"estado", "texto", "fuente": "RAG"}` con estado
     ok, sin_evidencia, error u omitida (sin consulta). Si falta origen o destino no se consulta nada.
-    Un título que no se puede interpretar (demasiado largo) consulta solo la zona y omite el precio (RF-48).
+    Como mucho 2 llamadas, sin reintentos (RF-49). El precio se omite sin consultar si:
+    - el título no se puede interpretar, por demasiado largo (RF-48);
+    - la zona no está (sin evidencia o error del RAG, RF-52);
+    - el texto de zona, sin saltos de línea, supera ZONA_LONGITUD_MAX: se pasa entero o no se pasa (RF-53).
     """
     omitida = {"estado": "omitida", "texto": None, "fuente": "RAG"}
     if not (origen and origen.strip() and destino and destino.strip()):
         return {"zona": dict(omitida), "precio": dict(omitida)}
     titulo_considerado, interpretable = resolver_titulo(titulo)
     zona = _dato_rag(config.PREGUNTA_ZONA.format(origen=origen, destino=destino))
-    if not interpretable:
+    if not interpretable or zona["estado"] != "ok":
         return {"zona": zona, "precio": dict(omitida)}
-    precio = _dato_rag(config.PREGUNTA_PRECIO.format(titulo=titulo_considerado, origen=origen, destino=destino))
+    # La zona del RAG es texto libre que entra en otra pregunta: sin saltos de línea y nunca cortada (RF-53).
+    zona_saneada = _SALTOS_DE_LINEA.sub(" ", zona["texto"]).strip()
+    if len(zona_saneada) > config.ZONA_LONGITUD_MAX:
+        return {"zona": zona, "precio": dict(omitida)}
+    precio = _dato_rag(config.PREGUNTA_PRECIO.format(titulo=titulo_considerado, zona=zona_saneada))
     return {"zona": zona, "precio": precio}
 
 
@@ -426,9 +433,19 @@ def _texto_dato_rag(nombre: str, dato: dict, titulo_no_interpretable: str | None
 
 
 def _mensaje_tarifa(tarifa: dict, interpretable: bool) -> str:
-    """Zona y precio etiquetados con el RAG; si el título no se pudo interpretar, se dice y no hay precio (RF-48)."""
-    no_interpretable = None if interpretable else "Precio: no se pudo interpretar el título pedido."
-    return " ".join([_texto_dato_rag("Zona", tarifa["zona"]), _texto_dato_rag("Precio", tarifa["precio"], no_interpretable)])
+    """Zona y precio etiquetados con el RAG, y la razón si el precio no se consultó (RF-48, RF-52, RF-53)."""
+    zona, precio = tarifa["zona"], tarifa["precio"]
+    motivo = None
+    if precio["estado"] == "omitida":
+        if not interpretable:
+            motivo = "Precio: no se pudo interpretar el título pedido."
+        elif zona["estado"] == "ok":
+            motivo = "Precio: no se pudo usar la zona devuelta por el RAG para consultarlo."
+        elif zona["estado"] in ("sin_evidencia", "error"):
+            # RF-52: sin zona no se pregunta el precio; se declara que faltan ambos, sin valores propios.
+            causa = "no se pudo consultar el RAG" if zona["estado"] == "error" else "no se pudieron determinar con el corpus"
+            return f"Faltan la zona y el precio: {causa}."
+    return " ".join([_texto_dato_rag("Zona", zona), _texto_dato_rag("Precio", precio, motivo)])
 
 
 def _respuesta(estado: str, mensaje: str, hora: str, titulo: str, **extra) -> dict:

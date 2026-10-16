@@ -87,7 +87,7 @@ Hoy MadridRumbo responde preguntas sobre el corpus CRTM (RAG), pero no sabe cóm
 - RF-48 *(cerrado 2026-10-16)*: SI el título pedido supera la longitud máxima configurada (valor inicial: 60 caracteres), ENTONCES EL SISTEMA no consulta el precio, informa de que no pudo interpretar el título y entrega la ruta y la zona, mostrando el título en la cabecera cortado a esa longitud seguido de «…» (RF-38).
 - RF-51: SI el título queda vacío tras sanearlo, ENTONCES EL SISTEMA considera el billete sencillo e indica ese título en la cabecera (RF-38).
 - RF-52: SI el RAG no aporta la zona (sin evidencia) o falla al consultarla, ENTONCES EL SISTEMA no consulta el precio e informa de que faltan la zona y el precio, sin sustituirlos por valores propios.
-- RF-53: ANTES de incluir en la pregunta de precio la zona devuelta por el RAG, EL SISTEMA la sanea igual que el título (sin saltos de línea y con la longitud máxima configurada). *(A comprobar en T17.)*
+- RF-53 *(reescrito 2026-10-16)*: ANTES de incluir en la pregunta de precio el texto de zona devuelto por el RAG, EL SISTEMA le quita los saltos de línea y lo pasa entero, sin cortarlo ni extraer identificadores de zona. SI ese texto supera la longitud máxima de zona configurada (propia, distinta de la del título; valor inicial 200), ENTONCES EL SISTEMA no consulta el precio, entrega la ruta y la zona e informa de que no se pudo usar la zona para el precio (como RF-48). *(A comprobar en T17 con el RAG real: el valor 200 y si pasar la frase entera empeora la respuesta del precio.)*
 - RF-49: EL SISTEMA realiza como máximo 2 llamadas al RAG por consulta de ruta: una de zona y una de precio.
 
 ## Requisitos no funcionales
@@ -125,7 +125,7 @@ Hoy MadridRumbo responde preguntas sobre el corpus CRTM (RAG), pero no sabe cóm
 - Título cualquiera (billete sencillo, abonos, etc.): RF-35, RF-46.
 - Título con saltos de línea, vacío tras sanear o demasiado largo: RF-47, RF-51, RF-48.
 - Zona sin evidencia o con error del RAG: RF-52 (y RF-41 si es error).
-- Zona devuelta por el RAG con saltos de línea o demasiado larga: RF-53.
+- Zona devuelta por el RAG con saltos de línea (se quitan) o más larga que el máximo de zona (sin precio, ruta y zona entregadas): RF-53.
 - Título sin precio en el corpus: RF-37.
 - ~~Título fuera de la lista cerrada: RF-36~~ (obsoleto).
 
@@ -147,7 +147,7 @@ Hoy MadridRumbo responde preguntas sobre el corpus CRTM (RAG), pero no sabe cóm
 
 ## Dudas abiertas
 
-- [A COMPROBAR EN T17: que la zona que devuelve el RAG, saneada (RF-53), produce una pregunta de precio útil con el RAG real.]
+- [A COMPROBAR EN T17: con el RAG real, que la zona entera sin saltos de línea (RF-53) produce una pregunta de precio útil, que el máximo de zona de 200 caracteres es razonable y si pasar la frase entera empeora la respuesta del precio.]
 - Cerradas el 2026-10-16: título vacío y título largo (RF-51, RF-48), zona sin evidencia o con error (RF-52), orden zona → precio para todos los títulos (RF-46), saneado de la zona (RF-53), formato ISO 8601 en el prompt (RF-50b).
 - [A VERIFICAR EN T16: si la hora de llegada de Google Routes funciona con nuestra configuración (modo transporte público con los modos del CRTM y sin hora de salida) y si el campo de respuesta configurado devuelve la hora de salida. Si no la devuelve, se aplica RF-45. Si la hora de llegada no funcionara con esa configuración, RF-39 se revisa antes de implementarlo.]
 - Cerrada el 2026-10-16: la hora actual (RF-14, RF-32, RF-34, RF-50) la aporta una única fuente, `ahora()` en `src/reloj.py`, tanto para la herramienta como para el prompt del especialista.

@@ -138,9 +138,15 @@ ANTELACION_MAX_DIAS = 7
 TITULO_POR_DEFECTO = "billete sencillo"
 # Longitud máxima (caracteres, ya sin saltos de línea) de un título para interpretarlo y preguntarlo al RAG.
 TITULO_LONGITUD_MAX = 60
+# Longitud máxima (caracteres, ya sin saltos de línea) del texto de zona del RAG que se pasa entero a la pregunta de
+# precio. Distinta de TITULO_LONGITUD_MAX. Nunca se corta: si lo supera, no se consulta el precio.
+# A COMPROBAR en T17 con el RAG real: el valor 200 y si pasar la frase entera empeora la respuesta del precio.
+ZONA_LONGITUD_MAX = 200
 
 # Preguntas al RAG, construidas con datos de la ruta (paradas o municipios).
 PREGUNTA_ZONA = "¿Qué zona tarifaria corresponde a un trayecto entre {origen} y {destino}?"
-PREGUNTA_PRECIO = "¿Cuál es el precio del {titulo} para un trayecto entre {origen} y {destino}?"
+# El precio se pregunta con la zona que devolvió el RAG (los abonos se pagan por zona, no por trayecto).
+# Importante: no debe contener "zona tarifaria", fragmento con el que los dobles de test identifican la pregunta de zona.
+PREGUNTA_PRECIO = "¿Cuál es el precio del {titulo} en la zona indicada a continuación? {zona}"
 # Frase con la que el RAG se abstiene (definida en rag/prompt.py; un test vigila que coincida).
 FRASE_ABSTENCION = "No lo sé, no está en los documentos."
