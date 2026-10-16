@@ -66,12 +66,18 @@ ZONA_HORARIA = "Europe/Madrid"
 # Tope de llamadas a tools por turno de un especialista (límite decidido en Python).
 MAX_STEPS_ESPECIALISTA = 3
 
+# Límites transversales del grafo multiagente por conversación y turno lógico.
+MAX_TURNOS_CONVERSACION = 10
+MAX_CICLOS_TOOLS = 8
+
 # Allowlist de tools que puede pedir cada especialista.
 TOOLS_POR_ESPECIALISTA = {
+    "rag": ["rag_ask"],
     "horarios": ["hora_actual", "rag_ask"],
-    "tarifas": ["describir_imagen", "calculadora", "rag_ask"],
+    "auxiliar": ["hora_actual", "calculadora"],
     # El RAG no se expone al especialista de rutas: lo llama la propia tool (spec 004, RF-19).
     "rutas": ["planificar_ruta"],
+    "tarifas": ["describir_imagen"],
 }
 
 # --- Tool multimodal describir_imagen ---
