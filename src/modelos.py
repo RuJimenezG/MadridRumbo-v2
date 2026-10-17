@@ -15,6 +15,10 @@ from typing import Any, Callable, Mapping
 Generador = Callable[[str], Any]
 
 
+class ErrorProveedorModelo(RuntimeError):
+    """Indica una respuesta no utilizable del proveedor sin exponer su detalle."""
+
+
 def _formatear_entrada(entrada: object) -> str:
     """Convierte una conversación o una instrucción en un prompt de texto."""
     if isinstance(entrada, str):
@@ -66,39 +70,72 @@ def _crear_cliente_gemini() -> Any:
     return genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 
+def _respuesta_bloqueada(respuesta: Any) -> bool:
+    """Detecta el bloqueo informado por Gemini antes de leer su texto."""
+    feedback = getattr(respuesta, "prompt_feedback", None)
+    return bool(getattr(feedback, "block_reason", None))
+
+
 class GeneradorGemini:
     """Generador de producción que retrasa cliente y dependencias de Gemini."""
 
-    def __init__(self, crear_cliente: Callable[[], Any] | None = None):
+    def __init__(
+        self,
+        crear_cliente: Callable[[], Any] | None = None,
+        *,
+        solicitar_json: bool = False,
+    ):
         self._crear_cliente = crear_cliente or _crear_cliente_gemini
         self._cliente: Any | None = None
+        self._solicitar_json = solicitar_json
 
     def __call__(self, prompt: str) -> str:
-        if self._cliente is None:
-            self._cliente = self._crear_cliente()
+        try:
+            if self._cliente is None:
+                self._cliente = self._crear_cliente()
 
-        from config import GENERATION_MODEL, TEMPERATURE
-        from google.genai import types
+            from config import GENERATION_MODEL, TEMPERATURE
+            from google.genai import types
 
-        respuesta = self._cliente.models.generate_content(
-            model=GENERATION_MODEL,
-            contents=prompt,
-            config=types.GenerateContentConfig(temperature=TEMPERATURE),
-        )
-        texto = getattr(respuesta, "text", None)
-        if not isinstance(texto, str) or not texto.strip():
-            raise RuntimeError("El modelo no devolvió contenido.")
-        return texto
+            opciones = {"temperature": TEMPERATURE}
+            if self._solicitar_json:
+                opciones["response_mime_type"] = "application/json"
+
+            respuesta = self._cliente.models.generate_content(
+                model=GENERATION_MODEL,
+                contents=prompt,
+                config=types.GenerateContentConfig(**opciones),
+            )
+            if _respuesta_bloqueada(respuesta):
+                raise ErrorProveedorModelo("El proveedor bloqueó la respuesta.")
+
+            texto = getattr(respuesta, "text", None)
+            if not isinstance(texto, str) or not texto.strip():
+                raise ErrorProveedorModelo("El proveedor no devolvió contenido utilizable.")
+            return texto
+        except ErrorProveedorModelo:
+            raise
+        except Exception as exc:
+            raise ErrorProveedorModelo("No se pudo obtener una respuesta del proveedor.") from exc
 
 
 class ModeloEstructurado:
     """Adapta Gemini a la salida de diccionario usada por supervisor y tools."""
 
-    def __init__(self, generar: Generador | None = None):
+    def __init__(
+        self,
+        generar: Generador | None = None,
+        *,
+        parsear_respuesta: bool = True,
+    ):
         self._generar = generar or GeneradorGemini()
+        self._parsear_respuesta = parsear_respuesta
 
-    def __call__(self, entrada: object) -> dict[str, Any]:
-        return _parsear_objeto(self._generar(_formatear_entrada(entrada)))
+    def __call__(self, entrada: object) -> Any:
+        respuesta = self._generar(_formatear_entrada(entrada))
+        if self._parsear_respuesta:
+            return _parsear_objeto(respuesta)
+        return respuesta
 
 
 class ModeloSintetizador:
@@ -122,7 +159,10 @@ class ModeloSintetizador:
 
 def crear_modelo_supervisor(generar: Generador | None = None) -> ModeloEstructurado:
     """Construye el adaptador estructurado que usará el Supervisor."""
-    return ModeloEstructurado(generar=generar)
+    return ModeloEstructurado(
+        generar=generar or GeneradorGemini(solicitar_json=True),
+        parsear_respuesta=False,
+    )
 
 
 def crear_modelo_especialista(generar: Generador | None = None) -> ModeloEstructurado:

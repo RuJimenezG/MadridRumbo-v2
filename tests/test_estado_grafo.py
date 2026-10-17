@@ -88,6 +88,27 @@ def test_proyeccion_publica_tiene_solo_las_seis_claves_y_traza_normalizada():
     assert isinstance(resultado["done"], bool)
 
 
+def test_proyeccion_anade_diagnostico_canonico_sin_mutar_estado_ni_filtrar_texto():
+    """RF-10 a RF-14: el diagnóstico se añade solo a la copia pública de log."""
+    estado = crear_estado_inicial()
+    estado["log"] = ["nodo_rag completado"]
+    diagnostico = {
+        "categoria": "proveedor",
+        "resumen": "TOKEN_DE_PRUEBA_NO_EXPOSABLE",
+    }
+
+    resultado = proyectar_resultado(estado, diagnostico_supervisor=diagnostico)
+
+    assert set(resultado) == {"respuesta", "plan", "log", "traza", "hitl_pendiente", "done"}
+    assert resultado["log"] == [
+        "nodo_rag completado",
+        "Supervisor: categoria=proveedor; resumen=El proveedor no entregó una respuesta utilizable.",
+    ]
+    assert estado["log"] == ["nodo_rag completado"]
+    assert "TOKEN_DE_PRUEBA_NO_EXPOSABLE" not in str(resultado)
+    assert resultado["traza"] == []
+
+
 def test_dobles_comunes_registran_llamadas_y_aislan_snapshots():
     """Los dobles de T2 no necesitan red ni comparten estado mutable."""
     llm = LLMFalso([{"final": "respuesta fija"}])

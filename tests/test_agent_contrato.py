@@ -83,6 +83,84 @@ def test_estado_vacio_recupera_el_checkpoint_en_lugar_de_sustituirlo(grafo_falso
     ]
 
 
+def test_resultado_del_turno_expone_diagnostico_seguro_sin_persistirlo(grafo_falso):
+    """RF-10 a RF-16 y RF-25: solo el resultado actual recibe el diagnóstico."""
+    primero = agent.procesar_turno({}, "Primer turno.", "hilo-diagnostico")
+    segundo = agent.procesar_turno({}, "Segundo turno.", "hilo-diagnostico")
+    snapshot = recuperar_estado(grafo_falso, "hilo-diagnostico")
+    esperado = "Supervisor: categoria=sin_fallback; resumen=Decisión estructurada validada."
+
+    _comprobar_contrato(primero)
+    _comprobar_contrato(segundo)
+    assert primero["log"] == [esperado]
+    assert segundo["log"] == [esperado]
+    assert snapshot["log"] == []
+    assert "diagnostico_supervisor" not in snapshot
+    assert all(esperado not in entrada["content"] for entrada in snapshot["historial"])
+
+
+def test_fallback_publico_solo_expone_categoria_y_resumen_canonicos(monkeypatch):
+    """RF-10 a RF-14: ni el JSON crudo ni datos internos llegan al contrato público."""
+    grafo = crear_grafo(
+        modelo_supervisor=lambda mensajes: "RESPUESTA_CRUDA_TOKEN_DE_PRUEBA",
+        modelo_sintetizador=lambda contexto: "Resumen controlado.",
+    )
+    monkeypatch.setattr(agent, "_GRAFO", grafo)
+
+    resultado = agent.procesar_turno({}, "¿Qué hora es?", "hilo-fallback-publico")
+    snapshot = recuperar_estado(grafo, "hilo-fallback-publico")
+
+    _comprobar_contrato(resultado)
+    assert resultado["log"] == [
+        "Supervisor: categoria=json_invalido; resumen=La decisión no contiene JSON válido; se aplicó el fallback."
+    ]
+    assert "RESPUESTA_CRUDA_TOKEN_DE_PRUEBA" not in str(resultado)
+    assert snapshot["log"] == []
+    assert "diagnostico_supervisor" not in snapshot
+
+
+def test_reanudacion_hitl_no_reproyecta_el_diagnostico_del_turno_inicial(monkeypatch):
+    """RF-25: aprobar un plan no reutiliza la categoría del Supervisor anterior."""
+    ruta = {
+        "estado": "ok",
+        "origen": {"direccion": "Atocha"},
+        "destino": {"direccion": "Sol"},
+        "ruta": {"duracion_min": 12, "tramos": []},
+    }
+    grafo = crear_grafo(
+        modelo_supervisor=lambda mensajes: {"roles": ["rutas"]},
+        especialistas={
+            "rutas": lambda estado: {
+                "resultados": [
+                    {
+                        "especialista": "rutas",
+                        "tool": "planificar_ruta",
+                        "status": "ok",
+                        "resultado": ruta,
+                        "args": {"origen": "Atocha", "destino": "Sol"},
+                    }
+                ]
+            }
+        },
+        modelo_sintetizador=lambda contexto: "Ruta lista para revisión.",
+    )
+    monkeypatch.setattr(agent, "_GRAFO", grafo)
+
+    inicial = agent.procesar_turno({}, "De Atocha a Sol.", "hilo-diagnostico-hitl")
+    reanudado = agent.aprobar_plan(
+        {"plan_id_seleccionado": inicial["plan"][0]["id"]},
+        "hilo-diagnostico-hitl",
+        True,
+    )
+    snapshot = recuperar_estado(grafo, "hilo-diagnostico-hitl")
+
+    assert inicial["log"] == [
+        "Supervisor: categoria=sin_fallback; resumen=Decisión estructurada validada."
+    ]
+    assert reanudado["log"] == []
+    assert "diagnostico_supervisor" not in snapshot
+
+
 def test_aprobacion_sin_snapshot_o_plan_no_modifica_el_checkpoint(grafo_falso):
     """RF-51: la aprobación inválida avisa y no escribe ninguna conversación."""
     sin_snapshot = agent.aprobar_plan({}, "hilo-inexistente", True)

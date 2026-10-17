@@ -47,6 +47,20 @@ def _validar_estado(estado: object) -> str | None:
     return None
 
 
+def _invocar_turno_con_diagnostico(
+    grafo: Any,
+    estado: Mapping[str, Any],
+    thread_id: str,
+) -> dict[str, Any]:
+    """Proyecta el diagnóstico efímero sin incorporarlo al checkpoint del grafo."""
+    contexto = {"diagnostico_supervisor": None}
+    estado_final = invocar_grafo(grafo, estado, thread_id, contexto=contexto)
+    return proyectar_resultado(
+        estado_final,
+        diagnostico_supervisor=contexto["diagnostico_supervisor"],
+    )
+
+
 def procesar_turno(estado: dict[str, Any], mensaje: str, thread_id: str) -> dict[str, Any]:
     """Procesa un mensaje válido y proyecta exclusivamente las seis claves públicas."""
     error_thread = _validar_thread_id(thread_id)
@@ -73,10 +87,13 @@ def procesar_turno(estado: dict[str, Any], mensaje: str, thread_id: str) -> dict
 
     turnos = snapshot.get("turnos_completados", 0)
     if isinstance(turnos, int) and turnos >= config.MAX_TURNOS_CONVERSACION:
-        estado_final = invocar_grafo(grafo, {"mensaje": mensaje, "limite_turnos": True}, thread_id)
-        return proyectar_resultado(estado_final)
+        return _invocar_turno_con_diagnostico(
+            grafo,
+            {"mensaje": mensaje, "limite_turnos": True},
+            thread_id,
+        )
 
-    estado_final = invocar_grafo(
+    return _invocar_turno_con_diagnostico(
         grafo,
         {
             "mensaje": mensaje,
@@ -87,7 +104,6 @@ def procesar_turno(estado: dict[str, Any], mensaje: str, thread_id: str) -> dict
         },
         thread_id,
     )
-    return proyectar_resultado(estado_final)
 
 
 def aprobar_plan(estado: dict[str, Any], thread_id: str, aprobado: bool) -> dict[str, Any]:
