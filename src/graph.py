@@ -8,10 +8,11 @@ from __future__ import annotations
 
 from copy import deepcopy
 import json
-from typing import Any, Callable, Mapping
+from typing import Any, Callable, Mapping, TypedDict
 
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import END, START, StateGraph
+from langgraph.runtime import Runtime
 from langgraph.types import Command, interrupt
 
 import config
@@ -32,6 +33,12 @@ ROLES_GRAFO = ("rag", "horarios", "rutas", "auxiliar", "tarifas")
 NodoEspecialista = Callable[[Mapping[str, Any]], Mapping[str, Any]]
 
 
+class ContextoEjecucion(TypedDict, total=False):
+    """Datos de una invocación que no deben llegar al checkpointer."""
+
+    diagnostico_supervisor: dict[str, str] | None
+
+
 def configuracion_hilo(thread_id: str) -> dict[str, dict[str, str]]:
     """Crea la configuración que LangGraph usa para aislar un checkpoint."""
     if not isinstance(thread_id, str) or not thread_id.strip():
@@ -39,9 +46,21 @@ def configuracion_hilo(thread_id: str) -> dict[str, dict[str, str]]:
     return {"configurable": {"thread_id": thread_id}}
 
 
-def invocar_grafo(grafo: Any, estado: Mapping[str, Any], thread_id: str) -> dict[str, Any]:
+def invocar_grafo(
+    grafo: Any,
+    estado: Mapping[str, Any],
+    thread_id: str,
+    *,
+    contexto: ContextoEjecucion | None = None,
+) -> dict[str, Any]:
     """Invoca un grafo siempre con el identificador de conversación requerido."""
-    return dict(grafo.invoke(dict(estado), config=configuracion_hilo(thread_id)))
+    return dict(
+        grafo.invoke(
+            dict(estado),
+            config=configuracion_hilo(thread_id),
+            context=contexto,
+        )
+    )
 
 
 def reanudar_grafo(grafo: Any, decision: Mapping[str, Any], thread_id: str) -> dict[str, Any]:
@@ -61,6 +80,15 @@ def _registrar_mensaje(estado: Mapping[str, Any]) -> dict[str, list[dict[str, st
     if not isinstance(mensaje, str) or not mensaje.strip():
         return {}
     return {"historial": [{"role": "user", "content": mensaje}]}
+
+
+def _nodo_supervisor_con_contexto(
+    estado: Mapping[str, Any],
+    runtime: Runtime[ContextoEjecucion],
+    modelo: Callable[..., Any] | None,
+) -> dict[str, Any]:
+    """Entrega el diagnóstico seguro al contexto efímero de esta invocación."""
+    return nodo_supervisor(estado, modelo=modelo, contexto=runtime.context)
 
 
 def _destino_entrada(estado: Mapping[str, Any]) -> str:
@@ -432,10 +460,17 @@ def crear_grafo(
             raise ValueError(f"Especialistas no permitidos: {sorted(desconocidos)!r}")
         nodos_especialistas.update(especialistas)
 
-    grafo = StateGraph(EstadoGrafo)
+    grafo = StateGraph(EstadoGrafo, context_schema=ContextoEjecucion)
     grafo.add_node("entrada", _registrar_mensaje)
     grafo.add_node("limite_turnos", _limite_turnos)
-    grafo.add_node("supervisor", lambda estado: nodo_supervisor(estado, modelo=modelo_supervisor))
+    grafo.add_node(
+        "supervisor",
+        lambda estado, runtime: _nodo_supervisor_con_contexto(
+            estado,
+            runtime,
+            modelo_supervisor,
+        ),
+    )
     for rol in ROLES_GRAFO:
         grafo.add_node(f"nodo_{rol}", _envolver_especialista(rol, nodos_especialistas[rol]))
     grafo.add_node("normalizar_rutas", normalizar_planes_rutas)

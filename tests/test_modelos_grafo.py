@@ -1,8 +1,10 @@
 """Adaptadores de modelo perezosos e inyectables (spec 005, T3)."""
 import importlib
 import sys
+from types import SimpleNamespace
 
 import model_auth
+import pytest
 
 
 def test_importar_y_construir_adaptadores_no_configura_claves(monkeypatch):
@@ -58,14 +60,92 @@ def test_sintetizador_inyectado_recibe_estado_y_no_llama_a_un_proveedor():
 
 
 def test_respuesta_estructurada_invalida_se_informa_sin_ejecutar_nada_externo():
-    """RF-6: el adaptador permite al supervisor aplicar su fallback controlado."""
-    from src.modelos import crear_modelo_supervisor
+    """RF-6: los especialistas conservan el rechazo de JSON no interpretable."""
+    from src.modelos import crear_modelo_especialista
 
-    supervisor = crear_modelo_supervisor(generar=lambda prompt: "no es JSON")
+    especialista = crear_modelo_especialista(generar=lambda prompt: "no es JSON")
 
     try:
-        supervisor("Consulta")
+        especialista("Consulta")
     except ValueError as error:
         assert "interpretable" in str(error)
     else:
         raise AssertionError("Una respuesta no estructurada debe fallar de forma controlada.")
+
+
+def test_generador_del_supervisor_pide_application_json_al_proveedor():
+    """RF-24: la decisión del Supervisor pide JSON nativo a Gemini."""
+    from src.modelos import GeneradorGemini
+
+    llamadas = []
+
+    class ClienteFalso:
+        models = SimpleNamespace(
+            generate_content=lambda **kwargs: llamadas.append(kwargs)
+            or SimpleNamespace(text='{"roles": ["auxiliar"]}')
+        )
+
+    generador = GeneradorGemini(
+        crear_cliente=ClienteFalso,
+        solicitar_json=True,
+    )
+
+    assert generador("Decide el rol.") == '{"roles": ["auxiliar"]}'
+    assert llamadas[0]["config"].response_mime_type == "application/json"
+
+
+def test_solo_el_adaptador_del_supervisor_solicita_json(monkeypatch):
+    """RF-1 y RF-24: especialistas y sintetizador conservan texto libre."""
+    import src.modelos as modelos
+
+    solicitudes_json = []
+
+    class GeneradorFalso:
+        def __init__(self, *, solicitar_json=False):
+            solicitudes_json.append(solicitar_json)
+
+        def __call__(self, prompt):
+            return "Respuesta falsa."
+
+    monkeypatch.setattr(modelos, "GeneradorGemini", GeneradorFalso)
+
+    modelos.crear_modelo_supervisor()
+    modelos.crear_modelo_especialista()
+    modelos.crear_modelo_sintetizador()
+
+    assert solicitudes_json == [True, False, False]
+
+
+@pytest.mark.parametrize(
+    "respuesta, error",
+    [
+        (None, RuntimeError("TOKEN_DE_PRUEBA_NO_EXPOSABLE")),
+        (SimpleNamespace(text=""), None),
+        (SimpleNamespace(text={"no": "texto"}), None),
+        (
+            SimpleNamespace(
+                text=None,
+                prompt_feedback=SimpleNamespace(block_reason="SAFETY"),
+            ),
+            None,
+        ),
+    ],
+)
+def test_incidencias_del_proveedor_se_traducen_sin_exponer_detalles(respuesta, error):
+    """RF-8: error, vacío, no texto y bloqueo cruzan una frontera uniforme."""
+    from src.modelos import ErrorProveedorModelo, GeneradorGemini
+
+    class ClienteFalso:
+        def generar(self, **kwargs):
+            if error is not None:
+                raise error
+            return respuesta
+
+        models = property(lambda self: SimpleNamespace(generate_content=self.generar))
+
+    generador = GeneradorGemini(crear_cliente=ClienteFalso)
+
+    with pytest.raises(ErrorProveedorModelo) as capturada:
+        generador("Decide el rol.")
+
+    assert "TOKEN_DE_PRUEBA_NO_EXPOSABLE" not in str(capturada.value)

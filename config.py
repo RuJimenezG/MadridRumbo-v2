@@ -17,7 +17,7 @@ QUERIES_DIR = BASE_DIR / "queries"
 OUTPUT_DIR = BASE_DIR / "output"
 CHUNKS_JSON = OUTPUT_DIR / "chunks.json"
 
-MAX_FILAS_CSV = 40  # : int | None
+MAX_FILAS_CSV = None  # : int | None
 CSV_PARADAS = "Paradas CRTM.csv"
 
 EXTENSIONES_TEXTO = {".txt", ".md"}
@@ -39,7 +39,7 @@ EMBED_BATCH_SIZE = 100
 EMBEDDINGS_JSON = OUTPUT_DIR / "embeddings.json"
 MAX_CHUNKS_EMBED: int | None = None  # None = todos; 50 puede dejar fuera FAQ/PDF
 
-EMBED_RPM_LIMIT = 80 # 2000  # La cuota gratuita de gemini-embedding-2 es de 100 RPM en free tier y 3000 RPM en Tier 1.
+EMBED_RPM_LIMIT = 2000  # La cuota gratuita de gemini-embedding-2 es de 100 RPM en free tier y 3000 RPM en Tier 1.
 
 # Configuración de las claves API utilizadas por los proveedores de embeddings.
 # GEMINI_API_KEY permite utilizar Gemini desde las funciones de embeddings.

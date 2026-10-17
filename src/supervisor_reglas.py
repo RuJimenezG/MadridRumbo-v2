@@ -23,6 +23,11 @@ PALABRAS_CALCULO = {"calcula", "calcular", "calculo", "total", "suma", "resta", 
 PALABRAS_RUTAS = {"ruta", "rutas", "llegar", "llego", "voy", "ir", "viaje", "trayecto"}
 PALABRAS_TRANSPORTE = {"metro", "autobus", "bus", "cercanias", "linea", "lineas", "tranvia"}
 PALABRAS_ACCION_HORARIO = {"horario", "horarios", "frecuencia", "ultima", "primer", "primera", "abre", "cierra", "salida", "salidas"}
+PATRONES_FORMULACION_RUTA = (
+    r"\bquiero\W+ir\W+de\b",
+    r"\bnecesito\W+ir\W+de\b",
+    r"\bvoy\W+de\b",
+)
 
 
 def _normalizar(texto: str) -> set[str]:
@@ -86,6 +91,8 @@ def _es_calculo(texto: str, palabras: set[str]) -> bool:
 def _es_ruta(texto: str, palabras: set[str]) -> bool:
     """Reconoce una intención de desplazamiento sin inferir origen ni destino."""
     if palabras & {"ruta", "rutas", "trayecto", "viaje"}:
+        return True
+    if any(re.search(patron, texto) for patron in PATRONES_FORMULACION_RUTA):
         return True
     return any(expresion in texto for expresion in ("como llegar", "como llego", "como voy", "como ir"))
 
