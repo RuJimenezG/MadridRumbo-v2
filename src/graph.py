@@ -21,7 +21,11 @@ from src.agents.base import EjecutorTool, crear_ejecutor_acotado, crear_ejecutor
 from src.agents.horarios import nodo_horarios
 from src.agents.rag import nodo_rag
 from src.agents.rutas import nodo_rutas
-from src.agents.tarifas import nodo_tarifas
+from src.agents.tarifas import (
+    MARCADOR_REDIRECCION_A_RAG,
+    nodo_tarifas,
+    redireccionar_tarifas_sin_imagen,
+)
 from src.estado import EstadoGrafo, crear_plan
 from src.modelos import crear_modelo_especialista
 from src.sintetizador import nodo_sintetizador, renderizar_respaldo
@@ -31,12 +35,15 @@ from src.tools import ejecutar_tool
 
 ROLES_GRAFO = ("rag", "horarios", "rutas", "auxiliar", "tarifas")
 NodoEspecialista = Callable[[Mapping[str, Any]], Mapping[str, Any]]
+_CLAVE_IMAGEN_VALIDA_INTERNA = "_imagen_valida_contexto"
 
 
 class ContextoEjecucion(TypedDict, total=False):
     """Datos de una invocación que no deben llegar al checkpointer."""
 
     diagnostico_supervisor: dict[str, str] | None
+    correcciones_tarifas: int
+    imagen_valida: bool
 
 
 def configuracion_hilo(thread_id: str) -> dict[str, dict[str, str]]:
@@ -362,7 +369,12 @@ def _especialistas_predeterminados(
         "horarios": lambda estado: nodo_horarios(dict(estado), modelos_efectivos["horarios"], ejecutor_para(estado)),
         "rutas": lambda estado: nodo_rutas(estado, modelos_efectivos["rutas"], ejecutor_para(estado)),
         "auxiliar": lambda estado: nodo_auxiliar(dict(estado), modelos_efectivos["auxiliar"], ejecutor_para(estado)),
-        "tarifas": lambda estado: nodo_tarifas(dict(estado), modelos_efectivos["tarifas"], ejecutor_para(estado)),
+        "tarifas": lambda estado: nodo_tarifas(
+            dict(estado),
+            modelos_efectivos["tarifas"],
+            ejecutor_para(estado),
+            tiene_imagen_valida=estado.get(_CLAVE_IMAGEN_VALIDA_INTERNA) is True,
+        ),
     }
 
 
@@ -392,20 +404,41 @@ def _resultados_desde_traza(rol: str, traza: list[Any]) -> list[dict[str, Any]]:
     return resultados
 
 
-def _envolver_especialista(rol: str, nodo: NodoEspecialista) -> Callable[[Mapping[str, Any]], dict[str, Any]]:
+def _envolver_especialista(
+    rol: str,
+    nodo: NodoEspecialista,
+) -> Callable[..., dict[str, Any]]:
     """Ejecuta un especialista, agrega sus deltas y consume el primer rol de cola."""
-    def ejecutar_nodo(estado: Mapping[str, Any]) -> dict[str, Any]:
+    def ejecutar_nodo(
+        estado: Mapping[str, Any],
+        runtime: Runtime[ContextoEjecucion],
+    ) -> dict[str, Any]:
         cola = estado.get("cola_roles", [])
         if not isinstance(cola, list) or not cola or cola[0] != rol:
             raise ValueError(f"La cola no permite ejecutar el nodo {rol!r}.")
 
-        actualizacion = nodo(estado)
+        imagen_valida = (
+            isinstance(runtime.context, Mapping)
+            and runtime.context.get("imagen_valida") is True
+        )
+        if rol == "tarifas" and not imagen_valida:
+            actualizacion = redireccionar_tarifas_sin_imagen()
+        else:
+            estado_para_nodo = dict(estado)
+            if rol == "tarifas":
+                estado_para_nodo[_CLAVE_IMAGEN_VALIDA_INTERNA] = True
+            actualizacion = nodo(estado_para_nodo)
         if not isinstance(actualizacion, Mapping):
             raise ValueError(f"El nodo {rol!r} no devolvió una actualización válida.")
 
         notas = _delta(estado.get("notas", []), actualizacion.get("notas", []))
         traza = _delta(estado.get("traza", []), actualizacion.get("traza", []))
         resultados = _delta(estado.get("resultados", []), actualizacion.get("resultados", []))
+        if rol == "tarifas" and actualizacion.get(MARCADOR_REDIRECCION_A_RAG) is True:
+            salida_redireccion = {"cola_roles": ["rag", *cola[1:]]}
+            if notas:
+                salida_redireccion["notas"] = notas
+            return salida_redireccion
         if not resultados:
             resultados = _resultados_desde_traza(rol, traza)
 

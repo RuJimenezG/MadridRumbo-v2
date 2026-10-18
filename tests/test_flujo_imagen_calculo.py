@@ -5,7 +5,9 @@ Usan un LLM y tools falsos: no llaman a ninguna API.
 import pytest
 
 import src.tools as tools
-from src.agents.tarifas import PROMPT_TARIFAS, nodo_tarifas
+from src.agents.tarifas import MARCADOR_REDIRECCION_A_RAG, PROMPT_TARIFAS, nodo_tarifas
+from src.estado import crear_estado_inicial
+from src.graph import crear_grafo, invocar_grafo, recuperar_estado
 
 
 TEXTO_IMAGEN = (
@@ -55,7 +57,7 @@ def test_tarifas_extrae_importes_sin_calcular():
     ])
     ejecutor = EjecutorFalso({"describir_imagen": TEXTO_IMAGEN})
 
-    salida = nodo_tarifas(estado(), llm, ejecutor)
+    salida = nodo_tarifas(estado(), llm, ejecutor, tiene_imagen_valida=True)
 
     assert [nombre for nombre, _ in ejecutor.llamadas] == ["describir_imagen"]
     assert [entrada["tool"] for entrada in salida["traza"]] == ["describir_imagen"]
@@ -71,7 +73,7 @@ def test_tarifas_con_ejecutor_controlado_solo_llama_a_imagen(monkeypatch):
         {"final": "He encontrado importes en la imagen."},
     ])
 
-    salida = nodo_tarifas(estado(), llm, tools.ejecutar_tool)
+    salida = nodo_tarifas(estado(), llm, tools.ejecutar_tool, tiene_imagen_valida=True)
 
     assert [entrada["tool"] for entrada in salida["traza"]] == ["describir_imagen"]
     assert salida["traza"][0]["status"] == "ok"
@@ -94,7 +96,7 @@ def test_sin_importes_no_inventa_un_total():
         return {"tool": "describir_imagen", "args": {}}
 
     ejecutor = EjecutorFalso({"describir_imagen": SIN_TEXTO})
-    salida = nodo_tarifas(estado(), llm, ejecutor)
+    salida = nodo_tarifas(estado(), llm, ejecutor, tiene_imagen_valida=True)
 
     assert [nombre for nombre, _ in ejecutor.llamadas] == ["describir_imagen"]
     assert "no se puede calcular" in salida["notas"][-1]
@@ -113,7 +115,7 @@ def test_tarifas_bloquea_calculadora_y_rag(tool, args):
     llm = LLMFalso([{"tool": tool, "args": args}, {"final": "No disponible."}])
     ejecutor = EjecutorFalso({})
 
-    salida = nodo_tarifas(estado(), llm, ejecutor)
+    salida = nodo_tarifas(estado(), llm, ejecutor, tiene_imagen_valida=True)
 
     assert ejecutor.llamadas == []
     assert salida["traza"][0] == {
@@ -122,3 +124,87 @@ def test_tarifas_bloquea_calculadora_y_rag(tool, args):
         "status": "bloqueada",
         "preview": f"ERROR: tool no permitida: {tool}",
     }
+
+
+def test_tarifas_sin_imagen_no_inicia_llm_ni_vision_y_pide_redireccion():
+    """RF-12: la defensa local evita cualquier llamada visual sin contexto válido."""
+    llm = LLMFalso([AssertionError("el LLM visual no debe ejecutarse")])
+    ejecutor = EjecutorFalso({"describir_imagen": TEXTO_IMAGEN})
+
+    salida = nodo_tarifas(estado("Describe este cartel."), llm, ejecutor)
+
+    assert salida[MARCADOR_REDIRECCION_A_RAG] is True
+    assert llm.recibidos == []
+    assert ejecutor.llamadas == []
+    assert salida["traza"] == []
+
+
+def test_contexto_de_imagen_demo_explicita_conserva_tarifas_sin_persistirla():
+    """RF-11: solo una integración interna que la marca habilita la visión."""
+    llamadas = []
+    grafo = crear_grafo(
+        modelo_supervisor=lambda mensajes: {"roles": ["tarifas"]},
+        especialistas={"tarifas": lambda estado: llamadas.append("tarifas") or {}},
+        modelo_sintetizador=lambda contexto: "Resumen controlado.",
+    )
+    contexto_demo = {
+        "diagnostico_supervisor": None,
+        "correcciones_tarifas": 0,
+        # Una integración futura seleccionó explícitamente la demo configurada.
+        "imagen_valida": True,
+    }
+
+    salida = invocar_grafo(
+        grafo,
+        crear_estado_inicial("¿Cuánto cuesta el Combinado Metro?"),
+        "imagen-demo-explicita",
+        contexto=contexto_demo,
+    )
+    snapshot = recuperar_estado(grafo, "imagen-demo-explicita")
+
+    assert llamadas == ["tarifas"]
+    assert contexto_demo["diagnostico_supervisor"]["categoria"] == "sin_fallback"
+    assert contexto_demo["correcciones_tarifas"] == 0
+    assert "imagen_valida" not in salida
+    assert "imagen_valida" not in snapshot
+
+
+def test_imagen_valida_no_se_hereda_en_el_turno_posterior_del_mismo_hilo():
+    """RF-8, RF-15 y RF-17: la señal visual vive solo durante una invocación."""
+    llamadas = []
+    grafo = crear_grafo(
+        modelo_supervisor=lambda mensajes: {"roles": ["tarifas"]},
+        especialistas={
+            "tarifas": lambda estado: llamadas.append("tarifas") or {},
+            "rag": lambda estado: llamadas.append("rag") or {},
+        },
+        modelo_sintetizador=lambda contexto: "Resumen controlado.",
+    )
+    primer_contexto = {
+        "diagnostico_supervisor": None,
+        "correcciones_tarifas": 0,
+        "imagen_valida": True,
+    }
+    segundo_contexto = {
+        "diagnostico_supervisor": None,
+        "correcciones_tarifas": 0,
+        "imagen_valida": False,
+    }
+
+    invocar_grafo(
+        grafo,
+        crear_estado_inicial("¿Cuánto cuesta el Combinado Metro?"),
+        "imagen-efimera",
+        contexto=primer_contexto,
+    )
+    invocar_grafo(
+        grafo,
+        crear_estado_inicial("¿Cuánto cuesta el Combinado Metro?"),
+        "imagen-efimera",
+        contexto=segundo_contexto,
+    )
+    snapshot = recuperar_estado(grafo, "imagen-efimera")
+
+    assert llamadas == ["tarifas", "rag"]
+    assert segundo_contexto["correcciones_tarifas"] == 1
+    assert "imagen_valida" not in snapshot

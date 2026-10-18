@@ -8,6 +8,7 @@ from src.supervisor_reglas import (
 )
 from src.modelos import ErrorProveedorModelo, crear_modelo_supervisor
 from src.supervisor import ROLES_ADMITIDOS, decidir_decision_supervisor, nodo_supervisor
+from src.catalogo_roles import CATALOGO_ROLES
 
 
 @pytest.mark.parametrize(
@@ -123,6 +124,92 @@ def test_prompt_del_supervisor_exige_json_sin_envoltorios():
     assert "json" in instruccion.lower()
     assert "markdown" in instruccion.lower()
     assert "texto" in instruccion.lower()
+
+
+def test_prompt_del_supervisor_se_genera_desde_el_catalogo_de_roles():
+    """RF-1 a RF-8: el modelo recibe capacidades y límites centralizados."""
+    mensajes_recibidos = []
+
+    nodo_supervisor(
+        {"mensaje": "Consulta documental."},
+        modelo=lambda mensajes: mensajes_recibidos.append(mensajes) or {"roles": []},
+    )
+
+    instruccion = mensajes_recibidos[0][0]["content"]
+    for rol, ficha in CATALOGO_ROLES.items():
+        assert f"- {rol}: {ficha.responsabilidad}." in instruccion
+    assert "Una consulta textual de tarifa sin imagen debe seleccionar rag." in instruccion
+    assert "No selecciones tarifas salvo que exista una imagen aportada válida." in instruccion
+
+
+def test_decision_tarifas_textual_valida_se_corrige_a_rag():
+    """RF-9 y RF-14 a RF-17: una decisión válida incompatible no usa fallback."""
+    decision = decidir_decision_supervisor(
+        {"mensaje": "¿Cuánto cuesta el Combinado Metro?"},
+        modelo=lambda mensajes: {"roles": ["tarifas"]},
+    )
+
+    assert decision.roles == ["rag"]
+    assert decision.uso_fallback is False
+    assert decision.categoria == "sin_fallback"
+    assert decision.correcciones_tarifas == 1
+    assert set(decision.__dict__) == {
+        "roles",
+        "uso_fallback",
+        "categoria",
+        "resumen",
+        "correcciones_tarifas",
+    }
+
+
+def test_repeticiones_tarifas_informan_contador_seguro_y_conservan_orden():
+    """RF-9 y RF-16: se corrige cada aparición sin reordenar la cola válida."""
+    decision = decidir_decision_supervisor(
+        {"mensaje": "¿Qué precio tienen los billetes?"},
+        modelo=lambda mensajes: {"roles": ["auxiliar", "tarifas", "tarifas", "rutas"]},
+    )
+
+    assert decision.roles == ["auxiliar", "rag", "rag", "rutas"]
+    assert decision.correcciones_tarifas == 2
+    assert decision.uso_fallback is False
+    assert decision.categoria == "sin_fallback"
+
+
+def test_referencia_textual_a_cartel_sin_imagen_va_a_rag():
+    """RF-10: una referencia visual sin archivo no habilita el rol visual."""
+    decision = decidir_decision_supervisor(
+        {"mensaje": "En la foto del cartel, ¿cuánto cuesta el abono?"},
+        modelo=lambda mensajes: {"roles": ["tarifas"]},
+    )
+
+    assert decision.roles == ["rag"]
+    assert decision.correcciones_tarifas == 1
+
+
+def test_imagen_valida_conserva_tarifas_en_una_decision_valida():
+    """RF-11: el contexto visual válido evita la corrección semántica."""
+    decision = decidir_decision_supervisor(
+        {"mensaje": "¿Cuánto cuesta el Combinado Metro?"},
+        modelo=lambda mensajes: {"roles": ["tarifas"]},
+        tiene_imagen_valida=True,
+    )
+
+    assert decision.roles == ["tarifas"]
+    assert decision.correcciones_tarifas == 0
+    assert decision.uso_fallback is False
+
+
+def test_fallback_valido_se_conserva_sin_correccion_semantica():
+    """RF-9: la guarda no sustituye el fallback ante una decisión inválida."""
+    decision = decidir_decision_supervisor(
+        {"mensaje": "¿Cuál es la tarifa del Combinado Metro?"},
+        modelo=lambda mensajes: {"roles": ["rol_prohibido"]},
+    )
+
+    assert decision.roles == ["rag"]
+    assert decision.uso_fallback is True
+    assert decision.categoria == "roles_invalidos"
+    assert decision.correcciones_tarifas == 0
 
 
 def test_adaptador_del_supervisor_conserva_el_texto_para_normalizarlo():

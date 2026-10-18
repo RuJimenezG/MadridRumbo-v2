@@ -53,11 +53,16 @@ def _invocar_turno_con_diagnostico(
     thread_id: str,
 ) -> dict[str, Any]:
     """Proyecta el diagnóstico efímero sin incorporarlo al checkpoint del grafo."""
-    contexto = {"diagnostico_supervisor": None}
+    contexto = {
+        "diagnostico_supervisor": None,
+        "correcciones_tarifas": 0,
+        "imagen_valida": False,
+    }
     estado_final = invocar_grafo(grafo, estado, thread_id, contexto=contexto)
     return proyectar_resultado(
         estado_final,
         diagnostico_supervisor=contexto["diagnostico_supervisor"],
+        correcciones_tarifas=contexto["correcciones_tarifas"],
     )
 
 

@@ -11,12 +11,17 @@ import json
 import re
 from typing import Any, Callable, Mapping, MutableMapping
 
+from src.catalogo_roles import (
+    ROLES_CATALOGO,
+    corregir_tarifas_textuales,
+    instrucciones_para_supervisor,
+)
 from src.modelos import ErrorProveedorModelo, crear_modelo_supervisor
 from src.supervisor_reglas import MENSAJE_REFORMULACION, elegir_roles_por_reglas
 
 
-# Los nombres coinciden con los nodos que declarará el grafo en T12.
-ROLES_ADMITIDOS = ("rag", "horarios", "rutas", "auxiliar", "tarifas")
+# La allowlist del Supervisor nace del mismo catálogo que recibe el modelo.
+ROLES_ADMITIDOS = ROLES_CATALOGO
 MAX_ROLES_POR_DECISION = 20
 CATEGORIAS_DIAGNOSTICO = frozenset(
     {"proveedor", "json_invalido", "roles_invalidos", "sin_fallback"}
@@ -56,6 +61,7 @@ class DecisionSupervisor:
     uso_fallback: bool
     categoria: str
     resumen: str
+    correcciones_tarifas: int = 0
 
 
 def _mensajes_para_modelo(estado: Mapping[str, Any]) -> list[dict[str, str]]:
@@ -66,8 +72,9 @@ def _mensajes_para_modelo(estado: Mapping[str, Any]) -> list[dict[str, str]]:
             "content": (
                 "Decide los especialistas necesarios. Responde exclusivamente con "
                 "JSON válido, sin Markdown ni texto envolvente. Ejemplo: "
-                '{"roles": ["auxiliar"]}. El campo roles usa solamente rag, horarios, '
-                "rutas, auxiliar o tarifas. Usa una lista vacía para finalizar."
+                '{"roles": ["auxiliar"]}. El campo roles usa solamente '
+                f"{', '.join(ROLES_ADMITIDOS)}. Usa una lista vacía para finalizar.\n\n"
+                f"{instrucciones_para_supervisor()}"
             ),
         }
     ]
@@ -145,16 +152,25 @@ def _decision_fallback(
 def decidir_decision_supervisor(
     estado: Mapping[str, Any],
     modelo: ModeloSupervisor | None = None,
+    *,
+    tiene_imagen_valida: bool = False,
 ) -> DecisionSupervisor:
     """Clasifica la decisión del Supervisor antes de usar el fallback seguro."""
     try:
         modelo_efectivo = modelo or crear_modelo_supervisor()
         respuesta = modelo_efectivo(_mensajes_para_modelo(estado))
+        roles_validados = validar_decision(_normalizar_decision_json(respuesta))
+        roles, correcciones_tarifas = corregir_tarifas_textuales(
+            roles_validados,
+            estado.get("mensaje", ""),
+            tiene_imagen_valida=tiene_imagen_valida is True,
+        )
         return DecisionSupervisor(
-            roles=validar_decision(_normalizar_decision_json(respuesta)),
+            roles=roles,
             uso_fallback=False,
             categoria="sin_fallback",
             resumen=RESUMENES_DIAGNOSTICO["sin_fallback"],
+            correcciones_tarifas=correcciones_tarifas,
         )
     except ErrorProveedorModelo:
         return _decision_fallback(estado, "proveedor")
@@ -181,13 +197,22 @@ def nodo_supervisor(
     contexto: MutableMapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Prepara la cola del turno o solicita una reformulación si no hay ámbito."""
-    decision = decidir_decision_supervisor(estado, modelo=modelo)
+    tiene_imagen_valida = (
+        contexto is not None and contexto.get("imagen_valida") is True
+    )
+    decision = decidir_decision_supervisor(
+        estado,
+        modelo=modelo,
+        tiene_imagen_valida=tiene_imagen_valida,
+    )
     roles = decision.roles
     if contexto is not None:
         contexto["diagnostico_supervisor"] = {
             "categoria": decision.categoria,
             "resumen": decision.resumen,
         }
+        if decision.correcciones_tarifas > 0:
+            contexto["correcciones_tarifas"] = decision.correcciones_tarifas
 
     actualizacion: dict[str, Any] = {"cola_roles": roles}
 

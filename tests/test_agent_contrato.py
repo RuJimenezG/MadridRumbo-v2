@@ -49,6 +49,45 @@ def test_fachada_expone_las_dos_firmas_y_las_seis_claves(grafo_falso):
     assert "No existe un plan pendiente" in resultado_aprobacion["respuesta"]
 
 
+def test_procesar_turno_inicializa_el_contexto_sin_imagen_valida(monkeypatch):
+    """RF-8 y RF-17: la fachada no hereda ni acepta contexto visual público."""
+    grafo = object()
+    contextos = []
+
+    monkeypatch.setattr(agent, "_obtener_grafo", lambda: grafo)
+    monkeypatch.setattr(agent, "recuperar_estado", lambda recibido, hilo: {})
+
+    def invocar(recibido, estado, hilo, *, contexto):
+        assert recibido is grafo
+        contextos.append(dict(contexto))
+        return {
+            "respuesta": "Resumen controlado.",
+            "planes_pendientes": [],
+            "log": [],
+            "traza": [],
+            "hitl_pendiente": False,
+            "done": True,
+        }
+
+    monkeypatch.setattr(agent, "invocar_grafo", invocar)
+
+    resultado = agent.procesar_turno(
+        {"imagen_valida": True},
+        "¿Cuánto cuesta el Combinado Metro?",
+        "hilo-contexto-inicial",
+    )
+
+    _comprobar_contrato(resultado)
+    assert contextos == [
+        {
+            "diagnostico_supervisor": None,
+            "correcciones_tarifas": 0,
+            "imagen_valida": False,
+        }
+    ]
+    assert "imagen_valida" not in resultado
+
+
 @pytest.mark.parametrize(
     ("estado", "mensaje", "thread_id", "fragmento"),
     [
@@ -97,6 +136,92 @@ def test_resultado_del_turno_expone_diagnostico_seguro_sin_persistirlo(grafo_fal
     assert snapshot["log"] == []
     assert "diagnostico_supervisor" not in snapshot
     assert all(esperado not in entrada["content"] for entrada in snapshot["historial"])
+
+
+def test_correccion_semantica_se_expone_solo_en_el_turno_que_la_origina(monkeypatch):
+    """RF-14 a RF-19: el indicador es público, seguro y efímero."""
+    def supervisor(mensajes):
+        return {"roles": ["tarifas"]} if "Combinado Metro" in mensajes[-1]["content"] else {"roles": []}
+
+    grafo = crear_grafo(
+        modelo_supervisor=supervisor,
+        especialistas={"rag": lambda estado: {}},
+        modelo_sintetizador=lambda contexto: "Resumen controlado.",
+    )
+    monkeypatch.setattr(agent, "_GRAFO", grafo)
+
+    primero = agent.procesar_turno(
+        {},
+        "¿Cuánto cuesta el Combinado Metro?",
+        "hilo-correccion-semantica",
+    )
+    segundo = agent.procesar_turno(
+        {},
+        "Consulta posterior sin tarifas.",
+        "hilo-correccion-semantica",
+    )
+    snapshot = recuperar_estado(grafo, "hilo-correccion-semantica")
+
+    _comprobar_contrato(primero)
+    _comprobar_contrato(segundo)
+    assert primero["log"] == [
+        "Supervisor: categoria=sin_fallback; resumen=Decisión estructurada validada.",
+        "Supervisor: correccion_semantica=aplicada; resumen=Se redirigieron 1 derivaciones incompatibles de tarifas a rag.",
+    ]
+    assert segundo["log"] == [
+        "Supervisor: categoria=sin_fallback; resumen=Decisión estructurada validada."
+    ]
+    assert "correccion_semantica" not in str(snapshot)
+    assert "correcciones_tarifas" not in snapshot
+    assert "diagnostico_supervisor" not in snapshot
+    assert "correccion_semantica" not in str(snapshot["historial"])
+    assert "correccion_semantica" not in str(primero["traza"])
+
+
+def test_reanudacion_hitl_no_reutiliza_correccion_semantica(monkeypatch):
+    """RF-15 y RF-17: la reanudación no recupera el contexto de otro turno."""
+    ruta = {
+        "estado": "ok",
+        "origen": {"direccion": "Atocha"},
+        "destino": {"direccion": "Sol"},
+        "ruta": {"duracion_min": 12, "tramos": []},
+    }
+    grafo = crear_grafo(
+        modelo_supervisor=lambda mensajes: {"roles": ["tarifas", "rutas"]},
+        especialistas={
+            "rag": lambda estado: {},
+            "rutas": lambda estado: {
+                "resultados": [
+                    {
+                        "especialista": "rutas",
+                        "tool": "planificar_ruta",
+                        "status": "ok",
+                        "resultado": ruta,
+                        "args": {"origen": "Atocha", "destino": "Sol"},
+                    }
+                ]
+            },
+        },
+        modelo_sintetizador=lambda contexto: "Ruta lista para revisión.",
+    )
+    monkeypatch.setattr(agent, "_GRAFO", grafo)
+
+    inicial = agent.procesar_turno(
+        {},
+        "¿Cuánto cuesta ir de Atocha a Sol con Combinado Metro?",
+        "hilo-correccion-hitl",
+    )
+    reanudado = agent.aprobar_plan(
+        {"plan_id_seleccionado": inicial["plan"][0]["id"]},
+        "hilo-correccion-hitl",
+        True,
+    )
+    snapshot = recuperar_estado(grafo, "hilo-correccion-hitl")
+
+    assert "correccion_semantica=aplicada" in "\n".join(inicial["log"])
+    assert reanudado["log"] == []
+    assert "correccion_semantica" not in str(snapshot)
+    assert "correcciones_tarifas" not in snapshot
 
 
 def test_fallback_publico_solo_expone_categoria_y_resumen_canonicos(monkeypatch):
