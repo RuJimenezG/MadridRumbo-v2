@@ -1,0 +1,241 @@
+"""Tests de presentación y contrato de los clientes (spec 008, RF-3, RF-4, RF-10, RF-15, RF-16, RF-24 y RF-26).
+
+Son funciones puras: no usan grafo, red ni API.
+"""
+import pytest
+
+from src.clientes.contrato import estado_vacio, normalizar_estado
+from src.clientes.presentacion import (
+    datos_depuracion,
+    es_mensaje_vacio,
+    es_salida,
+    formatear_turno,
+    interpretar_decision,
+)
+
+ESTADO = {
+    "respuesta": "El metro cierra a la 1:30.",
+    "plan": ["Informar del horario", "Citar la fuente"],
+    "log": ["[supervisor] -> horarios", "[horarios] nota lista"],
+    "traza": [
+        {"tool": "hora_actual", "args": {}, "status": "ok", "preview": "Hoy es jueves"},
+        {"tool": "rag_ask", "args": {"consulta": "horario"}, "status": "error", "preview": "ERROR"},
+    ],
+    "hitl_pendiente": True,
+    "done": False,
+}
+
+
+# --- Contrato ---
+
+def test_estado_vacio():
+    # El estado inicial no tiene respuesta, plan ni trazas y no está pendiente ni terminado.
+    assert estado_vacio() == {
+        "respuesta": "", "plan": [], "log": [], "traza": [], "hitl_pendiente": False, "done": False,
+    }
+
+
+def test_normalizar_rellena_claves_ausentes():
+    # El grafo real puede devolver menos claves: las que faltan toman su valor por defecto.
+    estado = normalizar_estado({"respuesta": "hola"})
+    assert estado["respuesta"] == "hola"
+    assert estado["plan"] == [] and estado["traza"] == [] and estado["log"] == []
+    assert estado["hitl_pendiente"] is False and estado["done"] is False
+
+
+def test_normalizar_conserva_claves_desconocidas_y_no_modifica_la_entrada():
+    original = {"respuesta": "hola", "extra": 1}
+    estado = normalizar_estado(original)
+    assert estado["extra"] == 1
+    assert "plan" not in original  # no se modifica el diccionario recibido
+
+
+def test_normalizar_none():
+    assert normalizar_estado(None) == estado_vacio()
+
+
+# --- Formato del turno (RF-15, RF-16) ---
+
+def test_formato_incluye_respuesta_log_traza():
+    # RF-15: respuesta, especialistas que actuaron y tools con su estado.
+    texto = formatear_turno(ESTADO, "hilo-1")
+    assert "El metro cierra a la 1:30." in texto
+    assert "[supervisor] -> horarios" in texto and "[horarios] nota lista" in texto
+    assert "hora_actual" in texto and "rag_ask" in texto
+    assert "ok" in texto and "error" in texto
+
+
+def test_formato_incluye_thread_id_y_banderas():
+    # RF-16: identificador de conversación y banderas de plan pendiente y terminada.
+    texto = formatear_turno(ESTADO, "hilo-1")
+    assert "hilo-1" in texto
+    assert "Plan pendiente: sí" in texto
+    assert "Terminada: no" in texto
+    terminado = formatear_turno({**ESTADO, "hitl_pendiente": False, "done": True}, "hilo-1")
+    assert "Plan pendiente: no" in terminado and "Terminada: sí" in terminado
+
+
+def test_formato_muestra_el_plan_cuando_hay():
+    texto = formatear_turno(ESTADO, "hilo-1")
+    assert "Informar del horario" in texto and "Citar la fuente" in texto
+
+
+def test_formato_con_estado_parcial_no_falla():
+    # Un grafo que solo devuelve la respuesta no rompe la presentación.
+    texto = formatear_turno({"respuesta": "hola"}, "hilo-2")
+    assert "hola" in texto and "hilo-2" in texto
+    assert "Plan pendiente: no" in texto
+
+
+# --- Entradas de la persona (RF-3, RF-4, RF-10) ---
+
+@pytest.mark.parametrize("texto", ["", "   ", "\n", "\t "])
+def test_es_mensaje_vacio(texto):
+    # RF-3
+    assert es_mensaje_vacio(texto) is True
+
+
+def test_mensaje_con_texto_no_es_vacio():
+    assert es_mensaje_vacio("hola") is False
+
+
+@pytest.mark.parametrize("texto", ["salir", "SALIR", "  Salir  ", "exit", "quit"])
+def test_es_salida(texto):
+    # RF-4
+    assert es_salida(texto) is True
+
+
+def test_no_es_salida():
+    assert es_salida("¿hasta qué hora hay metro?") is False
+
+
+@pytest.mark.parametrize("texto", ["s", "S", "sí", "si", " Sí ", "aprobar", "a"])
+def test_interpretar_decision_aprobar(texto):
+    # RF-10
+    assert interpretar_decision(texto) is True
+
+
+@pytest.mark.parametrize("texto", ["n", "N", "no", " NO ", "rechazar", "r"])
+def test_interpretar_decision_rechazar(texto):
+    assert interpretar_decision(texto) is False
+
+
+@pytest.mark.parametrize("texto", ["", "quizá", "x", "1", "siii"])
+def test_interpretar_decision_invalida(texto):
+    # RF-10: lo que no se reconoce devuelve None y el cliente vuelve a preguntar.
+    assert interpretar_decision(texto) is None
+
+
+# --- Depuración (RF-24) ---
+
+def test_datos_depuracion():
+    # RF-24: registro de especialistas, trazas, identificador y banderas.
+    datos = datos_depuracion(ESTADO, "hilo-1")
+    assert datos["thread_id"] == "hilo-1"
+    assert datos["log"] == ESTADO["log"]
+    assert datos["traza"] == ESTADO["traza"]
+    assert datos["hitl_pendiente"] is True and datos["done"] is False
+
+
+# --- Mismo formato en CLI y Streamlit (RF-26) ---
+
+def test_cli_usa_el_mismo_formato():
+    # RF-26: lo que imprime el CLI es exactamente `formatear_turno`, la misma función que usa Streamlit.
+    from src.clientes.cli import ejecutar_cli
+
+    estado_grafo = {
+        "respuesta": "Respuesta del grafo",
+        "log": ["[supervisor] -> horarios"],
+        "traza": [{"tool": "hora_actual", "args": {}, "status": "ok", "preview": "Hoy es jueves"}],
+        "hitl_pendiente": False,
+        "done": False,
+    }
+
+    class Grafo:
+        llamadas = []
+
+        def procesar_turno(self, estado, mensaje, thread_id):
+            self.llamadas.append(thread_id)
+            return dict(estado_grafo)
+
+    grafo = Grafo()
+    entradas = iter(["hola", "salir"])
+    salida = []
+    ejecutar_cli([], grafo, lambda prompt="": next(entradas), salida.append, None)
+
+    esperado = formatear_turno(estado_grafo, grafo.llamadas[0])
+    assert esperado in "\n".join(salida)
+
+
+# --- Planes de ruta y entradas técnicas del supervisor (spec 008, RF-6, RF-30 y RF-35) ---
+
+def _plan_de_ruta(numero):
+    return {
+        "id": f"ruta-{numero}",
+        "resultado": {
+            "estado": "ok",
+            "origen": {"direccion": "Puerta del Sol, Madrid"},
+            "destino": {"direccion": "Estación de Atocha, Madrid"},
+            "ruta": {"duracion_min": 12, "tramos": [{"modo": "A pie", "linea": None, "duracion_min": 3}]},
+            "zona": {"estado": "ok", "texto": "Zona A", "fuente": "RAG"},
+            "precio": {"estado": "ok", "texto": "1,50 €", "fuente": "RAG"},
+        },
+    }
+
+
+LOG_CON_TECNICAS = [
+    "[supervisor] -> rutas",
+    "Supervisor: categoria=json_invalido; resumen=La decisión no contiene JSON válido; se aplicó el fallback.",
+    "[rutas] nota lista",
+    "Supervisor: correccion_semantica=aplicada; resumen=Se redirigieron 1 derivaciones incompatibles de tarifas a rag.",
+]
+
+
+def test_formato_muestra_el_resumen_de_cada_plan():
+    # RF-6 y RF-30: cada plan con su identificador y un resumen legible, no el diccionario en bruto.
+    estado = {"respuesta": "Ruta preparada", "plan": [_plan_de_ruta(1), _plan_de_ruta(2)], "hitl_pendiente": True}
+    texto = formatear_turno(estado, "hilo-1")
+    assert "ruta-1" in texto and "ruta-2" in texto
+    assert texto.count("Origen: Puerta del Sol, Madrid") == 2
+    assert "12 min" in texto and "Zona A" in texto and "1,50 €" in texto
+    assert "{'id'" not in texto and "'resultado'" not in texto
+
+
+def test_el_titulo_del_plan_depende_de_cuantos_hay():
+    uno = formatear_turno({"respuesta": "x", "plan": [_plan_de_ruta(1)]}, "h")
+    varios = formatear_turno({"respuesta": "x", "plan": [_plan_de_ruta(1), _plan_de_ruta(2)]}, "h")
+    assert "Plan propuesto:" in uno and "Planes propuestos:" not in uno
+    assert "Planes propuestos:" in varios
+
+
+def test_un_plan_desconocido_no_rompe_el_formato():
+    texto = formatear_turno({"respuesta": "x", "plan": [{"id": "otro-1", "resultado": {"cosa": 1}}]}, "h")
+    assert "otro-1" in texto and "cosa: 1" in texto
+
+
+def test_por_defecto_se_muestran_las_entradas_tecnicas():
+    # El CLI las muestra: es lo que consulta el cliente técnico (spec 006, RF-15).
+    texto = formatear_turno({"respuesta": "x", "log": LOG_CON_TECNICAS}, "h")
+    for entrada in LOG_CON_TECNICAS:
+        assert entrada in texto
+
+
+def test_ocultar_tecnicas():
+    # RF-35: la web las oculta y conserva el resto del registro de especialistas.
+    texto = formatear_turno({"respuesta": "x", "log": LOG_CON_TECNICAS}, "h", ocultar_tecnicas=True)
+    assert "Supervisor: categoria=" not in texto
+    assert "Supervisor: correccion_semantica=" not in texto
+    assert "[supervisor] -> rutas" in texto and "[rutas] nota lista" in texto
+
+
+def test_si_todo_el_log_es_tecnico_no_queda_la_seccion_de_especialistas():
+    solo_tecnicas = [LOG_CON_TECNICAS[1], LOG_CON_TECNICAS[3]]
+    texto = formatear_turno({"respuesta": "x", "log": solo_tecnicas}, "h", ocultar_tecnicas=True)
+    assert "Especialistas" not in texto
+
+
+def test_la_depuracion_tambien_puede_ocultar_las_tecnicas():
+    estado = {"respuesta": "x", "log": LOG_CON_TECNICAS}
+    assert datos_depuracion(estado, "h")["log"] == LOG_CON_TECNICAS
+    oculto = datos_depuracion(estado, "h", ocultar_tecnicas=True)["log"]
+    assert oculto == ["[supervisor] -> rutas", "[rutas] nota lista"]

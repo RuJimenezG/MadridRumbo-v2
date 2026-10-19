@@ -82,3 +82,4 @@ Ninguna.
   - El LLM recibe una lista de mensajes `{"role", "content"}` y devuelve `{"tool", "args"}` para pedir una tool o `{"final"}` para dar la nota.
   - Cada tool se ejecuta con `ejecutar_tool(nombre, args, traza)`, que deja en la traza `tool`, `args`, `status` (ok, error o bloqueada) y `preview`.
 - **Dependencias aprobadas (2026-10-14):** `tzdata` y `pytest`.
+- **Fuente única de la hora (2026-10-19).** `hora_actual` obtiene el instante de `src.reloj.ahora()`, la misma fuente que usa `planificar_ruta` (spec 004, RF-14), en lugar de llamar a `datetime.now`. El comportamiento no cambia: RF-1 a RF-5 siguen igual y el parámetro opcional `ahora` sigue sirviendo para fijar el instante en los tests.

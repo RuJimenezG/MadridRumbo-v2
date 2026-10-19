@@ -55,3 +55,18 @@ def test_zona_invalida(monkeypatch):
     monkeypatch.setattr(config, "ZONA_HORARIA", "Zona/Inexistente")
     texto = hora_actual(datetime(2026, 10, 13, 17, 58, tzinfo=MADRID))
     assert texto.startswith("ERROR:")
+
+
+def test_usa_la_fuente_unica_de_la_hora(monkeypatch):
+    # Sin argumentos, el instante sale de src.reloj.ahora() (spec 004, RF-14) y no de datetime.now.
+    import src.reloj as reloj
+
+    monkeypatch.setattr(reloj, "ahora", lambda: datetime(2026, 10, 13, 17, 58, tzinfo=MADRID))
+    texto = hora_actual()
+    assert "martes" in texto and "13/10/2026" in texto and "17:58" in texto
+
+
+def test_zona_invalida_sin_argumentos(monkeypatch):
+    # RF-5: aunque la hora la dé el reloj compartido, una zona inválida sigue siendo un error controlado.
+    monkeypatch.setattr(config, "ZONA_HORARIA", "Zona/Inexistente")
+    assert hora_actual().startswith("ERROR:")
