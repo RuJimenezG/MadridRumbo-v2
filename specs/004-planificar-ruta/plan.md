@@ -140,6 +140,10 @@ planificar_ruta(origen, destino, hora_salida, hora_llegada, titulo):
   si algún extremo no es ok -> estado por prioridad fuera > no_encontrada > ambigua;
        mensaje lista cada problema; NO se llama a Google (RF-5) ni al RAG
   si distancia(origen, destino) <= RADIO_MISMA_UBICACION_M -> misma_ubicacion  # RF-10
+  para extremo elegido: si no verificar_candidato(extremo)          # T22, RF-55
+      (sin municipio, o ni iso == "ES-MD" ni region == "Comunidad de Madrid")
+      -> direccion_no_encontrada, mensaje "No se pudo verificar que la dirección de … esté en la
+         Comunidad de Madrid", sin Google ni RAG
   # 3) ruta
   respuesta = google_routes(coords, MODOS_GOOGLE, t, tipo_hora)   # máx. 1 llamada
       # tipo_hora = "salida" -> departureTime; "llegada" -> arrivalTime (solo TRANSIT,
@@ -156,7 +160,7 @@ planificar_ruta(origen, destino, hora_salida, hora_llegada, titulo):
      TIPOS_VEHICULO_ACEPTADOS -> sin_ruta, zona y precio "omitida" (RF-17, 12, 13)
   ruta = tiempo total + tramos (solo datos de Google; nada estimado, RF-18)
   # 4) zona y precio
-  lugares = (parada_subida, parada_bajada) si hay ruta, si no (municipio_o, municipio_d)
+  lugares = (municipio_o, municipio_d)     # T22, RF-54: siempre los municipios de Nominatim, con o sin ruta de Google
   # RF-46: primero la zona, después el precio del título en esa zona. Máx. 2 llamadas (RF-49).
   zona   = consultar_rag(PREGUNTA_ZONA.format(lugares))              # llamada 1
   # Orden zona -> precio para TODOS los títulos, sencillo incluido (RF-46).
@@ -201,7 +205,8 @@ Nominatim: `GET {URL}/search?q=...&format=jsonv2&countrycodes=es&viewbox=<lon_mi
 | Un único módulo `planificar_ruta.py` con funciones internas pequeñas y puras (`dentro_de_ambito`, `clasificar`, `validar_hora`, `mensaje_*`) | Un paquete por servicio | Menos archivos; las puras se testean sin dobles. Se parte si crece. |
 | Salida `dict` con `estado` cerrado y `mensaje` fijado por Python; serialización JSON en una capa fina | Texto libre; excepciones | Mensajes deterministas (RF-18, 23); la traza muestra el estado; coherente con `responder()`. |
 | Dos llamadas al RAG (zona y precio) con `rag_ask`, importada de forma perezosa dentro de `consultar_rag` | Una sola llamada; `retrieve()` directo | Permite RF-22 por dato, respeta "RAG como tool" y no cambia su contrato. La importación perezosa evita cargar Chroma al importar y permite el doble de prueba. |
-| Preguntas al RAG construidas con paradas de subida/bajada de Google, o con el municipio de Nominatim si Google falla (RF-20) | Texto libre de la dirección | Entidades que el corpus puede reconocer. |
+| Preguntas de zona al RAG construidas con el municipio de origen y de destino de Nominatim (T22, RF-54), con o sin ruta de Google (RF-20) | Paradas de subida/bajada de Google (**descartado tras T17**: el RAG respondió «No lo sé» con dos paradas y la zona con el municipio); texto libre de la dirección | Entidades que el corpus reconoce. |
+| Verificar cada extremo elegido con `verificar_candidato`: municipio no vacío y (`ISO3166-2-lvl4 == "ES-MD"` o `state == "Comunidad de Madrid"`); constantes `CCAA_ISO` y `CCAA_NOMBRE` en `planificar_ruta.py`; estado `direccion_no_encontrada` (T22, RF-55) | Estado nuevo; lista de comunidades en `config.py`; confiar solo en la caja | Sin municipio no hay pregunta de zona. `addressdetails=1` ya se pedía. El ISO no depende del idioma. Se reutiliza un estado existente para no cambiar el contrato. |
 | Ruta sin hora: no se envía `departureTime` y se informa de `ahora()` | Enviar la hora actual explícita | Google rechaza horas pasadas, y la actual lo sería al llegar la petición. |
 | Validar primero hora/título/datos (sin red) y luego geocodificar | Geocodificar siempre primero | No gasta Nominatim en peticiones ya inválidas (RNF Coste). |
 | Verificación en la respuesta por tipo de vehículo de cada tramo, además de `allowedTravelModes` | Confiar solo en la petición | RF-12 y RF-13 quedan comprobables por nosotros. Un tramo no permitido se informa como "sin ruta" aunque exista alternativa. |
@@ -236,6 +241,7 @@ Todos con `pytest`, sin red ni LLM. **Dobles:** `_http_json` (Nominatim y Google
 | `test_planificar_ruta_tarifa.py::test_billete_10_viajes_consulta_su_precio` y `::test_billete_10_viajes_de_extremo_a_extremo` | Dejan de ser un caso especial; se reescriben como título libre en el orden zona → precio | T21 |
 | `test_planificar_ruta_tarifa.py::test_consulta_zona_y_precio_sencillo` | Revisar: la pregunta de precio pasa a depender de la zona (RF-46) | T21 |
 | `test_planificar_ruta_rnf.py::test_maximo_2_nominatim_y_1_google` | Ampliar con el límite de 2 llamadas al RAG (RF-49) | T21 |
+| `test_planificar_ruta_google.py::test_secuencia_nominatim_google_rag` y `test_planificar_ruta_tarifa.py::test_primero_zona_despues_precio_del_titulo` (preguntas con paradas); `test_planificar_ruta_geocodificacion.py::test_geocodifica_origen_y_destino_con_nominatim` (candidato sin `region` ni `iso`); doble `tests/dobles_ruta.py::nominatim` (sin ISO) | RF-54 y RF-55 | T22 |
 | Pruebas que lean `config.TITULOS_TRANSPORTE` | Constante eliminada | T20 |
 | Plan anterior de `test_especialista_rutas.py` (`test_especialista_registrado_con_su_tool`, `test_falta_dato_no_invoca_tool`, `test_prompt_prohibe_ubicacion_por_defecto`, `test_mensaje_combinado_no_repite_peticion`, `test_no_es_ruta_no_invoca_tool`) | Nombres del plan original que **no existen**: el archivo lo reescribió Rubén con otros nombres. Trazabilidad de RF-25 a 29 actualizada abajo | T15 |
 - **Error interno:** con un doble que lanza una excepción inesperada (p. ej. `KeyError` en el parseo de la respuesta de Google), `planificar_ruta` devuelve `estado == "error_interno"`, no lanza, el mensaje está en español, lleva hora y título y no contiene el texto de la excepción.
@@ -268,6 +274,7 @@ Todos con `pytest`, sin red ni LLM. **Dobles:** `_http_json` (Nominatim y Google
 - **RF-28** depende de la spec de persistencia y de cómo el grafo componga `estado["mensaje"]`.
 - **Hora de llegada (nuevo).** `arrivalTime` solo vale en TRANSIT y es incompatible con `departureTime`; que funcione con `MODOS_GOOGLE` y que `GOOGLE_FIELD_MASK` devuelva las horas de salida **no está comprobado** (T16). Si no, RF-39 y RF-44 se revisan; RF-45 cubre la salida ausente.
 - **Título libre (nuevo).** Texto del LLM dentro de una pregunta al RAG: riesgo de inyección y de preguntas degradadas; mitigado solo por saneado (RF-47, 48); política cerrada en RF-48 y RF-51. Un título que el corpus no conoce acaba en abstención (RF-37): esperado, no un fallo.
+- **Verificación de comunidad (T22).** Nunca se ha visto una respuesta real de Nominatim con `ISO3166-2-lvl4` ni `state` en nuestras demos; si faltan con frecuencia, RF-55 rechaza rutas válidas. A comprobar en la repetición de T17 (ver spec, Dudas abiertas). La pregunta de zona «entre Madrid y Madrid» solo se ha probado con el RAG real a mano (T17, A2).
 - **Zona → precio (nuevo).** La pregunta de precio depende de la respuesta de zona (texto libre): más frágil; un fallo de zona deja sin precio (RF-52). Que la zona saneada dé una buena pregunta de precio: **a comprobar en T17**.
 - **Especialista de Rubén (nuevo).** T15 toca un archivo ajeno: cambio mínimo, coordinar con Rubén y no romper sus tests.
 - **Hora.** El cambio de hora, la zona horaria y los minutos: `ahora()` se compara truncada al minuto; la antelación máxima (7 días) es un valor provisional.
@@ -327,6 +334,8 @@ Todos con `pytest`, sin red ni LLM. **Dobles:** `_http_json` (Nominatim y Google
 | RF-46 | Lógica: zona → precio | `test_planificar_ruta_tarifa.py::test_primero_zona_despues_precio_del_titulo` *(nuevo, T21; el caso sin zona: RF-52)* |
 | RF-47 | Saneado del título | `test_planificar_ruta_hora_titulo.py::test_titulo_sin_saltos_de_linea` *(nuevo, T20)* |
 | RF-48 | Saneado del título | `test_planificar_ruta_hora_titulo.py::test_titulo_respeta_longitud_maxima` *(nuevo, T20; título largo: sin precio, mensaje "no se pudo interpretar el título", ruta y zona)* |
+| RF-54 | Lógica: municipios en la zona | `test_planificar_ruta_municipio.py::test_pregunta_de_zona_usa_municipio_de_origen_y_destino`, `::test_zona_antes_que_precio_y_maximo_2_llamadas_con_municipios` y `::test_google_caido_usa_los_mismos_municipios` *(nuevos, T22)* |
+| RF-55 | Lógica: `verificar_candidato` | `test_planificar_ruta_municipio.py::test_verificar_candidato`, `::test_geocodificar_extrae_region_e_iso`, `::test_extremo_no_verificado_no_entrega_ruta`, `::test_ambos_extremos_no_verificados_se_listan_los_dos` y `::test_la_verificacion_va_despues_de_ambito_y_ambiguedad` *(nuevos, T22)* |
 | RF-49 | Lógica: máx. 2 llamadas RAG | `test_planificar_ruta_rnf.py::test_maximo_2_llamadas_al_rag` *(nuevo, T21)* |
 | RF-40 | Lógica: geocodificacion_fallida | `test_planificar_ruta_geocodificacion.py::test_nominatim_falla_no_llama_a_google_ni_rag` |
 | RF-41 | Lógica: consultar_rag con error | `test_planificar_ruta_tarifa.py::test_rag_con_error_entrega_ruta_sin_zona_ni_precio` |
