@@ -229,7 +229,7 @@ Streamlit: selector de planes si hay varios; botones con plan_id; filtra las ent
 - **A mano:** Streamlit con el modo simulado (selector de plan y filtro) y, con el grafo real y API, una ruta de verdad (⚠️ gasta Gemini, Nominatim y Google).
 
 ### Riesgos añadidos
-- La PR #7 de Rubén ya está mergeada con una regresión de la imagen (spec 008, «Fuera de alcance»): los clientes no la resuelven.
+- La selección de la imagen demo depende de que el cliente preserve exactamente la referencia literal; los clientes no admiten otros archivos ni subida de imágenes.
 - Un aviso controlado del grafo pone `hitl_pendiente=False` aunque quede un plan pendiente: puede desincronizar la pantalla un momento; se corrige con el siguiente mensaje.
 - Los dobles de `tests/dobles_grafo.py` son de otra persona: si cambian, nuestros tests de integración pueden romperse.
 
@@ -246,3 +246,93 @@ Streamlit: selector de planes si hay varios; botones con plan_id; filtra las ent
 | RF-35 | `planes.py`, `presentacion.py`, `app.py` | `tests/test_planes.py::test_entradas_tecnicas`, `tests/test_presentacion.py::test_ocultar_tecnicas` |
 | RF-36 | `grafo_falso.py` | `tests/test_grafo_falso.py::test_planes_con_formato_real`, `::test_varios_planes` |
 | RF-26 (con el grafo real) | `contrato.py` | `tests/test_clientes_grafo_real.py` |
+
+## Cambio aprobado 2026-10-19: transmisión de la referencia de imagen demo
+
+Este complemento cubre RF-37. Los clientes no seleccionan archivos, no
+interpretan imágenes y no deciden especialistas: trasladan la consulta literal
+al mismo agente. La selección y validación de la demo pertenecen a la spec 007.
+
+### Archivos afectados
+
+| Archivo | Crear / Modificar | Qué cambia | RF |
+|---|---|---|---|
+| `tests/test_sesion.py` | Modificar | Comprobar que la sesión compartida por CLI y Streamlit entrega al agente sin transformación un mensaje que contiene `assets/imagen_demo.jpg`. | RF-37 |
+| `tests/test_cli.py` | Modificar | Recorrer el chat de terminal con un agente espía y verificar que recibe literalmente la referencia de la demo. | RF-37 |
+| `specs/008-clientes-cli-streamlit/validacion.md` | Modificar | Sustituir la limitación ya resuelta de imagen por la evidencia de RF-37 y registrar la comprobación manual de Streamlit. | RF-37 |
+
+No se modificarán `src/clientes/sesion.py`, `src/clientes/cli.py`, `app.py`,
+`src/clientes/grafo_falso.py` ni el contrato del agente: la sesión ya llama a
+`procesar_turno` con el mensaje recibido y ambos clientes ya delegan en ella.
+
+### Contrato
+
+El contrato permanece sin cambios:
+
+```text
+procesar_turno(estado: dict, mensaje: str, thread_id: str) -> dict
+```
+
+Ejemplo de transmisión desde ambos clientes:
+
+```text
+Entrada de la persona: Analiza assets/imagen_demo.jpg e indica los precios.
+Mensaje recibido por el agente: Analiza assets/imagen_demo.jpg e indica los precios.
+```
+
+Los clientes no añaden `estado["imagen"]`, no sustituyen la ruta, no cambian
+mayúsculas ni espacios del mensaje y no modifican las seis claves que devuelve
+el agente.
+
+### Lógica clave
+
+```text
+CLI:
+    leer texto de la persona
+    SesionChat.enviar(texto)
+
+Streamlit:
+    recibir texto de chat_input
+    SesionChat.enviar(texto)
+
+SesionChat.enviar(texto):
+    guardar el texto original en historial
+    llamar agente.procesar_turno(estado, texto, thread_id)
+    aplicar solo el estado devuelto por el agente
+```
+
+### Decisiones técnicas
+
+| Decisión | Alternativa descartada | Por qué |
+|---|---|---|
+| Probar la transmisión en `SesionChat` y también en el bucle de CLI. | Duplicar la selección de demo en cada interfaz. | `SesionChat` es la frontera común; la prueba de CLI confirma que la entrada llega a esa frontera sin transformarse. |
+| Mantener una comprobación manual de Streamlit. | Arrancar Streamlit o usar proveedores reales dentro de `pytest`. | RF-37 solo requiere preservar el texto; la spec mantiene los tests sin ejecución de Streamlit ni APIs. |
+| Dejar la semántica visual en la spec 007. | Programar en clientes reglas de imagen o invocaciones de tools. | Evita duplicar la guardia, conserva clientes finos y garantiza que CLI y web usan el mismo comportamiento del agente. |
+
+### Estrategia de tests
+
+| Área | Prueba y dobles | Cobertura |
+|---|---|---|
+| Sesión compartida | `GrafoFalso` o agente espía registra el tercer argumento de `procesar_turno`; `SesionChat.enviar` recibe un mensaje con la referencia literal y se compara por igualdad exacta. | RF-37 |
+| CLI | Entrada y salida inyectadas, con agente espía; enviar la referencia y después `salir`, y comprobar que la única llamada conserva el texto exacto. | RF-37 |
+| Streamlit | Comprobación manual con el modo simulado: escribir el mensaje literal y verificar que aparece sin cambios en el historial del chat. La selección visual real se comprobará con el grafo real según la spec 007. | RF-37 |
+
+No se ejecutarán Gemini, Vision, RAG, embeddings, ChromaDB ni Streamlit como
+parte de `pytest`.
+
+### Riesgos
+
+- El modo simulado acredita la transmisión del texto, pero no interpreta la
+  imagen; la activación de `tarifas` se cubre con los dobles del grafo real de
+  la spec 007.
+- Cualquier normalización futura del cliente (por ejemplo, recortar o reescribir
+  mensajes) debe preservar la referencia literal para no incumplir RF-37.
+- La demostración visual con proveedores reales sigue siendo opcional y puede
+  consumir API; no forma parte de la validación automatizada.
+
+### Trazabilidad del cambio
+
+| RF | Parte del plan | Test o comprobación |
+|---|---|---|
+| RF-37 | Sesión compartida y bucle de CLI sin transformaciones | `tests/test_sesion.py::test_referencia_de_demo_se_reenvia_sin_modificar` y `tests/test_cli.py::test_cli_reenvia_referencia_de_demo_sin_modificar` |
+| RF-37 | Chat Streamlit conserva el mensaje literal | Manual: modo simulado, escribir la referencia y revisar el historial |

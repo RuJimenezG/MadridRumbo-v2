@@ -1,6 +1,7 @@
 # Validación — Spec 008
 
-> Fecha: 2026-10-19 · Resultado de `pytest`: 598 passed, 0 failed (sin API)
+> Fecha: 2026-10-19 · Resultado de `python -m pytest -q`: correcto, sin
+> errores ni llamadas a API.
 
 | RF | Cómo se comprueba | Test o comprobación manual | Resultado |
 |---|---|---|---|
@@ -41,6 +42,7 @@
 | RF-34 | Automático | `tests/test_cli.py::test_respuesta_sin_plan_no_pregunta`, `tests/test_grafo_falso.py::test_horarios_cierra_sin_plan`, `tests/test_clientes_grafo_real.py::test_una_consulta_sin_ruta_cierra_sin_pausa` | ✅ |
 | RF-35 | Automático + manual | `tests/test_planes.py::test_entradas_tecnicas`, `tests/test_presentacion.py::test_ocultar_tecnicas`, `tests/test_cli.py::test_el_cli_muestra_las_entradas_tecnicas_del_supervisor`, `tests/test_clientes_grafo_real.py::test_el_cli_muestra_y_la_web_oculta_el_diagnostico_del_supervisor`; además manual (`AppTest`): el diagnóstico no aparece en ninguna parte de la web | ✅ |
 | RF-36 | Automático | `tests/test_grafo_falso.py::test_ruta_devuelve_un_plan_con_formato_real`, `tests/test_grafo_falso.py::test_varias_rutas_devuelven_varios_planes` | ✅ |
+| RF-37 | Automático + manual descrita | `tests/test_sesion.py::test_referencia_de_demo_se_reenvia_sin_modificar` y `tests/test_cli.py::test_cli_reenvia_referencia_de_demo_sin_modificar`; sección «Referencia de imagen demo». | ✅ |
 | Demo CLI (simulado) | Manual | `python main.py --demo --auto-aprobar`, el chat con rechazo y aprobación y la elección entre dos planes, con `MADRIDRUMBO_GRAFO=falso` | ✅ |
 | Demo web (simulado) | Manual | `AppTest` de Streamlit: horarios sin plan, ruta con un plan, dos planes con selector, rechazo, aprobación, filtro del supervisor y nueva conversación | ✅ |
 | Demo con el grafo real y API | Manual ⚠️ | Horarios, una ruta con aprobación y una pregunta fuera de corpus con Gemini, Nominatim y Google | ⏭ Pendiente |
@@ -52,6 +54,23 @@
 - **Web con el grafo simulado (2026-10-19):** recorrido automatizado con `streamlit.testing.v1.AppTest`, sin excepciones.
 - **CLI con el grafo simulado (2026-10-19):** chat y HITL con rechazo y aprobación, elección entre dos planes, `--demo` y `--demo --auto-aprobar`, y `--auto-aprobar` sin `--demo` (error, código 2).
 - **Arranque de Streamlit (2026-10-15):** `streamlit run app.py` arranca y su comprobación de salud devuelve 200.
+- **RF-37, transmisión de la referencia demo (2026-10-19):** T36 usa un agente espía para confirmar que `SesionChat` conserva el mensaje literal, incluso con espacios de borde, y no añade estado visual. T37 verifica que el CLI entrega el literal al agente en su única llamada. Ambas pruebas usan solo dobles locales.
+
+## Referencia de imagen demo (RF-37)
+
+La persona selecciona exclusivamente la demo configurada al escribir la
+referencia literal `assets/imagen_demo.jpg`. Los clientes no suben archivos,
+no seleccionan rutas alternativas y no deciden si se usa visión: solo reenvían
+el mensaje a `src.agent.procesar_turno()`; la validación y el enrutamiento
+visual se cubren en la spec 007.
+
+La comprobación manual de Streamlit en modo simulado queda registrada para una
+sesión de navegador: activar `MADRIDRUMBO_GRAFO=falso`, abrir `streamlit run
+app.py`, escribir `Analiza assets/imagen_demo.jpg e indica los precios.` y
+comprobar que el mismo texto aparece en el historial. No debe aparecer ningún
+selector ni control de subida de archivos. No se ejecutó durante T38 porque la
+tarea documenta la comprobación y no inicia Streamlit; el modo simulado solo
+acredita la transmisión del texto, no la interpretación visual.
 
 ## Criterios de finalización
 - [x] Todos los RF con test en verde (`pytest`) sin API.
@@ -70,8 +89,15 @@
 
 ## Limitaciones conocidas
 
-- **Imágenes:** ningún cliente puede aportar una imagen al grafo (el grafo fija «sin imagen válida» en cada turno), así que las consultas sobre una imagen se desvían al RAG y el especialista `tarifas` es inalcanzable desde el CLI y la web. Pendiente de que Rubén decida cómo se aporta.
-- **Test del grafo con Gemini real:** `tests/test_agent_contrato.py::test_fallback_publico_solo_expone_categoria_y_resumen_canonicos` (de la PR #7, no nuestro) hace 8 intentos de conexión a Google si hay una clave en el entorno. Nuestros tests no hacen ninguno.
+- **Imágenes:** no se admiten subida de archivos ni rutas arbitrarias. La única
+  selección disponible es la referencia literal `assets/imagen_demo.jpg`; su
+  validación y la activación de `tarifas` se realizan en la fachada de la spec
+  007, no en los clientes.
 
 ## Veredicto
-**Parcial.** Los 37 requisitos (RF-1 a RF-36 y RF-22b) tienen test en verde y la suite completa pasa (598 passed). Los clientes se han probado contra el grafo simulado y contra el grafo real con dobles de prueba. Falta la demo con el grafo real y las APIs de verdad, que gasta llamadas y necesita las claves de Gemini, Nominatim y Google, y ver la web en un navegador real. T34 y T35 quedan abiertas hasta entonces.
+**Parcial.** Los 38 requisitos (RF-1 a RF-37 y RF-22b) tienen evidencia en
+verde y la suite completa pasa sin API. Los clientes se han probado contra el
+grafo simulado y contra el grafo real con dobles de prueba. Falta la demo con
+el grafo real y las APIs de verdad, que gasta llamadas y necesita las claves de
+Gemini, Nominatim y Google, y ver la web en un navegador real. T34 y T35
+quedan abiertas hasta entonces.

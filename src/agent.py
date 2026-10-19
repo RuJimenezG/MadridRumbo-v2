@@ -1,6 +1,7 @@
 """Fachada pública del grafo multiagente, independiente de CLI y Streamlit."""
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any, Mapping
 
 import config
@@ -10,6 +11,7 @@ from src.graph import crear_grafo, invocar_grafo, recuperar_estado, reanudar_gra
 
 # El grafo se crea al recibir una petición válida para no pedir claves al importarlo.
 _GRAFO: Any | None = None
+_REFERENCIA_IMAGEN_DEMO = "assets/imagen_demo.jpg"
 
 
 def _obtener_grafo() -> Any:
@@ -47,6 +49,26 @@ def _validar_estado(estado: object) -> str | None:
     return None
 
 
+def _imagen_demo_valida_para(mensaje: object) -> bool:
+    """Comprueba localmente la demo solo tras su referencia literal aprobada."""
+    if not isinstance(mensaje, str) or _REFERENCIA_IMAGEN_DEMO not in mensaje:
+        return False
+
+    try:
+        directorio = Path(config.IMAGENES_DIR).resolve()
+        nombre_demo = config.IMAGEN_DEMO
+        if not isinstance(nombre_demo, str):
+            return False
+        archivo = (directorio / nombre_demo).resolve()
+        if archivo == directorio or directorio not in archivo.parents:
+            return False
+        if not archivo.is_file() or archivo.suffix.lower() not in config.EXTENSIONES_IMAGEN:
+            return False
+        return archivo.stat().st_size <= config.IMAGEN_MAX_MB * 1024 * 1024
+    except (OSError, TypeError, ValueError):
+        return False
+
+
 def _invocar_turno_con_diagnostico(
     grafo: Any,
     estado: Mapping[str, Any],
@@ -56,7 +78,7 @@ def _invocar_turno_con_diagnostico(
     contexto = {
         "diagnostico_supervisor": None,
         "correcciones_tarifas": 0,
-        "imagen_valida": False,
+        "imagen_valida": _imagen_demo_valida_para(estado.get("mensaje")),
     }
     estado_final = invocar_grafo(grafo, estado, thread_id, contexto=contexto)
     return proyectar_resultado(

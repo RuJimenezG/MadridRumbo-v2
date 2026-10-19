@@ -1,6 +1,6 @@
 # Spec 008 — Clientes CLI y Streamlit del grafo multiagente
 
-> Estado: Aprobada (cambio del 2026-10-19 aprobado el mismo día) · Aprobada originalmente el 2026-10-15 · Antes numerada 005 · Responsable: José Manuel Gil Ruiz
+> Estado: Aprobada (cambios del 2026-10-19 aprobados el mismo día) · Aprobada originalmente el 2026-10-15 · Antes numerada 005 · Responsable: José Manuel Gil Ruiz
 
 ## Contexto y objetivo
 
@@ -80,6 +80,7 @@ Esta spec define los dos clientes como **capas finas** sobre el grafo: muestran 
 - RF-34: CUANDO el grafo devuelve una respuesta sin plan pendiente, EL SISTEMA muestra la respuesta y no pregunta nada.
 - RF-35: EL SISTEMA muestra en el CLI las entradas técnicas del supervisor, y no las muestra en ninguna parte de la web de Streamlit.
 - RF-36: DONDE esté activo el modo simulado, EL SISTEMA devuelve planes con el mismo formato que el grafo real y, para algunos pedidos, varios planes a la vez.
+- RF-37: CUANDO una persona escribe una consulta que contiene literalmente `assets/imagen_demo.jpg` en el CLI o en Streamlit, EL SISTEMA transmite ese mensaje sin modificar al mismo grafo que usan ambos clientes.
 
 ## Requisitos no funcionales
 
@@ -104,15 +105,15 @@ Esta spec define los dos clientes como **capas finas** sobre el grafo: muestran 
 - `--auto-aprobar` sin `--demo`: RF-14.
 - Pulsar «Nueva conversación» con un plan pendiente: RF-23 (se descarta el plan y el estado).
 - Pulsar Aprobar o Rechazar sin plan pendiente: RF-22.
+- Una consulta que contiene literalmente `assets/imagen_demo.jpg`: RF-37 y las guardas de imagen de la spec 007.
 
 ## Fuera de alcance
 
-- Aportar una imagen desde los clientes: el grafo real no ofrece todavía una forma de hacerlo (hoy fija «sin imagen válida» en cada turno), así que las consultas sobre una imagen se desvían al RAG. Queda pendiente de la persona que lleva el grafo.
+- Subir imágenes desde los clientes o seleccionar archivos arbitrarios: solo se puede seleccionar la imagen demo configurada mediante la referencia literal `assets/imagen_demo.jpg`.
 
 - La lógica del grafo, el supervisor, los especialistas, la síntesis, el HITL interno y el checkpointer (los construye otra persona del equipo).
 - Pedir o enviar el motivo del rechazo: el rechazo solo descarta el plan y se continúa con otro mensaje.
 - Persistencia en disco entre reinicios (SqliteSaver) y despliegue.
-- Subir imágenes desde Streamlit: solo se usa la imagen demo.
 - Editar el plan antes de aprobarlo.
 - Autenticación de usuarios y varios usuarios simultáneos.
 - Conservar el chat antiguo de `app.py` que consultaba directamente al RAG; sigue disponible el CLI del módulo RAG.
@@ -124,9 +125,7 @@ Esta spec define los dos clientes como **capas finas** sobre el grafo: muestran 
 
 ## Dudas abiertas
 
-Ninguna que bloquee el plan. Quedan dos puntos que José habla con Rubén y que se aplican con la lectura indicada mientras tanto:
-
-- **Imagen desde los clientes.** Hoy el grafo real no permite aportar una imagen y `tarifas` es inalcanzable. Queda fuera de alcance y fuera de la demo; lo arregla quien lleva el grafo.
+Ninguna que bloquee el plan. Queda un punto que José habla con Rubén y se aplica con la lectura indicada mientras tanto:
 - **Alcance de RF-35.** Se ocultan los diagnósticos del supervisor en toda la web de Streamlit (chat y panel de depuración), la lectura más estricta de la spec 006. Si Rubén confirma que basta con el chat, se relaja.
 
 ## Decisiones tomadas
@@ -137,6 +136,7 @@ Ninguna que bloquee el plan. Quedan dos puntos que José habla con Rubén y que 
 - El rechazo solo descarta el plan; no se pide motivo.
 - `app.py` pasa a ser el cliente del grafo y sustituye al chat directo al RAG.
 - Modos del CLI: interactivo por defecto, `--demo` y `--auto-aprobar`.
-- La demo lanza tres pedidos fijos (RF-11), cambiados el 2026-10-19 a horarios, ruta y fuera de corpus: con el grafo real solo las rutas pausan para HITL y las consultas de imagen se desvían al RAG.
+- La demo lanza tres pedidos fijos (RF-11), cambiados el 2026-10-19 a horarios, ruta y fuera de corpus: con el grafo real solo las rutas pausan para HITL; una consulta que no selecciona explícitamente la imagen demo se desvía al RAG.
+- **Imagen demo por referencia literal (aprobada 2026-10-19).** La mención exacta `assets/imagen_demo.jpg` en un mensaje selecciona la imagen demo para ese turno en ambos clientes; no habilita subida de archivos ni selección de otras rutas.
 - **Contrato confirmado (2026-10-19)** contra `src/agent.py`: mismas funciones, firmas y seis claves. Cambia solo el formato de `plan` (lista de `{id, resultado}`) y que `aprobar_plan` necesita `plan_id_seleccionado` si hay varios planes. El grafo trata el checkpoint como fuente de verdad: el `estado` que envía el cliente solo sirve para indicar el plan elegido.
 - **Renumerada a 008** el 2026-10-19: la 005, la 006 y la 007 ya existían en `develop` (grafo y supervisor).

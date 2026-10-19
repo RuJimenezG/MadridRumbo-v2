@@ -6,9 +6,11 @@ from inspect import signature
 
 import pytest
 
+import config
 import src.agent as agent
 import src.modelos as modelos
 from src.graph import crear_grafo, recuperar_estado
+from tests.dobles_grafo import EjecutorFalso, LLMFalso
 
 
 CLAVES_PUBLICAS = {"respuesta", "plan", "log", "traza", "hitl_pendiente", "done"}
@@ -35,6 +37,30 @@ def _comprobar_contrato(resultado):
     assert isinstance(resultado["hitl_pendiente"], bool)
     assert isinstance(resultado["done"], bool)
     assert all(set(entrada) == {"tool", "args", "status", "preview"} for entrada in resultado["traza"])
+
+
+def _capturar_contextos_de_fachada(monkeypatch):
+    """Sustituye el grafo por una invocación controlada y registra su contexto efímero."""
+    grafo = object()
+    contextos = []
+
+    monkeypatch.setattr(agent, "_obtener_grafo", lambda: grafo)
+    monkeypatch.setattr(agent, "recuperar_estado", lambda recibido, hilo: {})
+
+    def invocar(recibido, estado, hilo, *, contexto):
+        assert recibido is grafo
+        contextos.append(dict(contexto))
+        return {
+            "respuesta": "Resumen controlado.",
+            "planes_pendientes": [],
+            "log": [],
+            "traza": [],
+            "hitl_pendiente": False,
+            "done": True,
+        }
+
+    monkeypatch.setattr(agent, "invocar_grafo", invocar)
+    return contextos
 
 
 def test_fachada_expone_las_dos_firmas_y_las_seis_claves(grafo_falso):
@@ -87,6 +113,130 @@ def test_procesar_turno_inicializa_el_contexto_sin_imagen_valida(monkeypatch):
         }
     ]
     assert "imagen_valida" not in resultado
+
+
+def test_referencia_literal_de_demo_activa_solo_el_turno_que_la_contiene(monkeypatch, tmp_path):
+    """RF-21, RF-22 y RF-24: la demo válida se selecciona de forma efímera."""
+    imagenes_dir = tmp_path / "assets"
+    imagenes_dir.mkdir()
+    (imagenes_dir / "imagen_demo.jpg").write_bytes(b"imagen-demo-de-prueba")
+    monkeypatch.setattr(config, "IMAGENES_DIR", imagenes_dir)
+    monkeypatch.setattr(config, "IMAGEN_DEMO", "imagen_demo.jpg")
+    contextos = _capturar_contextos_de_fachada(monkeypatch)
+
+    primero = agent.procesar_turno(
+        {},
+        "Analiza assets/imagen_demo.jpg e indica los precios.",
+        "hilo-demo-efimera",
+    )
+    segundo = agent.procesar_turno(
+        {},
+        "Ahora dime cuánto cuesta el abono.",
+        "hilo-demo-efimera",
+    )
+
+    _comprobar_contrato(primero)
+    _comprobar_contrato(segundo)
+    assert [contexto["imagen_valida"] for contexto in contextos] == [True, False]
+    assert "imagen_valida" not in primero
+    assert "imagen_valida" not in segundo
+
+
+def test_demo_referenciada_invalida_conserva_el_contexto_textual(monkeypatch, tmp_path):
+    """RF-22 y RF-23: una demo inexistente no habilita la ruta visual."""
+    monkeypatch.setattr(config, "IMAGENES_DIR", tmp_path / "assets")
+    monkeypatch.setattr(config, "IMAGEN_DEMO", "imagen_demo.jpg")
+    contextos = _capturar_contextos_de_fachada(monkeypatch)
+
+    resultado = agent.procesar_turno(
+        {},
+        "Analiza assets/imagen_demo.jpg y dime el precio del abono.",
+        "hilo-demo-invalida",
+    )
+
+    _comprobar_contrato(resultado)
+    assert contextos[0]["imagen_valida"] is False
+    assert "imagen_valida" not in resultado
+
+
+def test_referencia_de_demo_valida_alcanza_tarifas_e_invoca_vision_falsa(monkeypatch, tmp_path):
+    """RF-21 y RF-22: la selección pública mantiene el recorrido visual permitido."""
+    imagenes_dir = tmp_path / "assets"
+    imagenes_dir.mkdir()
+    (imagenes_dir / "imagen_demo.jpg").write_bytes(b"imagen-demo-de-prueba")
+    monkeypatch.setattr(config, "IMAGENES_DIR", imagenes_dir)
+    monkeypatch.setattr(config, "IMAGEN_DEMO", "imagen_demo.jpg")
+    mensaje = "Analiza assets/imagen_demo.jpg e indica los precios visibles."
+    ejecutor = EjecutorFalso({"describir_imagen": "Precio visible: 1,50 €."})
+    modelo_tarifas = LLMFalso(
+        [
+            {"tool": "describir_imagen", "args": {"pregunta": "precios visibles"}},
+            {"final": "La imagen muestra un precio de 1,50 €."},
+        ]
+    )
+
+    def rag_no_permitido(_mensajes):
+        raise AssertionError("RAG no debe ejecutarse cuando la demo válida selecciona tarifas")
+
+    grafo = crear_grafo(
+        modelo_supervisor=lambda mensajes: {"roles": ["tarifas"]},
+        modelos_especialistas={"tarifas": modelo_tarifas, "rag": rag_no_permitido},
+        ejecutar=ejecutor,
+        modelo_sintetizador=lambda contexto: "Resumen controlado.",
+    )
+    monkeypatch.setattr(agent, "_GRAFO", grafo)
+
+    resultado = agent.procesar_turno({}, mensaje, "hilo-demo-vision")
+
+    _comprobar_contrato(resultado)
+    assert ejecutor.llamadas == [("describir_imagen", {"pregunta": "precios visibles"})]
+    assert [entrada["tool"] for entrada in resultado["traza"]] == ["describir_imagen"]
+
+
+@pytest.mark.parametrize(
+    ("mensaje", "crear_demo"),
+    [
+        ("Analiza esta imagen y dime los precios.", True),
+        ("Analiza assets/imagen_demo.jpg y dime los precios.", False),
+    ],
+)
+def test_consultas_sin_demo_valida_se_mantienen_en_rag_sin_vision(monkeypatch, tmp_path, mensaje, crear_demo):
+    """RF-21 a RF-23: una referencia genérica o demo inválida no activa visión."""
+    imagenes_dir = tmp_path / "assets"
+    imagenes_dir.mkdir()
+    if crear_demo:
+        (imagenes_dir / "imagen_demo.jpg").write_bytes(b"imagen-demo-de-prueba")
+    monkeypatch.setattr(config, "IMAGENES_DIR", imagenes_dir)
+    monkeypatch.setattr(config, "IMAGEN_DEMO", "imagen_demo.jpg")
+    ejecutor = EjecutorFalso(
+        {
+            "rag_ask": "Evidencia textual del corpus CRTM.",
+            "describir_imagen": "La visión no debe ejecutarse.",
+        }
+    )
+    modelo_rag = LLMFalso(
+        [
+            {"tool": "rag_ask", "args": {"consulta": mensaje}},
+            {"final": "Respuesta anclada al corpus CRTM."},
+        ]
+    )
+
+    def tarifas_no_permitido(_mensajes):
+        raise AssertionError("Tarifas no debe ejecutarse sin una demo válida seleccionada")
+
+    grafo = crear_grafo(
+        modelo_supervisor=lambda mensajes: {"roles": ["tarifas"]},
+        modelos_especialistas={"tarifas": tarifas_no_permitido, "rag": modelo_rag},
+        ejecutar=ejecutor,
+        modelo_sintetizador=lambda contexto: "Resumen controlado.",
+    )
+    monkeypatch.setattr(agent, "_GRAFO", grafo)
+
+    resultado = agent.procesar_turno({}, mensaje, f"hilo-textual-{crear_demo}")
+
+    _comprobar_contrato(resultado)
+    assert ejecutor.llamadas == [("rag_ask", {"consulta": mensaje})]
+    assert all(entrada["tool"] != "describir_imagen" for entrada in resultado["traza"])
 
 
 @pytest.mark.parametrize(

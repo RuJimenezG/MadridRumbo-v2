@@ -63,6 +63,18 @@ def test_chat_interactivo_responde():
     assert "Eco: hola" in texto
 
 
+def test_cli_reenvia_referencia_de_demo_sin_modificar():
+    """RF-37: el bucle CLI entrega al agente la referencia literal aprobada."""
+    mensaje = "Analiza assets/imagen_demo.jpg e indica los precios."
+
+    codigo, _, grafo = ejecutar([mensaje, "salir"])
+
+    assert codigo == 0
+    assert len(grafo.llamadas) == 1
+    assert grafo.llamadas[0][0] == "procesar_turno"
+    assert grafo.llamadas[0][2] == mensaje
+
+
 def test_mismo_thread_id_en_todo_el_chat():
     # RF-2: todos los mensajes llevan el mismo identificador, que además se muestra.
     _, texto, grafo = ejecutar(["uno", "dos", "tres", "salir"])
