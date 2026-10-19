@@ -93,6 +93,32 @@ MODELO_VISION = "gemini-3.8-flash"
 # --- Tool calculadora ---
 CALC_MAX_CARACTERES = 200
 
+# --- Clientes CLI y Streamlit (spec 008) ---
+# Pedidos fijos de `python main.py --demo`: horarios, ruta (la única que pausa para HITL) y fuera de corpus.
+PEDIDOS_DEMO = (
+    "¿Hasta qué hora hay metro hoy?",
+    "¿Cómo puedo ir desde la Puerta del Sol hasta la Estación de Atocha?",
+    "¿Cuál es la capital de Francia?",
+)
+
+# Entradas técnicas del supervisor en el log del grafo: el CLI las muestra y la web las oculta.
+PREFIJOS_DIAGNOSTICO_SUPERVISOR = (
+    "Supervisor: categoria=",
+    "Supervisor: correccion_semantica=",
+)
+
+# Respuestas reconocidas en el chat (se comparan en minúsculas y sin espacios sobrantes).
+PALABRAS_SALIR = {"salir", "exit", "quit"}
+PALABRAS_APROBAR = {"s", "si", "sí", "a", "aprobar"}
+PALABRAS_RECHAZAR = {"n", "no", "r", "rechazar"}
+
+# Variable de entorno que activa el grafo simulado y valor que lo activa.
+VARIABLE_MODO_SIMULADO = "MADRIDRUMBO_GRAFO"
+VALOR_MODO_SIMULADO = "falso"
+
+# Módulo del grafo real que usan los clientes (debe exponer procesar_turno y aprobar_plan).
+MODULO_GRAFO_REAL = "src.agent"
+
 # --- Tool planificar_ruta (spec 004) ---
 # Ámbito de cobertura (territorio del corpus CRTM) como (lat_min, lon_min, lat_max, lon_max).
 # A VERIFICAR sobre el mapa: caja aproximada de la Comunidad de Madrid; en los bordes
