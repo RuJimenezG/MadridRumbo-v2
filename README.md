@@ -73,7 +73,7 @@ La segunda debe imprimir `9,50`.
    ```
 
 
-Debe listar los cuatro precios de la imagen demo (1,50 €, 1,80 €, 5,00 €, 7,30 €) y la traza con estado `ok`. Si falla con `ERROR: el modelo no pudo describir la imagen`, la causa puede ser una clave inválida, un modelo saturado (503) o no disponible (404): la tool no muestra el motivo.
+Debe listar los cuatro precios de la imagen demo (1,50 €, 1,80 €, 5,00 €, 7,30 €) y la traza con estado `ok`. Si falla con `ERROR: el modelo no pudo describir la imagen`, la causa real (tipo de error y código, como `ServerError 503 UNAVAILABLE`) queda en el registro de avisos de la consola. Un error temporal (503, 429 o de red) se reintenta una vez tras 2 segundos; una clave inválida (400, 401, 403) o un modelo retirado (404) no se reintentan.
 
 ## Imagen demo multimodal
 
@@ -88,7 +88,7 @@ Debe listar los cuatro precios de la imagen demo (1,50 €, 1,80 €, 5,00 €, 
 - `hora_actual` solo distingue laborable, sábado y domingo; los festivos se tratan como laborables.
 - La lectura de cifras de `describir_imagen` se ha verificado solo con la imagen demo.
 - Los especialistas `horarios` y `tarifas` todavía no están conectados a un grafo: se han probado con un LLM falso.
-- `describir_imagen` no reintenta ante un error temporal del modelo y no informa de la causa.
+- `describir_imagen` reintenta una sola vez ante un error temporal y registra la causa, pero el mensaje que ve el agente sigue siendo genérico a propósito, para no filtrar detalles internos.
 
 ## Metodología
 
