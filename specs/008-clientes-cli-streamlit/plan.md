@@ -1,6 +1,7 @@
-# Plan técnico — Spec 005
+# Plan técnico — Spec 008
 
 > Basado en `spec.md` (estado: Aprobada). No añade comportamiento que no esté en la spec.
+> **Actualizado el 2026-10-19** para el grafo real: la sección «Cambios por el grafo real» del final prevalece sobre lo anterior cuando se contradicen.
 
 ## Archivos afectados
 | Archivo | Crear / Modificar | Qué cambia | RF |
@@ -38,7 +39,7 @@ El estado que devuelve el grafo es un diccionario con estas claves. Las que falt
 | Clave | Tipo | Por defecto | Significado |
 |---|---|---|---|
 | `respuesta` | `str` | `""` | Respuesta para la persona usuaria |
-| `plan` | `list[str]` | `[]` | Viñetas del plan pendiente de decisión |
+| `plan` | `list[dict]` | `[]` | Planes pendientes de decisión: `{"id": "ruta-1", "resultado": {...}}` (ver «Cambios por el grafo real») |
 | `log` | `list[str]` | `[]` | Qué especialistas actuaron, p. ej. `[supervisor] -> horarios` |
 | `traza` | `list[dict]` | `[]` | Entradas `{"tool", "args", "status", "preview"}` (las de `ejecutar_tool`) |
 | `hitl_pendiente` | `bool` | `False` | Hay un plan esperando aprobar o rechazar |
@@ -156,3 +157,92 @@ Todos sin API (ver `docs/tests_sin_api.md`): grafo simulado, `leer` con una list
 | RF-27 | `sesion.py` | `tests/test_sesion.py::test_done_lo_decide_el_grafo` |
 | RF-28 | `cargar.py`, `grafo_falso.py` | `tests/test_cargar_agente.py::test_modo_simulado_usa_grafo_falso`, `tests/test_grafo_falso.py::test_cumple_el_contrato` |
 | RF-29 | `cargar.py` | `tests/test_cargar_agente.py::test_sin_grafo_real_da_error_claro` |
+
+## Cambios por el grafo real (2026-10-19)
+
+El grafo real (`src/agent.py`, specs 005 a 007) cumple nuestro contrato, con tres diferencias que recogen los RF-30 a RF-36.
+
+### Contrato confirmado
+
+```text
+procesar_turno(estado: dict, mensaje: str, thread_id: str) -> dict        # igual que lo propuesto
+aprobar_plan(estado: dict, thread_id: str, aprobado: bool) -> dict         # estado puede traer "plan_id_seleccionado"
+```
+
+- **`plan`** es `list[{"id": str, "resultado": dict}]`. Para una ruta, `resultado` trae `estado`, `origen.direccion`, `destino.direccion`, `ruta.duracion_min`, `ruta.tramos[{modo, linea, desde, hasta, duracion_min}]`, `zona` y `precio` (`{estado, texto, fuente}`), `hora_salida` y `titulo`.
+- **Varios planes:** `aprobar_plan` exige `estado["plan_id_seleccionado"]`; con un único plan lo deduce. Si falta o no existe devuelve un aviso con `hitl_pendiente=False` aunque siga habiendo un plan pendiente, así que el cliente **no debe fiarse de esa bandera tras un aviso controlado**.
+- **Solo las rutas pausan.** Horarios y RAG devuelven `hitl_pendiente=False` y `done=True` sin plan.
+- **El checkpoint es la fuente de verdad:** el `estado` del cliente solo sirve para indicar el plan elegido.
+- **Entradas técnicas del supervisor** en `log`: empiezan por `Supervisor: categoria=` o `Supervisor: correccion_semantica=`.
+
+### Archivos afectados (además de los ya previstos)
+| Archivo | Crear / Modificar | Qué cambia | RF |
+|---|---|---|---|
+| `src/clientes/planes.py` | Crear | Funciones puras: `resumir_plan`, `ids_de_planes`, `es_entrada_tecnica_supervisor` | RF-30, RF-33, RF-35 |
+| `src/clientes/presentacion.py` | Modificar | `formatear_turno` y `datos_depuracion` muestran planes con resumen y aceptan `ocultar_tecnicas` | RF-6, RF-30, RF-35 |
+| `src/clientes/sesion.py` | Modificar | `decidir(aprobado, plan_id=None)` envía `plan_id_seleccionado`; propiedad `planes` | RF-31, RF-32 |
+| `src/clientes/grafo_falso.py` | Modificar | Planes con formato real, varios planes para algunos pedidos y sin plan para el resto | RF-34, RF-36 |
+| `src/clientes/cli.py` | Modificar | Elegir plan cuando hay varios; resumen de cada plan; muestra entradas técnicas | RF-6, RF-9, RF-31, RF-32, RF-35 |
+| `app.py` | Modificar | Selector de plan en la barra lateral y filtro de entradas técnicas en toda la web | RF-31, RF-35 |
+| `config.py` | Modificar | `PEDIDOS_DEMO` (horarios, ruta, fuera de corpus) y `PREFIJOS_DIAGNOSTICO_SUPERVISOR` | RF-11, RF-35 |
+| `tests/test_planes.py` | Crear | Resumen, identificadores y filtro | RF-30, RF-33, RF-35 |
+| `tests/test_clientes_grafo_real.py` | Crear | Los clientes contra el grafo real con los dobles de `tests/dobles_grafo.py` (sin API) | RF-26, RF-30 a RF-34 |
+| Tests existentes del simulado, sesión y CLI | Modificar | Usar un pedido de ruta para provocar el plan pendiente | RF-34, RF-36 |
+
+### Lógica clave
+```text
+resumir_plan(plan):
+  r = plan["resultado"]  (si no es un diccionario -> mostrar el plan en bruto, RF-33)
+  líneas = ["Plan {id}"]
+  origen y destino (si existen), duración total, tramos "modo línea: desde -> hasta (n min)", zona, precio
+  los campos ausentes se omiten; un plan desconocido se vuelca como "clave: valor" legible
+
+SesionChat.decidir(aprobado, plan_id=None):
+  si hay más de un plan y plan_id es None -> no llama al grafo (el cliente debe pedir la elección)
+  estado_envio = {**estado, "plan_id_seleccionado": plan_id}  (solo si hay plan_id)
+  agente.aprobar_plan(estado_envio, thread_id, aprobado)
+  si el grafo responde con un aviso y deja hitl_pendiente=False pero había plan, el cliente
+       se re-sincroniza en el siguiente mensaje (el grafo lo bloquea y devuelve el plan)
+
+CLI tras un turno con planes pendientes:
+  mostrar el resumen de cada plan
+  si hay varios: pedir el número (inválido -> repreguntar)
+  pedir s/n y llamar a decidir(aprobado, plan_id)
+  tras rechazar, si el grafo devuelve otro plan, repetir; si no, seguir escribiendo
+
+Streamlit: selector de planes si hay varios; botones con plan_id; filtra las entradas técnicas (RF-35)
+```
+
+### Decisiones técnicas
+| Decisión | Alternativa descartada | Por qué |
+|---|---|---|
+| Resumen genérico y tolerante de `resultado` | Depender de todas las claves exactas | El grafo puede añadir campos y no debe romper la pantalla (RF-33) |
+| Elegir plan por número (1, 2…) mostrando su identificador | Pedir escribir `ruta-2` | Más cómodo en terminal y en una lista de la web |
+| Filtrar entradas técnicas por prefijo configurable | Ocultar todo el `log` | Se mantiene el registro de especialistas, que el enunciado pide ver |
+| Probar contra el grafo real con los dobles de Rubén | Solo contra el simulado | Demuestra el contrato real sin gastar API |
+| El simulado solo pausa en rutas | Que pause siempre | Se parece al real y evita una demo engañosa |
+
+### Estrategia de tests
+- **`test_planes.py`:** plan completo, plan sin tramos, plan sin zona ni precio, formato desconocido, lista vacía, identificadores y detección de entradas técnicas.
+- **Simulado, sesión y CLI:** ajustar los pedidos a una ruta; casos con uno y con varios planes; sin plan para horarios y RAG.
+- **`test_clientes_grafo_real.py`:** con `crear_grafo(...)` y los dobles de `tests/dobles_grafo.py`, enchufado en `agent._GRAFO`, se recorre: ruta con un plan, aprobar y terminar; ruta con varios planes, elegir uno; rechazar y conservar el hilo; consulta sin ruta que cierra sin pausa; entradas técnicas ocultas en la web y visibles en el CLI.
+- **A mano:** Streamlit con el modo simulado (selector de plan y filtro) y, con el grafo real y API, una ruta de verdad (⚠️ gasta Gemini, Nominatim y Google).
+
+### Riesgos añadidos
+- La PR #7 de Rubén ya está mergeada con una regresión de la imagen (spec 008, «Fuera de alcance»): los clientes no la resuelven.
+- Un aviso controlado del grafo pone `hitl_pendiente=False` aunque quede un plan pendiente: puede desincronizar la pantalla un momento; se corrige con el siguiente mensaje.
+- Los dobles de `tests/dobles_grafo.py` son de otra persona: si cambian, nuestros tests de integración pueden romperse.
+
+### Trazabilidad añadida
+| RF | Parte del plan | Test |
+|---|---|---|
+| RF-6, RF-9 (cambiados) | `cli.py`, `planes.py` | `tests/test_cli.py::test_plan_pendiente_muestra_resumen`, `::test_rechazar_muestra_el_nuevo_plan` |
+| RF-11 (cambiado) | `config.py`, `cli.py` | `tests/test_cli_demo.py::test_demo_lanza_tres_pedidos` |
+| RF-30 | `planes.py` | `tests/test_planes.py::test_resumen_de_ruta_completo` |
+| RF-31 | `sesion.py`, `cli.py`, `app.py` | `tests/test_sesion.py::test_decidir_con_varios_planes_envia_el_elegido`, `tests/test_cli.py::test_varios_planes_pide_elegir` |
+| RF-32 | `sesion.py`, `cli.py` | `tests/test_cli.py::test_un_plan_no_pide_elegir` |
+| RF-33 | `planes.py` | `tests/test_planes.py::test_plan_de_formato_desconocido` |
+| RF-34 | `cli.py` | `tests/test_cli.py::test_respuesta_sin_plan_no_pregunta` |
+| RF-35 | `planes.py`, `presentacion.py`, `app.py` | `tests/test_planes.py::test_entradas_tecnicas`, `tests/test_presentacion.py::test_ocultar_tecnicas` |
+| RF-36 | `grafo_falso.py` | `tests/test_grafo_falso.py::test_planes_con_formato_real`, `::test_varios_planes` |
+| RF-26 (con el grafo real) | `contrato.py` | `tests/test_clientes_grafo_real.py` |

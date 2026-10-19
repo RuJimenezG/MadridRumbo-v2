@@ -1,10 +1,12 @@
-# Spec 005 — Clientes CLI y Streamlit del grafo multiagente
+# Spec 008 — Clientes CLI y Streamlit del grafo multiagente
 
-> Estado: Aprobada · Fecha: 2026-10-15 · Responsable: José Manuel Gil Ruiz
+> Estado: Aprobada (cambio del 2026-10-19 aprobado el mismo día) · Aprobada originalmente el 2026-10-15 · Antes numerada 005 · Responsable: José Manuel Gil Ruiz
 
 ## Contexto y objetivo
 
-El enunciado exige que el mismo grafo multiagente se use desde un CLI y desde una app Streamlit, con la pausa HITL (aprobar o rechazar el plan antes de cerrar), trazas visibles y persistencia por identificador de conversación. Hoy `main.py` está vacío y `app.py` es un chat que llama directamente al RAG, sin grafo, sin HITL y sin trazas (spec 000). El grafo lo construye otra persona del equipo y aún no existe.
+El enunciado exige que el mismo grafo multiagente se use desde un CLI y desde una app Streamlit, con la pausa HITL (aprobar o rechazar el plan antes de cerrar), trazas visibles y persistencia por identificador de conversación. Hoy `main.py` está vacío y `app.py` es un chat que llama directamente al RAG, sin grafo, sin HITL y sin trazas (spec 000). El grafo lo construyó otra persona del equipo y ya está en `develop` (specs 005, 006 y 007): expone el contrato que esta spec proponía.
+
+**Cambio del 2026-10-19.** Al leer el grafo real aparecen diferencias que afectan a los clientes: los planes pendientes no son textos sino rutas con identificador y datos estructurados; puede haber varios planes a la vez y hay que indicar cuál se aprueba o rechaza; solo las consultas de rutas pausan para aprobación (horarios y RAG cierran directamente); y el chat web no debe mostrar los diagnósticos técnicos del supervisor.
 
 Esta spec define los dos clientes como **capas finas** sobre el grafo: muestran lo que el grafo devuelve y le trasladan las decisiones de la persona usuaria, sin decidir nada por su cuenta. Se desarrollan y prueban contra un grafo simulado que cumple el contrato acordado, y se enchufan al grafo real cuando exista.
 
@@ -34,15 +36,15 @@ Esta spec define los dos clientes como **capas finas** sobre el grafo: muestran 
 
 ### Aprobación humana (HITL) en el CLI
 
-- RF-6: CUANDO el grafo devuelve un plan pendiente de aprobación, EL SISTEMA muestra el plan y pregunta si se aprueba o se rechaza.
+- RF-6: CUANDO el grafo devuelve un plan pendiente de aprobación, EL SISTEMA muestra el plan con su identificador y un resumen legible y pregunta si se aprueba o se rechaza.
 - RF-7: EL SISTEMA no cierra ningún plan sin una decisión explícita de la persona usuaria, salvo en la demo con `--auto-aprobar`.
 - RF-8: CUANDO la persona aprueba, EL SISTEMA transmite la aprobación al grafo y muestra que la conversación ha terminado únicamente si el grafo lo indica.
-- RF-9: CUANDO la persona rechaza, EL SISTEMA transmite el rechazo al grafo, indica que el plan no se ha cerrado y permite escribir otro mensaje en la misma conversación.
+- RF-9: CUANDO la persona rechaza, EL SISTEMA transmite el rechazo al grafo, indica que el plan no se ha cerrado y, si el grafo devuelve otro plan pendiente, lo muestra; si no, permite escribir otro mensaje en la misma conversación.
 - RF-10: SI la respuesta a la pregunta de aprobar o rechazar no es válida, ENTONCES EL SISTEMA vuelve a preguntar sin consultar al grafo.
 
 ### Demo del CLI
 
-- RF-11: CUANDO se ejecuta `python main.py --demo`, EL SISTEMA lanza tres pedidos fijos, uno tras otro, cada uno en su propia conversación: «¿Hasta qué hora hay metro hoy?», «Según la imagen, ¿cuánto cuestan 3 billetes sencillos EMT y 1 Exprés Aeropuerto?» y «¿Cuál es la capital de Francia?».
+- RF-11: CUANDO se ejecuta `python main.py --demo`, EL SISTEMA lanza tres pedidos fijos, uno tras otro, cada uno en su propia conversación: «¿Hasta qué hora hay metro hoy?», «¿Cómo puedo ir desde la Puerta del Sol hasta la Estación de Atocha?» y «¿Cuál es la capital de Francia?».
 - RF-12: CUANDO se ejecuta `--demo` sin `--auto-aprobar`, EL SISTEMA pide la aprobación humana de cada plan.
 - RF-13: DONDE se ejecute `python main.py --demo --auto-aprobar`, EL SISTEMA aprueba cada plan automáticamente e indica en pantalla que lo ha hecho.
 - RF-14: SI se usa `--auto-aprobar` sin `--demo`, ENTONCES EL SISTEMA muestra un error y no inicia el chat.
@@ -71,6 +73,13 @@ Esta spec define los dos clientes como **capas finas** sobre el grafo: muestran 
 - RF-27: EL SISTEMA no decide en los clientes si la conversación ha terminado ni qué especialista actúa: solo lo muestra.
 - RF-28: DONDE esté activado el modo simulado mediante una variable de entorno, EL SISTEMA usa un grafo simulado en lugar del real y lo indica al iniciar el CLI y en la barra lateral de Streamlit.
 - RF-29: SI no hay grafo real disponible y el modo simulado no está activado, ENTONCES EL SISTEMA muestra un mensaje en español que explica cómo activar el modo simulado y no inicia el chat.
+- RF-30: CUANDO el grafo devuelve un plan de ruta, EL SISTEMA muestra su identificador, el origen, el destino, la duración total, los tramos con su modo y línea, y la zona y el precio cuando existan.
+- RF-31: CUANDO hay más de un plan pendiente, EL SISTEMA pide elegir el plan por su número antes de aprobar o rechazar, y transmite al grafo el identificador del plan elegido.
+- RF-32: CUANDO hay un único plan pendiente, EL SISTEMA no pide elegir plan y lo aprueba o rechaza directamente.
+- RF-33: SI un plan tiene un formato que el cliente no reconoce, ENTONCES EL SISTEMA muestra sus datos de forma legible en lugar de fallar.
+- RF-34: CUANDO el grafo devuelve una respuesta sin plan pendiente, EL SISTEMA muestra la respuesta y no pregunta nada.
+- RF-35: EL SISTEMA muestra en el CLI las entradas técnicas del supervisor, y no las muestra en ninguna parte de la web de Streamlit.
+- RF-36: DONDE esté activo el modo simulado, EL SISTEMA devuelve planes con el mismo formato que el grafo real y, para algunos pedidos, varios planes a la vez.
 
 ## Requisitos no funcionales
 
@@ -87,12 +96,18 @@ Esta spec define los dos clientes como **capas finas** sobre el grafo: muestran 
 - Rechazar y escribir otro mensaje en la misma conversación: RF-9 y RF-21.
 - Interrupción con `salir` o `Ctrl+C`: RF-4.
 - Fallo del grafo en mitad de la conversación: RF-5 y RF-25.
+- Dos o más planes de ruta pendientes a la vez: RF-31 y RF-32.
+- Plan con campos ausentes o de otro tipo (p. ej. ruta sin tramos): RF-33.
+- Consulta de horarios o de RAG, que el grafo cierra sin pausa: RF-34.
+- Mensaje nuevo mientras hay un plan pendiente: lo bloquea el cliente (RF-22b) y, si llegara al grafo, este responde con un aviso.
 - Grafo real todavía sin subir: RF-28 y RF-29.
 - `--auto-aprobar` sin `--demo`: RF-14.
 - Pulsar «Nueva conversación» con un plan pendiente: RF-23 (se descarta el plan y el estado).
 - Pulsar Aprobar o Rechazar sin plan pendiente: RF-22.
 
 ## Fuera de alcance
+
+- Aportar una imagen desde los clientes: el grafo real no ofrece todavía una forma de hacerlo (hoy fija «sin imagen válida» en cada turno), así que las consultas sobre una imagen se desvían al RAG. Queda pendiente de la persona que lleva el grafo.
 
 - La lógica del grafo, el supervisor, los especialistas, la síntesis, el HITL interno y el checkpointer (los construye otra persona del equipo).
 - Pedir o enviar el motivo del rechazo: el rechazo solo descarta el plan y se continúa con otro mensaje.
@@ -109,7 +124,10 @@ Esta spec define los dos clientes como **capas finas** sobre el grafo: muestran 
 
 ## Dudas abiertas
 
-Ninguna.
+Ninguna que bloquee el plan. Quedan dos puntos que José habla con Rubén y que se aplican con la lectura indicada mientras tanto:
+
+- **Imagen desde los clientes.** Hoy el grafo real no permite aportar una imagen y `tarifas` es inalcanzable. Queda fuera de alcance y fuera de la demo; lo arregla quien lleva el grafo.
+- **Alcance de RF-35.** Se ocultan los diagnósticos del supervisor en toda la web de Streamlit (chat y panel de depuración), la lectura más estricta de la spec 006. Si Rubén confirma que basta con el chat, se relaja.
 
 ## Decisiones tomadas
 
@@ -119,4 +137,6 @@ Ninguna.
 - El rechazo solo descarta el plan; no se pide motivo.
 - `app.py` pasa a ser el cliente del grafo y sustituye al chat directo al RAG.
 - Modos del CLI: interactivo por defecto, `--demo` y `--auto-aprobar`.
-- La demo lanza tres pedidos fijos (RF-11).
+- La demo lanza tres pedidos fijos (RF-11), cambiados el 2026-10-19 a horarios, ruta y fuera de corpus: con el grafo real solo las rutas pausan para HITL y las consultas de imagen se desvían al RAG.
+- **Contrato confirmado (2026-10-19)** contra `src/agent.py`: mismas funciones, firmas y seis claves. Cambia solo el formato de `plan` (lista de `{id, resultado}`) y que `aprobar_plan` necesita `plan_id_seleccionado` si hay varios planes. El grafo trata el checkpoint como fuente de verdad: el `estado` que envía el cliente solo sirve para indicar el plan elegido.
+- **Renumerada a 008** el 2026-10-19: la 005, la 006 y la 007 ya existían en `develop` (grafo y supervisor).
