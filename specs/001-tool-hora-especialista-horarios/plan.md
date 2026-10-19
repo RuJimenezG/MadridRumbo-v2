@@ -22,7 +22,7 @@
 **Tool**
 ```text
 hora_actual(ahora: datetime | None = None) -> str
-  ahora: solo para tests; si es None se usa el reloj real en ZONA_HORARIA.
+  ahora: solo para tests; si es None se usa src.reloj.ahora() (reloj real en ZONA_HORARIA).
 
 Salida: "Hoy es martes 13/10/2026, son las 17:58 (laborable, hora de Madrid)."
 Error:  "ERROR: no se pudo obtener la hora (zona horaria no válida)."
@@ -66,6 +66,7 @@ nodo_horarios:
 | Mini-bucle con protocolo `{"tool","args"}` / `{"final"}` e inyección de `llm` | `bind_tools` de LangChain | Se testea con un LLM falso sin depender del proveedor; el enunciado permite ambas |
 | `zoneinfo` + `tzdata` | `pytz`, o desfase fijo UTC+1/+2 | `zoneinfo` es estándar y gestiona CET/CEST; en Windows necesita `tzdata`. Dependencia nueva a aprobar (constitución, principio 12) |
 | `ahora` opcional como parámetro | Parchear el reloj con librerías externas | Test determinista sin dependencias extra |
+| El instante sale de `src.reloj.ahora()` (cambio 2026-10-19) | `datetime.now` directo | Una sola fuente de la hora para `hora_actual` y `planificar_ruta`; un test la sustituye con `monkeypatch` |
 | Solo laborable / sábado / domingo | Calendario de festivos | Los festivos son datos variables; fuera de alcance |
 | Los horarios salen del RAG | Tabla de horarios en código | Constitución: anclaje y no inventar datos |
 | El especialista nunca fija `done` | Que el especialista cierre | Constitución, principio 7 |
