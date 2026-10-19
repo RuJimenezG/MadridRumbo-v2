@@ -1,8 +1,16 @@
 """Tool multimodal: lee una imagen (p. ej. un cartel de tarifas) y devuelve su contenido en texto."""
+import logging
 import os
+import time
 from pathlib import Path
 
 import config
+
+registro = logging.getLogger(__name__)
+
+# Códigos de error del servicio que se arreglan esperando: límite de peticiones y fallos del servidor.
+CODIGOS_TEMPORALES = {429, 500, 502, 503, 504}
+ERROR_DEL_MODELO = "ERROR: el modelo no pudo describir la imagen"
 
 MIMES = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png"}
 
@@ -61,10 +69,44 @@ def describir_imagen(ruta: str | None = None, pregunta: str | None = None, clien
     if pregunta:
         prompt += f"\nCéntrate en esta pregunta: {pregunta}"
 
-    try:
-        texto = (cliente or ClienteGemini()).generar(archivo.read_bytes(), MIMES[sufijo], prompt)
-    except Exception:  # red, cuota, clave ausente...
-        return "ERROR: el modelo no pudo describir la imagen"
+    texto = _generar_con_un_reintento(cliente or ClienteGemini(), archivo.read_bytes(), MIMES[sufijo], prompt)
     if not texto or not texto.strip():
-        return "ERROR: el modelo no pudo describir la imagen"
+        return ERROR_DEL_MODELO
     return texto.strip()
+
+
+def _es_error_temporal(error: Exception) -> bool:
+    """True si esperar puede arreglarlo: límite de peticiones, fallo del servidor o fallo de red.
+
+    Se clasifica por el atributo `code` y no por la clase, que puede variar entre versiones de la librería.
+    """
+    if isinstance(error, (TimeoutError, ConnectionError)):
+        return True
+    return getattr(error, "code", None) in CODIGOS_TEMPORALES
+
+
+def _registrar_causa(error: Exception, intento: int) -> None:
+    """Deja en el registro de qué fallo se trata, sin el mensaje completo, la clave ni la imagen."""
+    registro.warning(
+        "describir_imagen falló (intento %d): tipo=%s código=%s estado=%s",
+        intento,
+        type(error).__name__,
+        getattr(error, "code", None),
+        getattr(error, "status", None),
+    )
+
+
+def _generar_con_un_reintento(cliente, imagen_bytes: bytes, mime: str, prompt: str) -> str | None:
+    """Llama al modelo; ante un error temporal espera y reintenta una sola vez.
+
+    Devuelve el texto, o None si el modelo falla (la causa queda en el registro).
+    """
+    for intento in (1, 2):
+        try:
+            return cliente.generar(imagen_bytes, mime, prompt)
+        except Exception as error:  # red, cuota, clave ausente...
+            _registrar_causa(error, intento)
+            if intento == 2 or not _es_error_temporal(error):
+                return None
+            time.sleep(config.IMAGEN_REINTENTO_ESPERA_S)
+    return None
