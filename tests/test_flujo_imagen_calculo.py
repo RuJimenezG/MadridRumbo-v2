@@ -1,10 +1,12 @@
-"""Tests del flujo imagen -> calculadora en el especialista de tarifas (spec 002, RF-21 a RF-23).
+"""Tests de extracción de importes en nodo_tarifas (spec 005, RF-15 y RF-44).
 
 Usan un LLM y tools falsos: no llaman a ninguna API.
 """
-import config
+import pytest
+
 import src.tools as tools
 from src.agents.tarifas import PROMPT_TARIFAS, nodo_tarifas
+
 
 TEXTO_IMAGEN = (
     "Billete sencillo EMT: 1,50 € | Billete sencillo TransBus: 1,80 € | "
@@ -27,7 +29,7 @@ class LLMFalso:
 
 
 class EjecutorFalso:
-    """Sustituye a ejecutar_tool: guarda las llamadas (nombre, args) y devuelve textos fijos."""
+    """Sustituye a ejecutar_tool: guarda las llamadas y devuelve textos fijos."""
 
     def __init__(self, resultados):
         self.resultados = resultados
@@ -41,50 +43,50 @@ class EjecutorFalso:
 
 
 def estado(mensaje=PREGUNTA):
+    """Construye el estado mínimo que usa el especialista de tarifas."""
     return {"mensaje": mensaje, "notas": [], "traza": []}
 
 
-def test_imagen_luego_calculo():
-    # RF-21: primero describir_imagen, después calculadora, en ese orden y con la misma traza.
+def test_tarifas_extrae_importes_sin_calcular():
+    """RF-15 y RF-46: tarifas entrega importes para el posterior nodo auxiliar."""
     llm = LLMFalso([
         {"tool": "describir_imagen", "args": {"pregunta": "precios de los billetes"}},
-        {"tool": "calculadora", "args": {"expresion": "3*1,50+5,00"}},
-        {"final": "Total: 9,50 €"},
+        {"final": "La imagen muestra los importes 1,50 € y 5,00 €."},
     ])
-    ejecutor = EjecutorFalso({"describir_imagen": TEXTO_IMAGEN, "calculadora": "9,50"})
+    ejecutor = EjecutorFalso({"describir_imagen": TEXTO_IMAGEN})
+
     salida = nodo_tarifas(estado(), llm, ejecutor)
-    assert [nombre for nombre, _ in ejecutor.llamadas] == ["describir_imagen", "calculadora"]
-    assert [t["tool"] for t in salida["traza"]] == ["describir_imagen", "calculadora"]
-    # El resultado de la imagen llega al LLM antes de que pida la calculadora.
+
+    assert [nombre for nombre, _ in ejecutor.llamadas] == ["describir_imagen"]
+    assert [entrada["tool"] for entrada in salida["traza"]] == ["describir_imagen"]
     assert "1,50" in llm.recibidos[1][-1]["content"]
-    assert "9,50" in llm.recibidos[2][-1]["content"]
+    assert "1,50" in salida["notas"][-1]
 
 
-def test_flujo_con_tools_reales(monkeypatch):
-    # RF-21: con la calculadora real y la allowlist real, el total es exacto.
+def test_tarifas_con_ejecutor_controlado_solo_llama_a_imagen(monkeypatch):
+    """RF-18: la única traza directa de tarifas corresponde a describir_imagen."""
     monkeypatch.setitem(tools.TOOLS_PERMITIDAS, "describir_imagen", lambda **kwargs: TEXTO_IMAGEN)
     llm = LLMFalso([
         {"tool": "describir_imagen", "args": {}},
-        {"tool": "calculadora", "args": {"expresion": "3*1,50+5,00"}},
-        {"final": "Total: 9,50 €"},
+        {"final": "He encontrado importes en la imagen."},
     ])
+
     salida = nodo_tarifas(estado(), llm, tools.ejecutar_tool)
-    assert salida["traza"][1]["tool"] == "calculadora"
-    assert salida["traza"][1]["preview"] == "9,50"
-    assert salida["traza"][1]["status"] == "ok"
+
+    assert [entrada["tool"] for entrada in salida["traza"]] == ["describir_imagen"]
+    assert salida["traza"][0]["status"] == "ok"
 
 
-def test_nota_muestra_importes_y_operacion():
-    # RF-22: el prompt exige citar los importes de la imagen y la operación, y la nota llega al grafo.
-    for exigencia in ["importes", "imagen", "operación"]:
+def test_prompt_entrega_importes_y_delega_el_calculo_en_auxiliar():
+    """RF-46: tarifas no calcula ni consulta RAG; deja esa responsabilidad fuera."""
+    for exigencia in ["importes", "imagen", "nodo_auxiliar"]:
         assert exigencia in PROMPT_TARIFAS.lower()
-    final = "Importes leídos de la imagen: 1,50 € y 5,00 €. Operación: 3*1,50+5,00 = 9,50 €."
-    salida = nodo_tarifas(estado(), LLMFalso([{"final": final}]), EjecutorFalso({}))
-    assert salida["notas"][-1] == f"[tarifas] {final}"
+    for tool_prohibida in ["calculadora", "rag_ask"]:
+        assert tool_prohibida not in PROMPT_TARIFAS
 
 
-def test_sin_importes_no_calcula():
-    # RF-23: si la imagen no da importes, no se llama a la calculadora y la nota lo indica.
+def test_sin_importes_no_inventa_un_total():
+    """RF-19: si la imagen no da importes, tarifas conserva la limitación."""
     def llm(mensajes):
         ultimo = mensajes[-1]["content"]
         if SIN_TEXTO in ultimo:
@@ -93,17 +95,30 @@ def test_sin_importes_no_calcula():
 
     ejecutor = EjecutorFalso({"describir_imagen": SIN_TEXTO})
     salida = nodo_tarifas(estado(), llm, ejecutor)
+
     assert [nombre for nombre, _ in ejecutor.llamadas] == ["describir_imagen"]
     assert "no se puede calcular" in salida["notas"][-1]
-    # La regla también está escrita en el prompt del especialista.
-    assert "no calcules" in PROMPT_TARIFAS.lower()
+    assert "precios ni resultados" in PROMPT_TARIFAS.lower()
 
 
-def test_tool_ajena_bloqueada():
-    # RF-21: el especialista de tarifas no puede usar tools que no le corresponden (p. ej. hora_actual).
-    assert "hora_actual" not in config.TOOLS_POR_ESPECIALISTA["tarifas"]
-    llm = LLMFalso([{"tool": "hora_actual", "args": {}}, {"final": "Listo"}])
+@pytest.mark.parametrize(
+    ("tool", "args"),
+    [
+        ("calculadora", {"expresion": "3*1,50+5,00"}),
+        ("rag_ask", {"consulta": "tarifas"}),
+    ],
+)
+def test_tarifas_bloquea_calculadora_y_rag(tool, args):
+    """RF-44: las dos tools pertenecen a otros nodos y no se ejecutan aquí."""
+    llm = LLMFalso([{"tool": tool, "args": args}, {"final": "No disponible."}])
     ejecutor = EjecutorFalso({})
+
     salida = nodo_tarifas(estado(), llm, ejecutor)
+
     assert ejecutor.llamadas == []
-    assert salida["traza"][0]["status"] == "bloqueada"
+    assert salida["traza"][0] == {
+        "tool": tool,
+        "args": args,
+        "status": "bloqueada",
+        "preview": f"ERROR: tool no permitida: {tool}",
+    }

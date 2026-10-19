@@ -3,6 +3,7 @@
 Usan un LLM y un ejecutor de tools falsos: no llaman a ninguna API.
 """
 import config
+import pytest
 from src.agents.horarios import PROMPT_HORARIOS, nodo_horarios
 
 ABSTENCION = "No lo sé, no está en los documentos."
@@ -30,7 +31,14 @@ class EjecutorFalso:
     def __call__(self, nombre, args, traza):
         self.llamadas.append(nombre)
         resultado = self.resultados.get(nombre, "ok")
-        traza.append({"tool": nombre, "args": args, "status": "ok", "preview": resultado})
+        traza.append(
+            {
+                "tool": nombre,
+                "args": args,
+                "status": "error" if str(resultado).startswith("ERROR") else "ok",
+                "preview": resultado,
+            }
+        )
         return resultado
 
 
@@ -44,6 +52,14 @@ def test_prompt_propio():
     llm = LLMFalso([{"final": "Respuesta"}])
     nodo_horarios(estado(), llm, EjecutorFalso())
     assert llm.recibidos[0][0]["content"] == PROMPT_HORARIOS
+
+
+def test_prompt_declara_la_excepcion_de_horarios_y_solo_sus_dos_tools():
+    """RF-58: horarios conserva hora y RAG como excepción explícita del grafo."""
+    prompt = PROMPT_HORARIOS.lower()
+    assert "únicamente" in prompt
+    assert "hora_actual" in prompt
+    assert "rag_ask" in prompt
 
 
 def test_usa_hora_actual():
@@ -70,6 +86,24 @@ def test_usa_rag():
     assert len(salida["traza"]) == 2
 
 
+@pytest.mark.parametrize("tool", ["hora_actual", "rag_ask"])
+def test_fallo_de_tool_permitida_queda_controlado_en_la_traza(tool):
+    """RF-17 a RF-19: los fallos de ambas dependencias se conservan sin propagarse."""
+    error = f"ERROR: fallo simulado de {tool}"
+    args = {"consulta": "horario"} if tool == "rag_ask" else {}
+    llm = LLMFalso([
+        {"tool": tool, "args": args},
+        {"final": f"No he podido obtener datos con {tool}."},
+    ])
+
+    salida = nodo_horarios(estado(), llm, EjecutorFalso({tool: error}))
+
+    assert salida["traza"] == [
+        {"tool": tool, "args": args, "status": "error", "preview": error}
+    ]
+    assert tool in salida["notas"][-1]
+
+
 def test_abstencion_sin_evidencia():
     # RF-11: si el RAG se abstiene, la nota lo dice y no inventa horarios.
     def llm(mensajes):
@@ -92,6 +126,18 @@ def test_tool_fuera_de_especialista_no_se_ejecuta():
     salida = nodo_horarios(estado(), llm, ejecutor)
     assert ejecutor.llamadas == []
     assert salida["traza"][0]["tool"] == "borrar_todo"
+    assert salida["traza"][0]["status"] == "bloqueada"
+
+
+@pytest.mark.parametrize("tool", ["calculadora", "describir_imagen", "planificar_ruta"])
+def test_cualquier_tercera_tool_se_bloquea(tool):
+    """RF-58: ninguna tercera tool se ejecuta desde el especialista de horarios."""
+    llm = LLMFalso([{"tool": tool, "args": {}}, {"final": "No disponible."}])
+    ejecutor = EjecutorFalso({tool: "resultado que no debe usarse"})
+
+    salida = nodo_horarios(estado(), llm, ejecutor)
+
+    assert ejecutor.llamadas == []
     assert salida["traza"][0]["status"] == "bloqueada"
 
 

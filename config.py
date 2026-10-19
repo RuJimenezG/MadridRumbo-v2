@@ -66,10 +66,18 @@ ZONA_HORARIA = "Europe/Madrid"
 # Tope de llamadas a tools por turno de un especialista (límite decidido en Python).
 MAX_STEPS_ESPECIALISTA = 3
 
+# Límites transversales del grafo multiagente por conversación y turno lógico.
+MAX_TURNOS_CONVERSACION = 10
+MAX_CICLOS_TOOLS = 8
+
 # Allowlist de tools que puede pedir cada especialista.
 TOOLS_POR_ESPECIALISTA = {
+    "rag": ["rag_ask"],
     "horarios": ["hora_actual", "rag_ask"],
-    "tarifas": ["describir_imagen", "calculadora", "rag_ask"],
+    "auxiliar": ["hora_actual", "calculadora"],
+    # El RAG no se expone al especialista de rutas: lo llama la propia tool (spec 004, RF-19).
+    "rutas": ["planificar_ruta"],
+    "tarifas": ["describir_imagen"],
 }
 
 # --- Tool multimodal describir_imagen ---
@@ -104,3 +112,53 @@ VALOR_MODO_SIMULADO = "falso"
 
 # Módulo del grafo real que usan los clientes (debe exponer procesar_turno y aprobar_plan).
 MODULO_GRAFO_REAL = "src.agent"
+
+# --- Tool planificar_ruta (spec 004) ---
+# Ámbito de cobertura (territorio del corpus CRTM) como (lat_min, lon_min, lat_max, lon_max).
+# A VERIFICAR sobre el mapa: caja aproximada de la Comunidad de Madrid; en los bordes
+# puede incluir algún trozo de provincias vecinas.
+AMBITO_COBERTURA = (39.88, -4.58, 41.17, -3.05)
+
+# Geocodificación con Nominatim (política de uso: 1 petición/s e identificación de la app).
+NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
+NOMINATIM_PAIS = "es"
+NOMINATIM_LIMIT = 10
+NOMINATIM_TIMEOUT_S = 10
+NOMINATIM_INTERVALO_S = 1.0
+# El contacto se lee del .env (NOMINATIM_CONTACTO); nunca se escribe en el código.
+_NOMINATIM_CONTACTO = os.getenv("NOMINATIM_CONTACTO")
+NOMINATIM_USER_AGENT = "MadridRumbo/1.0" + (f" ({_NOMINATIM_CONTACTO})" if _NOMINATIM_CONTACTO else "")
+
+# Candidatos mostrados al pedir una aclaración y radio (m) bajo el cual dos puntos son el mismo lugar.
+MAX_CANDIDATOS_MOSTRAR = 3
+RADIO_MISMA_UBICACION_M = 100
+
+# Google Routes. La clave solo se lee del entorno.
+GOOGLE_ROUTES_URL = "https://routes.googleapis.com/directions/v2:computeRoutes"
+GOOGLE_ROUTES_API_KEY = os.getenv("GOOGLE_ROUTES_API_KEY")
+GOOGLE_TIMEOUT_S = 10
+# A VERIFICAR con una respuesta real; la facturación puede depender de los campos pedidos.
+GOOGLE_FIELD_MASK = (
+    "routes.duration,routes.legs.steps.travelMode,"
+    "routes.legs.steps.staticDuration,routes.legs.steps.transitDetails"
+)
+# Modos de la red CRTM que se piden: metro, metro ligero/tranvía, autobús y Cercanías.
+MODOS_GOOGLE = ["SUBWAY", "LIGHT_RAIL", "BUS", "TRAIN"]
+# Tipos de vehículo de cada tramo que se aceptan al verificar la respuesta.
+# A VERIFICAR con una respuesta real: los trenes de larga distancia y alta velocidad quedan excluidos.
+TIPOS_VEHICULO_ACEPTADOS = {
+    "SUBWAY", "METRO_RAIL", "TRAM", "BUS", "TROLLEYBUS", "COMMUTER_TRAIN", "HEAVY_RAIL", "RAIL",
+}
+
+# Hora de salida pedida: antelación máxima en días (valor provisional).
+ANTELACION_MAX_DIAS = 7
+
+# Títulos de transporte admitidos (lista cerrada) y el que se aplica si no se indica ninguno.
+TITULOS_TRANSPORTE = ("billete sencillo", "billete de 10 viajes")
+TITULO_POR_DEFECTO = "billete sencillo"
+
+# Preguntas al RAG, construidas con datos de la ruta (paradas o municipios).
+PREGUNTA_ZONA = "¿Qué zona tarifaria corresponde a un trayecto entre {origen} y {destino}?"
+PREGUNTA_PRECIO = "¿Cuál es el precio del {titulo} para un trayecto entre {origen} y {destino}?"
+# Frase con la que el RAG se abstiene (definida en rag/prompt.py; un test vigila que coincida).
+FRASE_ABSTENCION = "No lo sé, no está en los documentos."

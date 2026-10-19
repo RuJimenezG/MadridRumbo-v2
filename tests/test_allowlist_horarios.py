@@ -1,4 +1,5 @@
-"""Tests de allowlist y traza de tools (spec 001, RF-6, RF-7 y RF-12). No usan API."""
+"""Tests de allowlist y traza de horarios sin API (spec 005, RF-58)."""
+import config
 import src.tools as tools
 from src.tools import TOOLS_PERMITIDAS, ejecutar_tool
 
@@ -7,6 +8,11 @@ def test_hora_en_allowlist():
     # RF-6: hora_actual está registrada y se puede ejecutar por nombre.
     assert "hora_actual" in TOOLS_PERMITIDAS
     assert callable(TOOLS_PERMITIDAS["hora_actual"])
+
+
+def test_allowlist_exclusiva_del_especialista_horarios():
+    """RF-58: esta es la única excepción autorizada a la separación de roles."""
+    assert config.TOOLS_POR_ESPECIALISTA["horarios"] == ["hora_actual", "rag_ask"]
 
 
 def test_traza_ok():
@@ -57,3 +63,16 @@ def test_rag_ask_en_allowlist(monkeypatch):
     falso.rag_ask = lambda consulta: f"respuesta a {consulta}"
     monkeypatch.setitem(sys.modules, "rag.responder", falso)
     assert TOOLS_PERMITIDAS["rag_ask"](consulta="horario") == "respuesta a horario"
+
+
+def test_error_de_rag_ask_queda_en_traza(monkeypatch):
+    """RF-17 a RF-19: el ejecutor general registra un fallo de RAG controlado."""
+    def rag_roto(**kwargs):
+        raise RuntimeError("fallo simulado")
+
+    monkeypatch.setitem(tools.TOOLS_PERMITIDAS, "rag_ask", rag_roto)
+    traza = []
+    resultado = ejecutar_tool("rag_ask", {"consulta": "horario"}, traza)
+
+    assert resultado.startswith("ERROR")
+    assert traza[0]["status"] == "error"
