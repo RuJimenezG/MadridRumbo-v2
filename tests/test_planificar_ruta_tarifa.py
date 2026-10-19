@@ -231,10 +231,10 @@ def test_primero_zona_despues_precio_del_titulo(esc, titulo):
     # RF-46: para TODOS los títulos (sencillo incluido) la zona se pregunta antes y el precio usa esa zona.
     r = pr.planificar_ruta("Sol", "Bernabéu", titulo=titulo)
     assert r["estado"] == "ok" and esc.orden == ["nominatim", "nominatim", "google", "rag", "rag"]
-    assert esc.preguntas[0] == config.PREGUNTA_ZONA.format(origen="Sol", destino="Plaza de Castilla")
+    assert esc.preguntas[0] == config.PREGUNTA_ZONA.format(origen="Madrid", destino="Madrid")     # T22: municipios
     assert esc.preguntas[1] == config.PREGUNTA_PRECIO.format(titulo=titulo or "billete sencillo", zona=ZONA)
     # La pregunta de precio ya no se construye con origen y destino, y las dos siguen distinguiéndose por fragmento.
-    assert "Sol" not in esc.preguntas[1] and "Plaza de Castilla" not in esc.preguntas[1]
+    assert "Madrid" not in esc.preguntas[1] and "Plaza de Castilla" not in esc.preguntas[1]
     assert "zona tarifaria" in esc.preguntas[0] and "zona tarifaria" not in esc.preguntas[1]
     assert "precio" in esc.preguntas[1] and "precio" not in esc.preguntas[0]
 

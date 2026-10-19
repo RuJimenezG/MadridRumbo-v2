@@ -195,10 +195,25 @@ def geocodificar(direccion: str) -> dict:
                 "lat": float(r["lat"]),
                 "lon": float(r["lon"]),
                 "municipio": next((lugar[k] for k in ("city", "town", "village", "municipality") if k in lugar), None),
+                "region": lugar.get("state"),
+                "iso": lugar.get("ISO3166-2-lvl4"),
             })
         except (KeyError, TypeError, ValueError, AttributeError):
             continue  # un resultado mal formado se descarta sin tumbar la consulta
     return {"estado": "ok", "candidatos": candidatos}
+
+
+# Comunidad de Madrid en Nominatim: el código ISO no depende del idioma; el nombre es el de `accept-language=es`.
+CCAA_ISO = "ES-MD"
+CCAA_NOMBRE = "Comunidad de Madrid"
+
+
+def verificar_candidato(candidato: dict) -> bool:
+    """Indica si el candidato tiene municipio y es de la Comunidad de Madrid (por ISO o por nombre, RF-55)."""
+    municipio = candidato.get("municipio")
+    if not isinstance(municipio, str) or not municipio.strip():
+        return False
+    return candidato.get("iso") == CCAA_ISO or candidato.get("region") == CCAA_NOMBRE
 
 
 def distancia_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -379,8 +394,7 @@ def _dato_rag(pregunta: str) -> dict:
 def consultar_tarifa(origen: str | None, destino: str | None, titulo=None) -> dict:
     """Consulta al RAG primero la zona y después el precio del título en esa zona; devuelve `{"zona", "precio"}`.
 
-    `origen` y `destino` son las paradas de subida y bajada de Google o, si Google falló, los
-    municipios de Nominatim (RF-20). Cada dato es `{"estado", "texto", "fuente": "RAG"}` con estado
+    `origen` y `destino` son los municipios de origen y destino de Nominatim (RF-54, RF-20). Cada dato es `{"estado", "texto", "fuente": "RAG"}` con estado
     ok, sin_evidencia, error u omitida (sin consulta). Si falta origen o destino no se consulta nada.
     Como mucho 2 llamadas, sin reintentos (RF-49). El precio se omite sin consultar si:
     - el título no se puede interpretar, por demasiado largo (RF-48);
@@ -574,6 +588,14 @@ def _planificar_ruta(origen, destino, hora_salida, hora_llegada, titulo) -> dict
         return salir("misma_ubicacion", f"El origen y el destino son la misma ubicación («{lugar_o['direccion']}»). "
                                         "No hay ruta que calcular.", **identificados)
 
+    # Sin municipio o sin Comunidad de Madrid verificada no se entrega ruta (RF-55): la zona se pregunta por municipio.
+    sin_verificar = [rol for rol, lugar in (("origen", lugar_o), ("destino", lugar_d)) if not verificar_candidato(lugar)]
+    if sin_verificar:
+        textos = {"origen": origen, "destino": destino}
+        return salir("direccion_no_encontrada", " ".join(
+            f"No se pudo verificar que la dirección de {rol} «{textos[rol]}» esté en la {CCAA_NOMBRE}. Indica una más precisa."
+            for rol in sin_verificar))
+
     # 3) Ruta con Google (máx. 1 llamada).
     trayecto = f"De «{lugar_o['direccion']}» a «{lugar_d['direccion']}»"
     google = consultar_google(lugar_o, lugar_d, validacion["salida_rfc3339"], validacion["llegada_rfc3339"])
@@ -590,7 +612,7 @@ def _planificar_ruta(origen, destino, hora_salida, hora_llegada, titulo) -> dict
 
     # 4) Zona y precio con el RAG (máx. 2 llamadas); sus fallos no tumban la ruta (RF-41).
     ruta = interpretada["ruta"]
-    tarifa = consultar_tarifa(interpretada["parada_subida"], interpretada["parada_bajada"], titulo)
+    tarifa = consultar_tarifa(lugar_o["municipio"], lugar_d["municipio"], titulo)    # RF-54: municipios, no paradas
     trayecto_txt = "; ".join(_texto_tramo(t) for t in ruta["tramos"])
     texto = f"{trayecto}: {ruta['duracion_min']} min (Google Routes). Trayecto: {trayecto_txt}. "
     extra = {}

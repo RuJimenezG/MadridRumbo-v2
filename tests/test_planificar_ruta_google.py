@@ -222,7 +222,8 @@ def test_secuencia_nominatim_google_rag(esc):
     assert "departureTime" not in cuerpo                  # RF-14: sin hora pedida
     # La ruta y las paradas de Google alimentan al RAG (T10 → T11).
     assert r["ruta"]["duracion_min"] == 22
-    assert "Sol" in esc.preguntas[0] and "Plaza de Castilla" in esc.preguntas[0]
+    # T22 (RF-54): la zona se pregunta con el municipio de Nominatim, no con las paradas de Google.
+    assert esc.preguntas[0] == config.PREGUNTA_ZONA.format(origen="Madrid", destino="Madrid")
 
 
 def test_hora_pedida_llega_a_google_en_rfc3339(esc):

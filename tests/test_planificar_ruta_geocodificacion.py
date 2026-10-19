@@ -76,7 +76,8 @@ def test_geocodifica_origen_y_destino_con_nominatim(red):
 
     assert origen["estado"] == "ok" and destino["estado"] == "ok"
     assert origen["candidatos"] == [
-        {"direccion": SOL["display_name"], "lat": 40.4169, "lon": -3.7035, "municipio": "Madrid"}
+        {"direccion": SOL["display_name"], "lat": 40.4169, "lon": -3.7035, "municipio": "Madrid",
+         "region": "Comunidad de Madrid", "iso": None}   # T22: región e ISO para verificar la comunidad (RF-55)
     ]
     assert destino["candidatos"][0]["municipio"] == "Madrid"  # sale de address.town
 

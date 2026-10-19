@@ -186,3 +186,20 @@ def test_rutas_consulta_que_no_es_de_rutas_no_invoca_la_tool():
 
     assert ejecutor.llamadas == [] and salida["traza"] == []
     assert "no es una consulta de rutas" in salida["notas"][-1].lower()
+
+
+@pytest.mark.parametrize("args", [{"destino": "Sol"}, {"origen": "", "destino": "Sol"}, {"origen": None, "destino": "Sol"}])
+def test_rutas_no_asume_un_origen_por_defecto(args):
+    """RF-27: si falta el origen, la tool no se invoca (no se rellena con una ubicación supuesta) y se pide en la nota."""
+    llm = LLMFalso([{"tool": "planificar_ruta", "args": args}])
+    ejecutor = EjecutorFalso({"planificar_ruta": json.dumps(RUTA_OK, ensure_ascii=False)})
+
+    salida = nodo_rutas(_estado("Quiero llegar a Sol."), llm, ejecutor)
+
+    assert ejecutor.llamadas == [] and salida["traza"] == []
+    assert "origen" in salida["notas"][-1].lower()
+
+
+def test_prompt_prohibe_inventar_o_suponer_extremos():
+    """RF-27: el prompt ordena no inventar ni suponer origen o destino."""
+    assert "No inventes ni supongas origen o destino" in PROMPT_RUTAS
