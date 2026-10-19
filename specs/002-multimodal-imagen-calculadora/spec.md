@@ -83,3 +83,8 @@ El enunciado exige una tool multimodal imagen → texto con una imagen demo de t
 
 - [NECESITA ACLARACIÓN: ¿Qué imagen demo se usa (cartel de tarifas CRTM, plano o panel)? Debe tener importes legibles para la demo de cálculo.]
 - [NECESITA ACLARACIÓN: ¿Qué especialista llama a las tools? Se asume la configuración `TOOLS_POR_ESPECIALISTA` descrita en el plan; el especialista que haga el flujo combinado lo decide quien lleve el grafo.]
+
+## Cambios posteriores
+
+- **2026-10-19. Superados por la spec 005:** RF-21 a RF-23 describían un único especialista que leía la imagen y calculaba. Al integrarse el grafo, `tarifas` solo lee los importes (RF-15 de la spec 005) y `auxiliar` hace la cuenta (RF-43 y RF-46). Los demás requisitos (RF-1 a RF-20, las dos tools y la allowlist) siguen vigentes.
+- **2026-10-19. Spec 007:** `tarifas` solo se activa con una imagen aportada válida; hoy ningún cliente puede aportarla (ver `validacion.md`).

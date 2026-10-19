@@ -1,6 +1,6 @@
 # Validación — Spec 002
 
-> Fecha: 2026-10-14 · Resultado de `pytest`: 75 passed, 0 failed
+> Fecha: 2026-10-14 · Actualizada el 2026-10-19 tras integrarse el grafo (specs 005 a 007) · Resultado de `pytest`: 450 passed, 0 failed
 
 | RF | Cómo se comprueba | Test o comprobación manual | Resultado |
 |---|---|---|---|
@@ -22,20 +22,25 @@
 | RF-18 | Automático | `tests/test_calculadora.py::test_sin_red` | ✅ |
 | RF-19 | Automático | `tests/test_allowlist_multimodal.py::test_calculadora_en_allowlist` | ✅ |
 | RF-20 | Automático | `tests/test_allowlist_multimodal.py::test_traza_calculadora` | ✅ |
-| RF-21 | Automático | `tests/test_flujo_imagen_calculo.py::test_imagen_luego_calculo`, `::test_flujo_con_tools_reales`, `::test_tool_ajena_bloqueada` | ✅ |
-| RF-22 | Automático | `tests/test_flujo_imagen_calculo.py::test_nota_muestra_importes_y_operacion` | ✅ |
-| RF-23 | Automático | `tests/test_flujo_imagen_calculo.py::test_sin_importes_no_calcula` | ✅ |
+| RF-21 | Automático · **superado por la spec 005 (RF-15, RF-43, RF-46)** | El flujo ya no lo hace un solo especialista: `tarifas` lee los importes con `describir_imagen` y `auxiliar` calcula con `calculadora`. `tests/test_flujo_imagen_calculo.py::test_tarifas_extrae_importes_sin_calcular`, `::test_tarifas_bloquea_calculadora_y_rag`, `tests/test_grafo_enrutamiento.py::test_grafo_encadena_tarifas_y_auxiliar_sin_calculadora_en_tarifas` | ✅ (con dobles) |
+| RF-22 | Automático · **reformulado** | La nota de `tarifas` conserva los importes y su procedencia; la operación la deja `auxiliar` en su traza. `tests/test_flujo_imagen_calculo.py::test_prompt_entrega_importes_y_delega_el_calculo_en_auxiliar` | ✅ (con dobles) |
+| RF-23 | Automático | `tests/test_flujo_imagen_calculo.py::test_sin_importes_no_inventa_un_total` | ✅ |
 | Demo | Manual ⚠️ API | `describir_imagen` + `calculadora` sobre la imagen demo con `gemini-3.8-flash` → 4 precios leídos y total 9,50 | ✅ (a nivel de tools; sin LLM de especialista) |
 
 ## Criterios de finalización
 - [x] Todos los RF con test en verde (`pytest`) sin API.
 - [x] Demo manual de las tools realizada con la API real y resultado guardado en el informe.
+- [ ] Flujo imagen → importes → total de punta a punta con el grafo real: **no es posible hoy** (ver «Limitaciones»).
 
 ## Fuera de spec
-- Especialista `tarifas` (`src/agents/tarifas.py`) y su entrada en `TOOLS_POR_ESPECIALISTA`. La spec dejaba abierto qué especialista usa las tools; se creó uno para dar dueño al flujo (RF-21 a RF-23). Está pendiente de confirmar con quien lleve el grafo.
+- Especialista `tarifas` (`src/agents/tarifas.py`). La spec dejaba abierto qué especialista usa las tools; se creó uno para dar dueño al flujo. Quien lleva el grafo lo adoptó y lo cambió (spec 005): ahora solo lee la imagen y la cuenta la hace `auxiliar`, y la allowlist de `tarifas` quedó en `describir_imagen`.
 - Mini-bucle común en `src/agents/base.py`, compartido con el especialista de horarios.
 - Estado «error» en la traza para errores controlados de las tools (`ERROR: ...`).
 - Imagen demo: captura de la sección «Billetes de autobuses EMT» de RedTransporte (800 x 260 px). No es un cartel oficial; la fuente y la fecha están en el README.
 
+## Limitaciones
+- **El flujo de la imagen es inalcanzable desde los clientes.** La spec 007 solo permite `tarifas` con una «imagen aportada válida», pero `src/agent.py` fija `imagen_valida=False` en cada turno y la API pública no ofrece forma de aportar una imagen. Una consulta sobre una imagen se desvía al RAG, que no ve imágenes. Pendiente de que quien lleva el grafo decida cómo se aporta.
+- La demo real (2026-10-14) se hizo a nivel de tools, con un script, no a través del grafo.
+
 ## Veredicto
-**Parcial.** Los 23 RF tienen test en verde y la suite completa pasa (75 passed). Además, el 2026-10-14 se ejecutó la demo real de las dos tools con `gemini-3.8-flash`: `describir_imagen` leyó los cuatro precios de la imagen (RF-1, RF-3, RF-11) y `calculadora` dio 9,50 para `3*1,50+5,00`, con las dos llamadas en la traza (RF-9, RF-10, RF-19, RF-20). Queda sin probar el flujo del especialista `tarifas` con un LLM real, que necesita el grafo integrado (RF-21 a RF-23 solo están cubiertos con LLM falso). El modelo configurado por defecto (`gemini-3.6-flash`) devolvió un 503 por demanda alta durante la prueba. T11 queda hecha a nivel de tools; T12 sigue abierta hasta probar el flujo con el grafo.
+**Parcial.** Los 23 RF tienen test en verde y la suite completa pasa (450 passed). El 2026-10-14 se ejecutó la demo real de las dos tools con `gemini-3.8-flash`: `describir_imagen` leyó los cuatro precios de la imagen (RF-1, RF-3, RF-11) y `calculadora` dio 9,50 para `3*1,50+5,00`, con las dos llamadas en la traza (RF-9, RF-10, RF-19, RF-20). RF-21 a RF-23 se reformularon cuando la spec 005 repartió el flujo entre `tarifas` y `auxiliar`; siguen cubiertos con dobles de prueba, pero no se pueden demostrar de punta a punta con el grafo real mientras no se pueda aportar una imagen. T11 quedó hecha a nivel de tools; T12 sigue abierta.
