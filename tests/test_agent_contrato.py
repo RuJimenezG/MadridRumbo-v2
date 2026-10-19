@@ -7,6 +7,7 @@ from inspect import signature
 import pytest
 
 import src.agent as agent
+import src.modelos as modelos
 from src.graph import crear_grafo, recuperar_estado
 
 
@@ -226,8 +227,25 @@ def test_reanudacion_hitl_no_reutiliza_correccion_semantica(monkeypatch):
 
 def test_fallback_publico_solo_expone_categoria_y_resumen_canonicos(monkeypatch):
     """RF-10 a RF-14: ni el JSON crudo ni datos internos llegan al contrato público."""
+    llamadas = []
+
+    def especialista_falso(rol):
+        def ejecutar(estado):
+            llamadas.append(rol)
+            return {}
+
+        return ejecutar
+
+    def crear_cliente_prohibido():
+        raise AssertionError("el test no debe crear un cliente Gemini")
+
+    monkeypatch.setattr(modelos, "_crear_cliente_gemini", crear_cliente_prohibido)
     grafo = crear_grafo(
         modelo_supervisor=lambda mensajes: "RESPUESTA_CRUDA_TOKEN_DE_PRUEBA",
+        especialistas={
+            rol: especialista_falso(rol)
+            for rol in ("rag", "horarios", "rutas", "auxiliar", "tarifas")
+        },
         modelo_sintetizador=lambda contexto: "Resumen controlado.",
     )
     monkeypatch.setattr(agent, "_GRAFO", grafo)
@@ -240,6 +258,7 @@ def test_fallback_publico_solo_expone_categoria_y_resumen_canonicos(monkeypatch)
         "Supervisor: categoria=json_invalido; resumen=La decisión no contiene JSON válido; se aplicó el fallback."
     ]
     assert "RESPUESTA_CRUDA_TOKEN_DE_PRUEBA" not in str(resultado)
+    assert llamadas == ["auxiliar"]
     assert snapshot["log"] == []
     assert "diagnostico_supervisor" not in snapshot
 

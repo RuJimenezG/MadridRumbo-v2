@@ -23,6 +23,18 @@ red, embeddings ni bases de datos reales: `test_modelos_grafo.py`,
 `test_especialista_rutas.py`, `test_agent_contrato.py`,
 `test_estado_grafo.py` y `test_grafo_persistencia.py`.
 
+## Regresión de tests sin Gemini
+
+Comprobación realizada el 19/10/2026:
+
+- `python -m pytest tests/test_agent_contrato.py::test_fallback_publico_solo_expone_categoria_y_resumen_canonicos -q`: **1 passed**.
+- `python -m pytest -q`: **100 % completado, código de salida 0**.
+
+El test de fallback público inyecta los cinco especialistas, registra que la
+consulta «¿Qué hora es?» alcanza el doble `auxiliar` y sustituye la creación
+del cliente Gemini por un centinela que falla si se invoca. Por tanto, cubre
+RF-10 a RF-14 sin pedir credenciales ni abrir conexiones de red.
+
 ## Registro de ejecución manual
 
 Comprobaciones realizadas el 17/10/2026 por la persona validadora:
