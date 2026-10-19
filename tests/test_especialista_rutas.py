@@ -1,6 +1,8 @@
 """Tests del especialista de rutas (spec 005, T10). No usan API ni red."""
 import json
 
+import pytest
+
 import config
 
 from src.agents.rutas import PROMPT_RUTAS, nodo_rutas
@@ -85,6 +87,32 @@ def test_rutas_sin_un_extremo_no_invoca_la_tool():
     assert ejecutor.llamadas == []
     assert salida["traza"] == []
     assert "destino" in salida["notas"][-1].lower()
+
+
+@pytest.mark.parametrize(
+    ("mensaje", "dato_pendiente"),
+    [
+        ("QUIERO IR DE Átocha.", "destino"),
+        ("Necesito, ir de Atocha a...", "destino"),
+        ("Voy de.", "origen y el destino"),
+    ],
+)
+def test_formulacion_incompleta_pide_aclaracion_antes_de_llm_tool_y_hitl(
+    mensaje, dato_pendiente
+):
+    """RF-21: una formulación explícita incompleta se detiene antes de planificar."""
+    llm = LLMFalso([])
+    ejecutor = EjecutorFalso({"planificar_ruta": json.dumps(RUTA_OK, ensure_ascii=False)})
+
+    salida = nodo_rutas(_estado(mensaje), llm, ejecutor)
+
+    assert dato_pendiente in salida["notas"][-1].lower()
+    assert llm.llamadas == []
+    assert ejecutor.llamadas == []
+    assert salida["traza"] == []
+    assert "resultados" not in salida
+    assert salida.get("planes_pendientes", []) == []
+    assert salida.get("hitl_pendiente", False) is False
 
 
 def test_rutas_bloquea_una_segunda_planificacion_en_el_mismo_nodo():

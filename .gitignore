@@ -23,6 +23,7 @@ output/
 output/experimentos
 chroma/
 embeddings.json
+output/chunks.json
 
 #Archivos de prueba
 prueba_*.py

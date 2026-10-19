@@ -9,6 +9,12 @@ from __future__ import annotations
 from copy import deepcopy
 from typing import Annotated, Any, Mapping, TypedDict, TypeVar
 
+from src.supervisor import RESUMENES_DIAGNOSTICO
+
+
+_RESUMEN_CORRECCION_SEMANTICA = (
+    "Se redirigieron {cantidad} derivaciones incompatibles de tarifas a rag."
+)
 
 class EntradaTraza(TypedDict):
     """Entrada pública de auditoría de una invocación de tool."""
@@ -142,15 +148,50 @@ def _proyectar_traza(entradas: object) -> list[EntradaTraza]:
     return traza
 
 
-def proyectar_resultado(estado: Mapping[str, Any]) -> dict[str, Any]:
+def _entrada_diagnostico_supervisor(diagnostico: object) -> str | None:
+    """Convierte una categoría permitida en la única entrada pública segura."""
+    if not isinstance(diagnostico, Mapping):
+        return None
+    categoria = diagnostico.get("categoria")
+    resumen = RESUMENES_DIAGNOSTICO.get(categoria)
+    if not isinstance(categoria, str) or not isinstance(resumen, str):
+        return None
+    return f"Supervisor: categoria={categoria}; resumen={resumen}"
+
+
+def _entrada_correccion_semantica(correcciones_tarifas: object) -> str | None:
+    """Convierte un contador interno válido en la única corrección observable."""
+    if (
+        not isinstance(correcciones_tarifas, int)
+        or isinstance(correcciones_tarifas, bool)
+        or correcciones_tarifas <= 0
+    ):
+        return None
+    resumen = _RESUMEN_CORRECCION_SEMANTICA.format(cantidad=correcciones_tarifas)
+    return f"Supervisor: correccion_semantica=aplicada; resumen={resumen}"
+
+
+def proyectar_resultado(
+    estado: Mapping[str, Any],
+    *,
+    diagnostico_supervisor: Mapping[str, Any] | None = None,
+    correcciones_tarifas: object = None,
+) -> dict[str, Any]:
     """Devuelve exclusivamente el contrato público que expondrá src.agent."""
     respuesta = estado.get("respuesta", "")
     log = estado.get("log", [])
+    log_publico = list(log) if isinstance(log, list) else []
+    entrada_diagnostico = _entrada_diagnostico_supervisor(diagnostico_supervisor)
+    if entrada_diagnostico:
+        log_publico.append(entrada_diagnostico)
+    entrada_correccion = _entrada_correccion_semantica(correcciones_tarifas)
+    if entrada_correccion:
+        log_publico.append(entrada_correccion)
 
     return {
         "respuesta": respuesta if isinstance(respuesta, str) else str(respuesta),
         "plan": _proyectar_planes(estado.get("planes_pendientes", [])),
-        "log": list(log) if isinstance(log, list) else [],
+        "log": log_publico,
         "traza": _proyectar_traza(estado.get("traza", [])),
         "hitl_pendiente": bool(estado.get("hitl_pendiente", False)),
         "done": bool(estado.get("done", False)),
