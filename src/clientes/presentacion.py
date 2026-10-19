@@ -5,6 +5,7 @@ las entradas de la persona usuaria.
 """
 import config
 from src.clientes.contrato import normalizar_estado
+from src.clientes.planes import es_entrada_tecnica_supervisor, resumir_plan
 
 # Longitud máxima del extracto de cada tool al mostrar la traza.
 PREVIEW_MAX = 80
@@ -14,15 +15,32 @@ def _si_no(valor: bool) -> str:
     return "sí" if valor else "no"
 
 
-def formatear_turno(estado: dict, thread_id: str) -> str:
-    """Texto de un turno: respuesta, plan, especialistas, tools y banderas."""
+def _log_visible(log: list, ocultar_tecnicas: bool) -> list:
+    """El log del grafo; la web quita los diagnósticos técnicos del supervisor (RF-35)."""
+    if not ocultar_tecnicas:
+        return list(log)
+    return [entrada for entrada in log if not es_entrada_tecnica_supervisor(entrada)]
+
+
+def formatear_turno(estado: dict, thread_id: str, ocultar_tecnicas: bool = False) -> str:
+    """Texto de un turno: respuesta, planes, especialistas, tools y banderas.
+
+    `ocultar_tecnicas` quita del registro los diagnósticos del supervisor: el CLI los muestra
+    (los consulta el cliente técnico) y la web no.
+    """
     estado = normalizar_estado(estado)
     lineas = [estado["respuesta"]]
 
-    if estado["plan"]:
-        lineas += ["", "Plan propuesto:"] + [f"  - {punto}" for punto in estado["plan"]]
-    if estado["log"]:
-        lineas += ["", "Especialistas:"] + [f"  {entrada}" for entrada in estado["log"]]
+    planes = estado["plan"] if isinstance(estado["plan"], list) else []
+    if planes:
+        lineas += ["", "Plan propuesto:" if len(planes) == 1 else "Planes propuestos:"]
+        for numero, plan in enumerate(planes):
+            if numero:
+                lineas.append("")
+            lineas += resumir_plan(plan).split("\n")
+    log = _log_visible(estado["log"], ocultar_tecnicas)
+    if log:
+        lineas += ["", "Especialistas:"] + [f"  {entrada}" for entrada in log]
     if estado["traza"]:
         lineas += ["", "Tools:"]
         for paso in estado["traza"]:
@@ -38,12 +56,12 @@ def formatear_turno(estado: dict, thread_id: str) -> str:
     return "\n".join(lineas)
 
 
-def datos_depuracion(estado: dict, thread_id: str) -> dict:
+def datos_depuracion(estado: dict, thread_id: str, ocultar_tecnicas: bool = False) -> dict:
     """Datos del panel de depuración: especialistas, tools, conversación y banderas."""
     estado = normalizar_estado(estado)
     return {
         "thread_id": thread_id,
-        "log": estado["log"],
+        "log": _log_visible(estado["log"], ocultar_tecnicas),
         "traza": estado["traza"],
         "hitl_pendiente": estado["hitl_pendiente"],
         "done": estado["done"],

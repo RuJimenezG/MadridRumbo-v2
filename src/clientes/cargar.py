@@ -1,4 +1,4 @@
-"""Elige el grafo que usan los clientes: el real o, si se pide, el simulado (spec 005, RF-28 y RF-29)."""
+"""Elige el grafo que usan los clientes: el real o, si se pide, el simulado (spec 008, RF-28 y RF-29)."""
 import importlib
 import os
 

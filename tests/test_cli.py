@@ -1,11 +1,15 @@
-"""Tests del chat interactivo del CLI (spec 005, RF-1 a RF-5 y RF-28). No usan API.
+"""Tests del chat interactivo del CLI (spec 008, RF-1 a RF-5 y RF-28). No usan API.
 
 La entrada y la salida del CLI se inyectan: `leer` devuelve líneas de una lista y
 `escribir` acumula lo que se imprimiría.
 """
+import config
 from src.clientes.cli import ejecutar_cli
 from src.clientes.grafo_falso import GrafoFalso
 from src.clientes.sesion import MENSAJE_ERROR
+
+
+RUTA = config.PEDIDOS_DEMO[1]  # el único pedido que pausa para HITL
 
 
 class GrafoSinPlan:
@@ -115,7 +119,7 @@ def test_muestra_el_aviso_del_modo_simulado():
 
 
 # --- HITL: aprobar o rechazar el plan (RF-6 a RF-10) ---
-# Se usa GrafoFalso, que siempre deja un plan pendiente de decisión.
+# Se usa GrafoFalso: un pedido de ruta deja un plan pendiente (los demás cierran sin pausa).
 
 def ejecutar_hitl(lineas, agente=None):
     """Como `ejecutar`, pero con el grafo simulado y devolviendo también lo que preguntó el CLI."""
@@ -133,7 +137,7 @@ def llamadas(grafo):
 
 def test_plan_pendiente_pregunta_decision():
     # RF-6: se muestra el plan y se pregunta si se aprueba o se rechaza.
-    _, texto, _, entrada = ejecutar_hitl(["hola", "s", "salir"])
+    _, texto, _, entrada = ejecutar_hitl([RUTA, "s", "salir"])
     assert "Plan propuesto" in texto
     preguntas = [p for p in entrada.prompts if "[s/n]" in p]
     assert len(preguntas) == 1
@@ -142,7 +146,7 @@ def test_plan_pendiente_pregunta_decision():
 
 def test_no_cierra_sin_decision():
     # RF-7: sin una decisión explícita nunca se llama a aprobar_plan.
-    for lineas in (["hola"], ["hola", "salir"]):  # fin de entrada y `salir` en la pregunta
+    for lineas in (["hola"], [RUTA, "salir"]):  # fin de entrada y `salir` en la pregunta
         codigo, _, grafo, _ = ejecutar_hitl(lineas)
         assert codigo == 0
         assert [nombre for nombre, _ in llamadas(grafo)] == ["procesar_turno"]
@@ -150,7 +154,7 @@ def test_no_cierra_sin_decision():
 
 def test_aprobar_muestra_terminada_solo_si_el_grafo_lo_dice():
     # RF-8: la aprobación llega al grafo y «Terminada» depende solo de lo que diga el grafo.
-    _, texto, grafo, _ = ejecutar_hitl(["hola", "s", "salir"])
+    _, texto, grafo, _ = ejecutar_hitl([RUTA, "s", "salir"])
     assert llamadas(grafo)[-1] == ("aprobar_plan", True)
     assert "Terminada: sí" in texto
 
@@ -160,13 +164,13 @@ def test_aprobar_muestra_terminada_solo_si_el_grafo_lo_dice():
             nuevo["done"] = False
             return nuevo
 
-    _, texto, _, _ = ejecutar_hitl(["hola", "s", "salir"], GrafoQueNoCierra())
+    _, texto, _, _ = ejecutar_hitl([RUTA, "s", "salir"], GrafoQueNoCierra())
     assert "Terminada: sí" not in texto
 
 
 def test_rechazar_permite_seguir():
     # RF-9: tras rechazar, se puede escribir otro mensaje en la misma conversación.
-    _, texto, grafo, _ = ejecutar_hitl(["hola", "n", "otra cosa", "s", "salir"])
+    _, texto, grafo, _ = ejecutar_hitl([RUTA, "n", RUTA, "s", "salir"])
     assert [nombre for nombre, _ in llamadas(grafo)] == [
         "procesar_turno", "aprobar_plan", "procesar_turno", "aprobar_plan",
     ]
@@ -177,7 +181,113 @@ def test_rechazar_permite_seguir():
 
 def test_decision_invalida_repregunta():
     # RF-10: una respuesta no válida vuelve a preguntar sin llamar al grafo.
-    _, texto, grafo, entrada = ejecutar_hitl(["hola", "x", "quizá", "n", "salir"])
+    _, texto, grafo, entrada = ejecutar_hitl([RUTA, "x", "quizá", "n", "salir"])
     assert len([p for p in entrada.prompts if "[s/n]" in p]) == 3
     assert "Respuesta no válida" in texto
-    assert llamadas(grafo) == [("procesar_turno", "hola"), ("aprobar_plan", False)]
+    assert llamadas(grafo) == [("procesar_turno", RUTA), ("aprobar_plan", False)]
+
+
+# --- Planes de ruta: resumen y elección entre varios (spec 008, RF-6, RF-9, RF-31 a RF-35) ---
+
+VARIAS_RUTAS = "Dame dos rutas alternativas desde la Puerta del Sol hasta la Estación de Atocha"
+HORARIOS = config.PEDIDOS_DEMO[0]
+
+
+class GrafoEspia(GrafoFalso):
+    """Grafo simulado que guarda el `estado` que recibe `aprobar_plan`."""
+
+    def __init__(self):
+        super().__init__()
+        self.estados_recibidos = []
+
+    def aprobar_plan(self, estado, thread_id, aprobado):
+        self.estados_recibidos.append(dict(estado))
+        return super().aprobar_plan(estado, thread_id, aprobado)
+
+
+def ejecutar_planes(lineas):
+    """Lanza el CLI con el grafo espía y devuelve (código, texto, grafo, entrada)."""
+    grafo = GrafoEspia()
+    entrada = Entrada(lineas)
+    salida = []
+    codigo = ejecutar_cli([], grafo, entrada, salida.append, None)
+    return codigo, "\n".join(salida), grafo, entrada
+
+
+def preguntas_de_plan(entrada):
+    return [p for p in entrada.prompts if "[1-" in p]
+
+
+def decisiones_enviadas(grafo):
+    return [dato for nombre, _, dato in grafo.llamadas if nombre == "aprobar_plan"]
+
+
+def test_plan_pendiente_muestra_resumen():
+    # RF-6: el plan se ve con su identificador y un resumen legible, no como un diccionario.
+    _, texto, _, _ = ejecutar_planes([RUTA, "s", "salir"])
+    assert "ruta-1" in texto and "Origen:" in texto and "Destino:" in texto and "min" in texto
+    assert "{'id'" not in texto
+
+
+def test_un_plan_no_pide_elegir():
+    # RF-32: con un único plan solo se pregunta si se aprueba.
+    _, _, grafo, entrada = ejecutar_planes([RUTA, "s", "salir"])
+    assert preguntas_de_plan(entrada) == []
+    assert "plan_id_seleccionado" not in grafo.estados_recibidos[-1]
+
+
+def test_varios_planes_pide_elegir():
+    # RF-31: con varios planes se pide el número y se envía el identificador elegido al grafo.
+    _, texto, grafo, entrada = ejecutar_planes([VARIAS_RUTAS, "2", "s", "salir"])
+    assert "ruta-1" in texto and "ruta-2" in texto
+    assert len(preguntas_de_plan(entrada)) == 1 and "[1-2]" in preguntas_de_plan(entrada)[0]
+    assert grafo.estados_recibidos[-1]["plan_id_seleccionado"] == "ruta-2"
+    assert "Terminada: sí" in texto
+
+
+def test_eleccion_de_plan_invalida_repregunta():
+    # Una elección que no es un número válido vuelve a preguntar sin llamar al grafo.
+    _, texto, grafo, entrada = ejecutar_planes([VARIAS_RUTAS, "9", "x", "1", "n", "s", "salir"])
+    assert len(preguntas_de_plan(entrada)) == 3
+    assert "Plan no válido" in texto
+    assert decisiones_enviadas(grafo) == [False, True]
+
+
+def test_rechazar_muestra_el_nuevo_plan():
+    # RF-9: si tras rechazar el grafo deja otro plan pendiente, se muestra y se vuelve a preguntar.
+    _, texto, grafo, entrada = ejecutar_planes([VARIAS_RUTAS, "1", "n", "s", "salir"])
+    assert decisiones_enviadas(grafo) == [False, True]
+    assert grafo.estados_recibidos[0]["plan_id_seleccionado"] == "ruta-1"
+    # Con un único plan restante ya no se pide elegir: solo hubo una pregunta de elección.
+    assert len(preguntas_de_plan(entrada)) == 1
+    assert "Terminada: sí" in texto
+
+
+def test_salir_en_la_eleccion_no_aprueba_nada():
+    # RF-7: sin decisión explícita no se cierra nada.
+    for lineas in ([VARIAS_RUTAS, "salir"], [VARIAS_RUTAS]):
+        codigo, _, grafo, _ = ejecutar_planes(lineas)
+        assert codigo == 0
+        assert decisiones_enviadas(grafo) == []
+
+
+def test_respuesta_sin_plan_no_pregunta():
+    # RF-34: horarios cierra sin plan: se muestra la respuesta y no se pregunta nada.
+    _, texto, grafo, entrada = ejecutar_planes([HORARIOS, "salir"])
+    assert "Terminada: sí" in texto
+    assert [p for p in entrada.prompts if "[s/n]" in p or "[1-" in p] == []
+    assert decisiones_enviadas(grafo) == []
+
+
+def test_el_cli_muestra_las_entradas_tecnicas_del_supervisor():
+    # RF-35: el CLI las muestra (solo la web las oculta).
+    tecnica = "Supervisor: categoria=json_invalido; resumen=La decisión no contiene JSON válido; se aplicó el fallback."
+
+    class GrafoConDiagnostico(GrafoSinPlan):
+        def procesar_turno(self, estado, mensaje, thread_id):
+            resultado = super().procesar_turno(estado, mensaje, thread_id)
+            resultado["log"] = ["[supervisor] -> eco", tecnica]
+            return resultado
+
+    _, texto, _ = ejecutar(["hola", "salir"], GrafoConDiagnostico())
+    assert tecnica in texto

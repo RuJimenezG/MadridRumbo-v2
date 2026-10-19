@@ -1,4 +1,4 @@
-"""Tests de la carga del grafo para los clientes (spec 005, RF-28 y RF-29). No usan API."""
+"""Tests de la carga del grafo para los clientes (spec 008, RF-28 y RF-29). No usan API."""
 import sys
 import types
 

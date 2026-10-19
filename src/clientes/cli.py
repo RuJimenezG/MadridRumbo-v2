@@ -1,4 +1,4 @@
-"""Cliente de terminal del grafo multiagente (spec 005).
+"""Cliente de terminal del grafo multiagente (spec 008).
 
 Capa fina: muestra lo que devuelve el grafo y traslada lo que escribe la persona.
 La entrada (`leer`) y la salida (`escribir`) se inyectan para poder probarlo sin terminal.
@@ -6,6 +6,7 @@ La entrada (`leer`) y la salida (`escribir`) se inyectan para poder probarlo sin
 import argparse
 
 import config
+from src.clientes.planes import ids_de_planes
 from src.clientes.presentacion import (
     es_mensaje_vacio,
     es_salida,
@@ -16,7 +17,9 @@ from src.clientes.sesion import SesionChat
 
 PROMPT = "Tú> "
 PROMPT_DECISION = "¿Apruebas el plan? [s/n]> "
+PROMPT_PLAN = "¿Qué plan quieres decidir? [1-{n}]> "
 DECISION_NO_VALIDA = "Respuesta no válida: escribe s para aprobar o n para rechazar."
+PLAN_NO_VALIDO = "Plan no válido: escribe un número entre 1 y {n}."
 BIENVENIDA = "MadridRumbo: escribe tu consulta sobre transporte en Madrid ('salir' para terminar)."
 
 
@@ -28,24 +31,61 @@ def _mostrar_turno(sesion: SesionChat, escribir) -> None:
         escribir(formatear_turno(sesion.estado, sesion.thread_id))
 
 
-def _pedir_decision(sesion: SesionChat, leer, escribir) -> bool:
-    """Pregunta si se aprueba el plan hasta recibir una decisión válida.
+def _pedir_plan(sesion: SesionChat, leer, escribir) -> tuple[bool, str | None]:
+    """Con varios planes pendientes, pregunta cuál se decide (por su número o su identificador).
 
-    Devuelve False si la persona termina el chat sin decidir; en ese caso no se cierra nada.
+    Devuelve `(seguir, plan_id)`: `plan_id` es None si solo hay un plan y no hace falta elegir, y
+    `seguir` es False si la persona termina el chat sin elegir.
     """
-    while sesion.puede_decidir:
+    ids = ids_de_planes(sesion.planes)
+    if len(ids) <= 1:
+        return True, None
+    while True:
+        try:
+            texto = leer(PROMPT_PLAN.format(n=len(ids)))
+        except (EOFError, KeyboardInterrupt):
+            escribir("")
+            return False, None
+        if es_salida(texto):
+            return False, None
+        elegido = texto.strip()
+        if elegido.isdigit() and 1 <= int(elegido) <= len(ids):
+            return True, ids[int(elegido) - 1]
+        if elegido in ids:
+            return True, elegido
+        escribir(PLAN_NO_VALIDO.format(n=len(ids)))
+
+
+def _pedir_aprobacion(leer, escribir) -> bool | None:
+    """Pregunta s/n hasta recibir una respuesta válida; None si la persona termina sin decidir."""
+    while True:
         try:
             texto = leer(PROMPT_DECISION)
         except (EOFError, KeyboardInterrupt):
             escribir("")
-            return False
+            return None
         if es_salida(texto):
-            return False
+            return None
         decision = interpretar_decision(texto)
+        if decision is not None:
+            return decision
+        escribir(DECISION_NO_VALIDA)
+
+
+def _pedir_decision(sesion: SesionChat, leer, escribir) -> bool:
+    """Mientras haya planes pendientes, pide elegir plan (si hay varios) y aprobarlo o rechazarlo.
+
+    Tras rechazar, el grafo puede dejar otros planes pendientes: se vuelve a preguntar por ellos.
+    Devuelve False si la persona termina el chat sin decidir; en ese caso no se cierra nada.
+    """
+    while sesion.puede_decidir:
+        seguir, plan_id = _pedir_plan(sesion, leer, escribir)
+        if not seguir:
+            return False
+        decision = _pedir_aprobacion(leer, escribir)
         if decision is None:
-            escribir(DECISION_NO_VALIDA)
-            continue
-        sesion.decidir(decision)
+            return False
+        sesion.decidir(decision, plan_id)
         _mostrar_turno(sesion, escribir)
     return True
 
@@ -97,7 +137,9 @@ def _demo(agente, auto_aprobar: bool, leer, escribir) -> int:
         if auto_aprobar:
             if sesion.puede_decidir:
                 escribir("Plan aprobado automáticamente (--auto-aprobar).")
-                sesion.decidir(True)
+                # Con varios planes se aprueba el primero: no hay nadie que elija.
+                ids = ids_de_planes(sesion.planes)
+                sesion.decidir(True, ids[0] if len(ids) > 1 else None)
                 _mostrar_turno(sesion, escribir)
         elif not _pedir_decision(sesion, leer, escribir):
             return 0  # la persona se fue sin decidir: no se sigue ni se cierra nada

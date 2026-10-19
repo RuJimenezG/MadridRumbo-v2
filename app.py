@@ -1,5 +1,5 @@
 """
-app.py — Cliente Streamlit del grafo multiagente (spec 005).
+app.py — Cliente Streamlit del grafo multiagente (spec 008).
 
 Capa fina: toda la lógica de la conversación vive en `src/clientes/sesion.py`, igual que en el CLI.
 Aquí solo se dibuja el chat, la barra lateral con el plan y los botones Aprobar y Rechazar,
@@ -12,6 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import streamlit as st
 
 from src.clientes.cargar import GrafoNoDisponible, cargar_agente
+from src.clientes.planes import ids_de_planes, resumir_plan
 from src.clientes.presentacion import datos_depuracion
 from src.clientes.sesion import SesionChat
 
@@ -37,9 +38,14 @@ with st.sidebar:
         st.warning(st.session_state.aviso)
 
     st.subheader("Plan")
+    ids_planes = ids_de_planes(sesion.planes)
+    plan_elegido = None
     if sesion.puede_decidir:
-        for punto in sesion.estado["plan"]:
-            st.markdown(f"- {punto}")
+        # Cada plan con su resumen legible; con varios hay que elegir cuál se decide (RF-31).
+        for plan in sesion.planes:
+            st.text(resumir_plan(plan))
+        if len(ids_planes) > 1:
+            plan_elegido = st.radio("Plan a decidir", ids_planes, key="plan_elegido")
     elif sesion.estado["done"]:
         st.success("Conversación terminada.")
     else:
@@ -50,15 +56,16 @@ with st.sidebar:
     aprobar = columna_aprobar.button("Aprobar", type="primary", disabled=not sesion.puede_decidir)
     rechazar = columna_rechazar.button("Rechazar", disabled=not sesion.puede_decidir)
     if aprobar or rechazar:
-        sesion.decidir(aprobado=aprobar)
+        sesion.decidir(aprobado=aprobar, plan_id=plan_elegido)
         st.rerun()
 
     if st.button("Nueva conversación"):
         sesion.nueva_conversacion()
         st.rerun()
 
+    # La web no muestra los diagnósticos técnicos del supervisor (RF-35); el CLI sí.
     with st.expander("Depuración"):
-        st.json(datos_depuracion(sesion.estado, sesion.thread_id))
+        st.json(datos_depuracion(sesion.estado, sesion.thread_id, ocultar_tecnicas=True))
 
 # --- Chat ---
 st.title("MadridRumbo — Asistente de transporte de Madrid")

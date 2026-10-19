@@ -93,12 +93,18 @@ MODELO_VISION = "gemini-3.8-flash"
 # --- Tool calculadora ---
 CALC_MAX_CARACTERES = 200
 
-# --- Clientes CLI y Streamlit (spec 005) ---
-# Pedidos fijos de `python main.py --demo`: horarios, tarifas con imagen y fuera de corpus.
+# --- Clientes CLI y Streamlit (spec 008) ---
+# Pedidos fijos de `python main.py --demo`: horarios, ruta (la única que pausa para HITL) y fuera de corpus.
 PEDIDOS_DEMO = (
     "¿Hasta qué hora hay metro hoy?",
-    "Según la imagen, ¿cuánto cuestan 3 billetes sencillos EMT y 1 Exprés Aeropuerto?",
+    "¿Cómo puedo ir desde la Puerta del Sol hasta la Estación de Atocha?",
     "¿Cuál es la capital de Francia?",
+)
+
+# Entradas técnicas del supervisor en el log del grafo: el CLI las muestra y la web las oculta.
+PREFIJOS_DIAGNOSTICO_SUPERVISOR = (
+    "Supervisor: categoria=",
+    "Supervisor: correccion_semantica=",
 )
 
 # Respuestas reconocidas en el chat (se comparan en minúsculas y sin espacios sobrantes).

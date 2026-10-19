@@ -2,11 +2,12 @@
 
 Guarda el identificador de la conversación, el último estado del grafo y el historial,
 y traslada al grafo lo que decide la persona. No decide nada por su cuenta: `done` y
-`hitl_pendiente` se copian tal cual de lo que devuelve el grafo (spec 005, RF-27).
+`hitl_pendiente` se copian tal cual de lo que devuelve el grafo (spec 008, RF-27).
 """
 import uuid
 
 from src.clientes.contrato import estado_vacio, normalizar_estado
+from src.clientes.planes import ids_de_planes
 
 # Mensaje que ve la persona si el grafo falla; no incluye detalles internos.
 MENSAJE_ERROR = "No se pudo completar la acción: el grafo ha fallado. Inténtalo de nuevo."
@@ -26,6 +27,12 @@ class SesionChat:
         self.estado = estado_vacio()
         self.historial: list[dict] = []
         self.error = None
+
+    @property
+    def planes(self) -> list:
+        """Planes pendientes de decisión, tal como los devolvió el grafo."""
+        planes = self.estado["plan"]
+        return list(planes) if isinstance(planes, list) else []
 
     @property
     def puede_decidir(self) -> bool:
@@ -58,12 +65,27 @@ class SesionChat:
         except Exception:  # un fallo del grafo no debe cortar la conversación
             self._registrar_error()
 
-    def decidir(self, aprobado: bool) -> None:
-        """Traslada al grafo la aprobación o el rechazo del plan. Se ignora sin plan pendiente."""
+    def decidir(self, aprobado: bool, plan_id: str | None = None) -> None:
+        """Traslada al grafo la aprobación o el rechazo del plan.
+
+        Se ignora, sin llamar al grafo, si no hay plan pendiente, si hay varios planes y no se
+        indica cuál, o si el identificador no corresponde a ninguno: el grafo respondería con
+        un aviso que deja `hitl_pendiente` en falso aunque siga habiendo un plan.
+        """
         if not self.puede_decidir:
             return
+        ids = ids_de_planes(self.planes)
+        if plan_id is None and len(ids) > 1:
+            return
+        if plan_id is not None and plan_id not in ids:
+            return
+
+        # Copia: el identificador elegido solo viaja en esta llamada, no se guarda en la sesión.
+        enviado = dict(self.estado)
+        if plan_id is not None:
+            enviado["plan_id_seleccionado"] = plan_id
         try:
-            self._aplicar(self.agente.aprobar_plan(self.estado, self.thread_id, aprobado))
+            self._aplicar(self.agente.aprobar_plan(enviado, self.thread_id, aprobado))
         except Exception:
             self._registrar_error()
 

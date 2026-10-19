@@ -1,4 +1,4 @@
-"""Tests de la demo del CLI: `--demo` y `--auto-aprobar` (spec 005, RF-11 a RF-14). No usan API."""
+"""Tests de la demo del CLI: `--demo` y `--auto-aprobar` (spec 008, RF-11 a RF-14). No usan API."""
 import config
 from src.clientes.cli import ejecutar_cli
 from src.clientes.grafo_falso import GrafoFalso
@@ -32,17 +32,17 @@ def test_demo_lanza_tres_pedidos():
 
 
 def test_demo_sin_auto_pide_aprobacion():
-    # RF-12: sin --auto-aprobar se pide la decisión humana de cada plan.
-    codigo, _, grafo, entrada = ejecutar(["--demo"], ["s", "n", "s"])
+    # RF-12: sin --auto-aprobar se pide la decisión humana del plan; solo la ruta genera uno.
+    codigo, _, grafo, entrada = ejecutar(["--demo"], ["n"])
     assert codigo == 0
-    assert len([p for p in entrada.prompts if "[s/n]" in p]) == 3
-    assert decisiones(grafo) == [True, False, True]
+    assert len([p for p in entrada.prompts if "[s/n]" in p]) == 1
+    assert decisiones(grafo) == [False]
 
 
 def test_demo_decision_invalida_repregunta():
-    _, texto, grafo, _ = ejecutar(["--demo"], ["x", "s", "s", "s"])
+    _, texto, grafo, _ = ejecutar(["--demo"], ["x", "s"])
     assert "Respuesta no válida" in texto
-    assert decisiones(grafo) == [True, True, True]
+    assert decisiones(grafo) == [True]
 
 
 def test_demo_sin_decision_no_aprueba_nada():
@@ -50,15 +50,16 @@ def test_demo_sin_decision_no_aprueba_nada():
     codigo, _, grafo, _ = ejecutar(["--demo"], [])
     assert codigo == 0
     assert decisiones(grafo) == []
-    assert len([c for c in grafo.llamadas if c[0] == "procesar_turno"]) == 1  # no sigue con más pedidos
+    # Horarios cierra sin pausa; la ruta pausa y, sin decisión, la demo termina sin lanzar el tercer pedido.
+    assert len([c for c in grafo.llamadas if c[0] == "procesar_turno"]) == 2
 
 
 def test_demo_auto_aprueba():
     # RF-13: con --auto-aprobar se aprueba solo, sin preguntar, y se indica en pantalla.
     _, texto, grafo, entrada = ejecutar(["--demo", "--auto-aprobar"])
     assert entrada.prompts == []
-    assert decisiones(grafo) == [True, True, True]
-    assert texto.count("aprobado automáticamente") == 3
+    assert decisiones(grafo) == [True]  # solo la ruta genera un plan
+    assert texto.count("aprobado automáticamente") == 1
 
 
 def test_auto_aprobar_sin_demo_da_error():
@@ -68,3 +69,23 @@ def test_auto_aprobar_sin_demo_da_error():
     assert "--demo" in texto
     assert grafo.llamadas == []
     assert entrada.prompts == []
+
+
+def test_demo_auto_aprueba_el_primer_plan_si_hay_varios():
+    # RF-13: con --auto-aprobar y varios planes no hay quien elija, así que se aprueba el primero.
+    class GrafoConVariasRutas(GrafoFalso):
+        def __init__(self):
+            super().__init__()
+            self.estados_recibidos = []
+
+        def procesar_turno(self, estado, mensaje, thread_id):
+            return super().procesar_turno(estado, "Dame dos rutas alternativas desde Sol hasta Atocha", thread_id)
+
+        def aprobar_plan(self, estado, thread_id, aprobado):
+            self.estados_recibidos.append(dict(estado))
+            return super().aprobar_plan(estado, thread_id, aprobado)
+
+    grafo = GrafoConVariasRutas()
+    codigo = ejecutar_cli(["--demo", "--auto-aprobar"], grafo, Entrada([]), [].append, None)
+    assert codigo == 0
+    assert [e["plan_id_seleccionado"] for e in grafo.estados_recibidos] == ["ruta-1"] * 3

@@ -1,4 +1,4 @@
-"""Tests de presentación y contrato de los clientes (spec 005, RF-3, RF-4, RF-10, RF-15, RF-16, RF-24 y RF-26).
+"""Tests de presentación y contrato de los clientes (spec 008, RF-3, RF-4, RF-10, RF-15, RF-16, RF-24 y RF-26).
 
 Son funciones puras: no usan grafo, red ni API.
 """
@@ -165,3 +165,77 @@ def test_cli_usa_el_mismo_formato():
 
     esperado = formatear_turno(estado_grafo, grafo.llamadas[0])
     assert esperado in "\n".join(salida)
+
+
+# --- Planes de ruta y entradas técnicas del supervisor (spec 008, RF-6, RF-30 y RF-35) ---
+
+def _plan_de_ruta(numero):
+    return {
+        "id": f"ruta-{numero}",
+        "resultado": {
+            "estado": "ok",
+            "origen": {"direccion": "Puerta del Sol, Madrid"},
+            "destino": {"direccion": "Estación de Atocha, Madrid"},
+            "ruta": {"duracion_min": 12, "tramos": [{"modo": "A pie", "linea": None, "duracion_min": 3}]},
+            "zona": {"estado": "ok", "texto": "Zona A", "fuente": "RAG"},
+            "precio": {"estado": "ok", "texto": "1,50 €", "fuente": "RAG"},
+        },
+    }
+
+
+LOG_CON_TECNICAS = [
+    "[supervisor] -> rutas",
+    "Supervisor: categoria=json_invalido; resumen=La decisión no contiene JSON válido; se aplicó el fallback.",
+    "[rutas] nota lista",
+    "Supervisor: correccion_semantica=aplicada; resumen=Se redirigieron 1 derivaciones incompatibles de tarifas a rag.",
+]
+
+
+def test_formato_muestra_el_resumen_de_cada_plan():
+    # RF-6 y RF-30: cada plan con su identificador y un resumen legible, no el diccionario en bruto.
+    estado = {"respuesta": "Ruta preparada", "plan": [_plan_de_ruta(1), _plan_de_ruta(2)], "hitl_pendiente": True}
+    texto = formatear_turno(estado, "hilo-1")
+    assert "ruta-1" in texto and "ruta-2" in texto
+    assert texto.count("Origen: Puerta del Sol, Madrid") == 2
+    assert "12 min" in texto and "Zona A" in texto and "1,50 €" in texto
+    assert "{'id'" not in texto and "'resultado'" not in texto
+
+
+def test_el_titulo_del_plan_depende_de_cuantos_hay():
+    uno = formatear_turno({"respuesta": "x", "plan": [_plan_de_ruta(1)]}, "h")
+    varios = formatear_turno({"respuesta": "x", "plan": [_plan_de_ruta(1), _plan_de_ruta(2)]}, "h")
+    assert "Plan propuesto:" in uno and "Planes propuestos:" not in uno
+    assert "Planes propuestos:" in varios
+
+
+def test_un_plan_desconocido_no_rompe_el_formato():
+    texto = formatear_turno({"respuesta": "x", "plan": [{"id": "otro-1", "resultado": {"cosa": 1}}]}, "h")
+    assert "otro-1" in texto and "cosa: 1" in texto
+
+
+def test_por_defecto_se_muestran_las_entradas_tecnicas():
+    # El CLI las muestra: es lo que consulta el cliente técnico (spec 006, RF-15).
+    texto = formatear_turno({"respuesta": "x", "log": LOG_CON_TECNICAS}, "h")
+    for entrada in LOG_CON_TECNICAS:
+        assert entrada in texto
+
+
+def test_ocultar_tecnicas():
+    # RF-35: la web las oculta y conserva el resto del registro de especialistas.
+    texto = formatear_turno({"respuesta": "x", "log": LOG_CON_TECNICAS}, "h", ocultar_tecnicas=True)
+    assert "Supervisor: categoria=" not in texto
+    assert "Supervisor: correccion_semantica=" not in texto
+    assert "[supervisor] -> rutas" in texto and "[rutas] nota lista" in texto
+
+
+def test_si_todo_el_log_es_tecnico_no_queda_la_seccion_de_especialistas():
+    solo_tecnicas = [LOG_CON_TECNICAS[1], LOG_CON_TECNICAS[3]]
+    texto = formatear_turno({"respuesta": "x", "log": solo_tecnicas}, "h", ocultar_tecnicas=True)
+    assert "Especialistas" not in texto
+
+
+def test_la_depuracion_tambien_puede_ocultar_las_tecnicas():
+    estado = {"respuesta": "x", "log": LOG_CON_TECNICAS}
+    assert datos_depuracion(estado, "h")["log"] == LOG_CON_TECNICAS
+    oculto = datos_depuracion(estado, "h", ocultar_tecnicas=True)["log"]
+    assert oculto == ["[supervisor] -> rutas", "[rutas] nota lista"]
