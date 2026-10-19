@@ -26,3 +26,16 @@
        Hecho cuando: la traza muestra `describir_imagen` y `calculadora`, y el total coincide con el cálculo a mano.
 - [ ] T12. (Parcial: falta demo real) Validación final RF por RF (`/sdd-validar`). (Todos)
        Hecho cuando: `validacion.md` con veredicto «Sí».
+
+## Cambio del 2026-10-19: reintento y causa del error
+
+> Una tarea cada vez y con los tests primero. Se hacen antes de cerrar la T12.
+
+- [x] T13. Añadir `IMAGEN_REINTENTO_ESPERA_S = 2.0` a `config.py`. (RF-24)
+       Hecho cuando: `python -c "import config; print(config.IMAGEN_REINTENTO_ESPERA_S)"` imprime `2.0`.
+- [x] T14. Escribir los tests del reintento y del registro: un 503 y después éxito, dos fallos temporales, errores no temporales (400, 403, 404) y registro de la causa sin datos sensibles. (RF-24 a RF-27)
+       Hecho cuando: los tests nuevos de `tests/test_describir_imagen.py` existen y fallan.
+- [x] T15. Implementar el reintento y el registro en `src/tools/describir_imagen.py`. (RF-24 a RF-27)
+       Hecho cuando: `pytest tests/test_describir_imagen.py` en verde y toda la suite sigue en verde.
+- [x] T16. Actualizar `validacion.md` con RF-24 a RF-27. (RF-24 a RF-27)
+       Hecho cuando: las filas nuevas tienen su test citado y existente.

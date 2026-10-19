@@ -73,7 +73,7 @@ La segunda debe imprimir `9,50`.
    ```
 
 
-Debe listar los cuatro precios de la imagen demo (1,50 €, 1,80 €, 5,00 €, 7,30 €) y la traza con estado `ok`. Si falla con `ERROR: el modelo no pudo describir la imagen`, la causa puede ser una clave inválida, un modelo saturado (503) o no disponible (404): la tool no muestra el motivo.
+Debe listar los cuatro precios de la imagen demo (1,50 €, 1,80 €, 5,00 €, 7,30 €) y la traza con estado `ok`. Si falla con `ERROR: el modelo no pudo describir la imagen`, la causa real (tipo de error y código, como `ServerError 503 UNAVAILABLE`) queda en el registro de avisos de la consola. Un error temporal (503, 429 o de red) se reintenta una vez tras 2 segundos; una clave inválida (400, 401, 403) o un modelo retirado (404) no se reintentan.
 
 ## Imagen demo multimodal
 
