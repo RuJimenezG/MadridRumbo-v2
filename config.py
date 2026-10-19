@@ -84,3 +84,23 @@ MODELO_VISION = "gemini-3.8-flash"
 
 # --- Tool calculadora ---
 CALC_MAX_CARACTERES = 200
+
+# --- Clientes CLI y Streamlit (spec 005) ---
+# Pedidos fijos de `python main.py --demo`: horarios, tarifas con imagen y fuera de corpus.
+PEDIDOS_DEMO = (
+    "¿Hasta qué hora hay metro hoy?",
+    "Según la imagen, ¿cuánto cuestan 3 billetes sencillos EMT y 1 Exprés Aeropuerto?",
+    "¿Cuál es la capital de Francia?",
+)
+
+# Respuestas reconocidas en el chat (se comparan en minúsculas y sin espacios sobrantes).
+PALABRAS_SALIR = {"salir", "exit", "quit"}
+PALABRAS_APROBAR = {"s", "si", "sí", "a", "aprobar"}
+PALABRAS_RECHAZAR = {"n", "no", "r", "rechazar"}
+
+# Variable de entorno que activa el grafo simulado y valor que lo activa.
+VARIABLE_MODO_SIMULADO = "MADRIDRUMBO_GRAFO"
+VALOR_MODO_SIMULADO = "falso"
+
+# Módulo del grafo real que usan los clientes (debe exponer procesar_turno y aprobar_plan).
+MODULO_GRAFO_REAL = "src.agent"
