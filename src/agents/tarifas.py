@@ -11,6 +11,12 @@ from typing import Any, Callable
 from src.agents.base import ejecutar_especialista
 
 
+MARCADOR_REDIRECCION_A_RAG = "_redirigir_tarifas_a_rag"
+_NOTA_SIN_IMAGEN_VALIDA = (
+    "[tarifas] Se redirigió la consulta a rag porque no hay una imagen válida."
+)
+
+
 PROMPT_TARIFAS = """Eres el especialista de tarifas de MadridRumbo.
 Extraes los textos e importes visibles en una imagen relacionada con tarifas de
 transporte público de Madrid.
@@ -31,6 +37,23 @@ Reglas:
 """
 
 
-def nodo_tarifas(estado: dict[str, Any], llm: Callable[..., Any], ejecutar: Callable[..., str]) -> dict:
+def redireccionar_tarifas_sin_imagen() -> dict[str, Any]:
+    """Devuelve una señal interna para que el grafo derive el turno a RAG."""
+    return {
+        MARCADOR_REDIRECCION_A_RAG: True,
+        "notas": [_NOTA_SIN_IMAGEN_VALIDA],
+        "traza": [],
+    }
+
+
+def nodo_tarifas(
+    estado: dict[str, Any],
+    llm: Callable[..., Any],
+    ejecutar: Callable[..., str],
+    *,
+    tiene_imagen_valida: bool = False,
+) -> dict[str, Any]:
     """Ejecuta la extracción de tarifas mediante su única tool directa permitida."""
+    if tiene_imagen_valida is not True:
+        return redireccionar_tarifas_sin_imagen()
     return ejecutar_especialista("tarifas", PROMPT_TARIFAS, estado, llm, ejecutar)

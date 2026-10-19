@@ -6,7 +6,10 @@ dentro del mismo procesamiento.
 """
 from __future__ import annotations
 
+
 from datetime import datetime
+import re
+import unicodedata
 from typing import Any, Callable, Mapping
 
 from src.reloj import ahora
@@ -35,6 +38,44 @@ Reglas:
   {"tool": "planificar_ruta", "args": {...}} para pedir la tool, o
   {"final": "<nota en español>"} cuando tengas la respuesta.
 """
+
+PATRON_FORMULACION_RUTA = re.compile(
+    r"\b(?:quiero\W+ir\W+de|necesito\W+ir\W+de|voy\W+de)\b(?P<resto>.*)"
+)
+
+
+def _aclaracion_formulacion_incompleta(mensaje: Any) -> str | None:
+    """Detecta solo las tres formulaciones aprobadas cuando les falta un extremo."""
+    if not isinstance(mensaje, str):
+        return None
+
+    sin_acentos = unicodedata.normalize("NFD", mensaje.lower())
+    sin_acentos = "".join(
+        caracter for caracter in sin_acentos if unicodedata.category(caracter) != "Mn"
+    )
+    coincidencia = PATRON_FORMULACION_RUTA.search(sin_acentos)
+    if coincidencia is None:
+        return None
+
+    # Los tokens eliminan puntuación para distinguir el separador «a» de extremos vacíos.
+    extremos = re.findall(r"[a-zñ0-9]+", coincidencia.group("resto"))
+    if not extremos:
+        return "Falta indicar el origen y el destino para planificar la ruta."
+
+    try:
+        separador = len(extremos) - 1 - extremos[::-1].index("a")
+    except ValueError:
+        return "Falta indicar el destino para planificar la ruta."
+
+    tiene_origen = separador > 0
+    tiene_destino = separador < len(extremos) - 1
+    if not tiene_origen and not tiene_destino:
+        return "Falta indicar el origen y el destino para planificar la ruta."
+    if not tiene_origen:
+        return "Falta indicar el origen para planificar la ruta."
+    if not tiene_destino:
+        return "Falta indicar el destino para planificar la ruta."
+    return None
 
 
 def construir_prompt(ahora_dt: datetime) -> str:
@@ -98,6 +139,10 @@ def nodo_rutas(
                 "args": dict(args_ruta),
             }]
         return salida
+
+    aclaracion = _aclaracion_formulacion_incompleta(estado.get("mensaje"))
+    if aclaracion is not None:
+        return terminar(aclaracion)
 
     args_replanificar = estado.get("replanificar_args")
     if isinstance(args_replanificar, Mapping):

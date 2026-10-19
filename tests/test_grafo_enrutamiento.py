@@ -3,8 +3,15 @@ import json
 
 import pytest
 
-from src.estado import crear_estado_inicial
-from src.graph import ROLES_GRAFO, crear_grafo, invocar_grafo, siguiente_destino
+from src.estado import crear_estado_inicial, proyectar_resultado
+from src.graph import (
+    ROLES_GRAFO,
+    configuracion_hilo,
+    crear_grafo,
+    invocar_grafo,
+    recuperar_estado,
+    siguiente_destino,
+)
 from tests.dobles_grafo import EjecutorFalso, LLMFalso
 
 
@@ -88,6 +95,34 @@ def test_grafo_acepta_finish_sin_ejecutar_especialistas():
     assert salida["respuesta"] == "Resumen sencillo de los resultados."
 
 
+@pytest.mark.parametrize(
+    "modelo, categoria",
+    [
+        (lambda mensajes: {"roles": []}, "sin_fallback"),
+        (lambda mensajes: "no es JSON", "json_invalido"),
+    ],
+)
+def test_grafo_transporta_diagnostico_por_contexto_sin_persistirlo(modelo, categoria):
+    """RF-10, RF-11 y RF-25: el contexto no entra en la salida ni checkpoint."""
+    grafo = crear_grafo(
+        modelo_supervisor=modelo,
+        modelo_sintetizador=lambda contexto: "Resumen sencillo de los resultados.",
+    )
+    contexto = {"diagnostico_supervisor": None}
+
+    salida = invocar_grafo(
+        grafo,
+        crear_estado_inicial("Consulta documental."),
+        f"contexto-{categoria}",
+        contexto=contexto,
+    )
+
+    assert contexto["diagnostico_supervisor"]["categoria"] == categoria
+    assert "diagnostico_supervisor" not in salida
+    assert salida["log"] == []
+    assert "diagnostico_supervisor" not in recuperar_estado(grafo, f"contexto-{categoria}")
+
+
 def test_selector_rechaza_un_rol_sin_arista_declarada():
     """RF-4: ningún nombre ajeno puede llegar a una arista del StateGraph."""
     with pytest.raises(ValueError, match="no permitido"):
@@ -148,12 +183,117 @@ def test_grafo_encadena_tarifas_y_auxiliar_sin_calculadora_en_tarifas():
         _grafo_con_tools(["tarifas", "auxiliar"], modelos, ejecutor),
         crear_estado_inicial("Calcula el total de la imagen."),
         "recorrido-tarifas-auxiliar",
+        contexto={"imagen_valida": True},
     )
 
     assert [nombre for nombre, _ in ejecutor.llamadas] == ["describir_imagen", "calculadora"]
     assert [entrada["tool"] for entrada in salida["traza"]] == ["describir_imagen", "calculadora"]
     assert all(resultado["especialista"] != "tarifas" or resultado["tool"] != "calculadora"
                for resultado in salida["resultados"])
+
+
+def test_tarifas_sin_imagen_redirige_a_rag_sin_vision():
+    """RF-12 y RF-13: una llegada defensiva sustituye tarifas por RAG con traza."""
+    ejecutor = EjecutorFalso(
+        {
+            "rag_ask": "El Combinado Metro se consulta en la documentación CRTM.",
+            "describir_imagen": "Esta tool no debe ejecutarse.",
+        }
+    )
+    llm_rag = LLMFalso(
+        [
+            {"tool": "rag_ask", "args": {"consulta": "Describe este cartel."}},
+            {"final": "Respuesta anclada al corpus CRTM."},
+        ]
+    )
+
+    def llm_tarifas_no_permitido(_mensajes):
+        raise AssertionError("El LLM visual no debe ejecutarse sin imagen válida.")
+
+    grafo = crear_grafo(
+        modelo_supervisor=lambda mensajes: {"roles": ["tarifas"]},
+        modelos_especialistas={"rag": llm_rag, "tarifas": llm_tarifas_no_permitido},
+        ejecutar=ejecutor,
+        modelo_sintetizador=lambda contexto: "Resumen controlado.",
+    )
+
+    salida = invocar_grafo(
+        grafo,
+        crear_estado_inicial("Describe este cartel."),
+        "tarifas-sin-imagen",
+        contexto={"imagen_valida": False},
+    )
+
+    assert ejecutor.llamadas == [("rag_ask", {"consulta": "Describe este cartel."})]
+    assert [entrada["tool"] for entrada in salida["traza"]] == ["rag_ask"]
+    assert all(entrada["tool"] != "describir_imagen" for entrada in salida["traza"])
+    assert salida["cola_roles"] == []
+
+
+def test_combinado_metro_corregido_llama_rag_ask_y_conserva_traza():
+    """RF-9 y RF-13 a RF-17: la corrección válida obtiene evidencia sin visión."""
+    evidencia_crtm = "Corpus CRTM: el Combinado Metro se regula en su tabla tarifaria."
+    ejecutor = EjecutorFalso(
+        {
+            "rag_ask": evidencia_crtm,
+            "describir_imagen": "Esta tool no debe ejecutarse.",
+        }
+    )
+    llm_rag = LLMFalso(
+        [
+            {
+                "tool": "rag_ask",
+                "args": {"consulta": "¿Cuánto cuesta el Combinado Metro?"},
+            },
+            {"final": f"Respuesta anclada: {evidencia_crtm}"},
+        ]
+    )
+
+    def llm_tarifas_no_permitido(_mensajes):
+        raise AssertionError("No debe invocarse el LLM visual para una tarifa textual.")
+
+    grafo = crear_grafo(
+        modelo_supervisor=lambda mensajes: {"roles": ["tarifas"]},
+        modelos_especialistas={"rag": llm_rag, "tarifas": llm_tarifas_no_permitido},
+        ejecutar=ejecutor,
+        modelo_sintetizador=lambda contexto: f"Respuesta anclada: {evidencia_crtm}",
+    )
+    contexto = {
+        "diagnostico_supervisor": None,
+        "correcciones_tarifas": 0,
+        "imagen_valida": False,
+    }
+
+    salida = invocar_grafo(
+        grafo,
+        crear_estado_inicial("¿Cuánto cuesta el Combinado Metro?"),
+        "combinado-metro-corregido",
+        contexto=contexto,
+    )
+    resultado = proyectar_resultado(
+        salida,
+        diagnostico_supervisor=contexto["diagnostico_supervisor"],
+        correcciones_tarifas=contexto["correcciones_tarifas"],
+    )
+
+    assert ejecutor.llamadas == [
+        ("rag_ask", {"consulta": "¿Cuánto cuesta el Combinado Metro?"})
+    ]
+    assert resultado["respuesta"] == f"Respuesta anclada: {evidencia_crtm}"
+    assert resultado["traza"] == [
+        {
+            "tool": "rag_ask",
+            "args": {"consulta": "¿Cuánto cuesta el Combinado Metro?"},
+            "status": "ok",
+            "preview": evidencia_crtm,
+        }
+    ]
+    assert resultado["log"] == [
+        "Supervisor: categoria=sin_fallback; resumen=Decisión estructurada validada.",
+        "Supervisor: correccion_semantica=aplicada; resumen=Se redirigieron 1 derivaciones incompatibles de tarifas a rag.",
+    ]
+    assert all(entrada["tool"] != "describir_imagen" for entrada in resultado["traza"])
+    assert set(resultado) == {"respuesta", "plan", "log", "traza", "hitl_pendiente", "done"}
 
 
 def test_horarios_y_rutas_mantienen_sus_consultas_internas_sin_duplicar_rag():
@@ -183,3 +323,55 @@ def test_horarios_y_rutas_mantienen_sus_consultas_internas_sin_duplicar_rag():
     assert [nombre for nombre, _ in ejecutor.llamadas] == ["hora_actual", "rag_ask", "planificar_ruta"]
     assert [entrada["tool"] for entrada in salida["traza"]] == ["hora_actual", "rag_ask", "planificar_ruta"]
     assert sum(nombre == "rag_ask" for nombre, _ in ejecutor.llamadas) == 1
+
+
+@pytest.mark.parametrize(
+    "mensaje",
+    [
+        "QUIERO IR DE Átocha A Sol, por favor.",
+        "Necesito, ir de Atocha a Sol!!!",
+        "Voy de Atocha a Sol; dime cómo.",
+    ],
+)
+def test_fallback_de_ruta_valida_planifica_y_se_pausa_para_hitl(mensaje):
+    """RF-17 a RF-20: el fallback llega a rutas, tool y pausa de aprobación."""
+    ruta = {
+        "estado": "ok",
+        "origen": {"direccion": "Estación de Atocha, Madrid"},
+        "destino": {"direccion": "Puerta del Sol, Madrid"},
+        "ruta": {"duracion_min": 12, "tramos": [{"modo": "SUBWAY", "linea": "1"}]},
+    }
+    llm_rutas = LLMFalso([
+        {"tool": "planificar_ruta", "args": {"origen": "Atocha", "destino": "Sol"}},
+        {"final": "Ruta disponible para revisión."},
+    ])
+    ejecutor = EjecutorFalso({"planificar_ruta": json.dumps(ruta, ensure_ascii=False)})
+
+    def proveedor_no_disponible(_mensajes):
+        raise RuntimeError("proveedor no disponible")
+
+    grafo = crear_grafo(
+        modelo_supervisor=proveedor_no_disponible,
+        modelos_especialistas={"rutas": llm_rutas},
+        ejecutar=ejecutor,
+        modelo_sintetizador=lambda contexto: "Ruta preparada para aprobación.",
+    )
+    contexto = {"diagnostico_supervisor": None}
+    thread_id = f"fallback-rutas-{mensaje[:8]}"
+
+    salida = invocar_grafo(
+        grafo,
+        crear_estado_inicial(mensaje),
+        thread_id,
+        contexto=contexto,
+    )
+    snapshot = grafo.get_state(configuracion_hilo(thread_id))
+
+    assert contexto["diagnostico_supervisor"]["categoria"] == "proveedor"
+    assert len(llm_rutas.llamadas) == 2
+    assert ejecutor.llamadas == [("planificar_ruta", {"origen": "Atocha", "destino": "Sol"})]
+    assert [entrada["tool"] for entrada in salida["traza"]] == ["planificar_ruta"]
+    assert salida["planes_pendientes"][0]["id"] == "ruta-1"
+    assert salida["hitl_pendiente"] is True
+    assert salida["done"] is False
+    assert snapshot.next == ("pausa_hitl",)
