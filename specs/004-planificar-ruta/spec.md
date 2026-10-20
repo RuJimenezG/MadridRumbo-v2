@@ -1,6 +1,6 @@
 # Spec 004 — Planificar ruta en transporte público
 
-> Estado: Aprobada · Fecha: 2026-10-14
+> Estado: Aprobada · Fecha: 2026-10-14 · **Modificada 2026-10-16 (`/sdd-cambio`), pendiente de aprobación:** hora de llegada (RF-39, RF-43 a RF-45), títulos libres (RF-35, RF-36 obsoleto, RF-46 a RF-49, RF-51 a RF-53) y fecha/hora actuales y formato ISO para el especialista (RF-50, RF-50b). Dudas cerradas el mismo día (RF-43 decidido). Lo obsoleto se marca como tal y no se renumera nada.
 
 ## Contexto y objetivo
 
@@ -39,9 +39,9 @@ Hoy MadridRumbo responde preguntas sobre el corpus CRTM (RAG), pero no sabe cóm
 ### Cálculo de la ruta
 
 - RF-11: CUANDO el origen y el destino están geocodificados y dentro del ámbito, EL SISTEMA calcula la ruta con Google Routes a partir de sus coordenadas.
-- RF-12: EL SISTEMA calcula la ruta considerando solo los modos de la red del CRTM: metro, metro ligero/tranvía, autobús y Cercanías.
+- RF-12: EL SISTEMA calcula la ruta considerando solo los modos de la red del CRTM: metro, metro ligero/tranvía, autobús y Cercanías. *(Limitación conocida, T16: Google clasifica igual (`HEAVY_RAIL`) a Cercanías y a Renfe Avant, así que la media distancia (Avant) también se admite; no se distingue por tipo de vehículo.)*
 - RF-13: EL SISTEMA admite el desplazamiento a pie únicamente como tramo de una ruta en transporte público.
-- RF-14: SI la persona no indica hora de salida, ENTONCES EL SISTEMA calcula la ruta con salida en el momento de la consulta.
+- RF-14: SI la persona no indica ni hora de salida ni hora de llegada, ENTONCES EL SISTEMA calcula la ruta con salida en el momento de la consulta.
 - RF-15: CUANDO Google Routes devuelve una ruta, EL SISTEMA devuelve el tiempo total y el trayecto, tramo a tramo.
 - RF-16: SI Google Routes falla por error o falta de conexión, ENTONCES EL SISTEMA informa de que no se pudo calcular la ruta.
 - RF-17: SI Google Routes responde pero no hay ruta en transporte público, ENTONCES EL SISTEMA informa de que no hay ruta disponible y no da zona ni precio.
@@ -50,10 +50,10 @@ Hoy MadridRumbo responde preguntas sobre el corpus CRTM (RAG), pero no sabe cóm
 
 ### Zona tarifaria y precio
 
-- RF-19: SI la persona no indica título de transporte, ENTONCES, una vez calculada la ruta, EL SISTEMA consulta al RAG la zona tarifaria del trayecto y el precio del billete sencillo.
+- RF-19: SI la persona no indica título de transporte, ENTONCES, una vez calculada la ruta, EL SISTEMA consulta al RAG la zona tarifaria del trayecto y el precio del billete sencillo. *(T22: la zona se pregunta con el municipio de origen y de destino, RF-54.)*
 - RF-20: SI Google Routes falla por error o falta de conexión (RF-16) y ambas direcciones se geocodificaron dentro del ámbito, ENTONCES EL SISTEMA consulta igualmente al RAG la zona tarifaria y el precio.
 - RF-21: SI el RAG no aporta evidencia suficiente de zona o precio, ENTONCES EL SISTEMA entrega la ruta e indica expresamente que no pudo determinar la zona o el precio con el corpus.
-- RF-22: SI el RAG aporta la zona pero no el precio, o al revés, ENTONCES EL SISTEMA informa solo del dato disponible y declara cuál falta.
+- RF-22: SI el RAG aporta la zona pero no el precio, o al revés, ENTONCES EL SISTEMA informa solo del dato disponible y declara cuál falta. (El caso "precio sin zona" no se da: sin zona no se consulta el precio, RF-52.)
 - RF-23: EL SISTEMA no estima ni inventa ningún precio ni zona que el RAG no haya respaldado.
 - RF-24: EL SISTEMA indica en la respuesta qué datos proceden de la ruta (Google) y cuáles del corpus (RAG).
 - RF-41: SI el RAG falla por error al consultar la zona o el precio, ENTONCES EL SISTEMA entrega la ruta e informa de que no pudo consultar la zona ni el precio, sin sustituirlos por valores propios.
@@ -66,28 +66,42 @@ Hoy MadridRumbo responde preguntas sobre el corpus CRTM (RAG), pero no sabe cóm
 - RF-28: CUANDO la persona aporta en un turno posterior el dato que faltaba, EL SISTEMA lo combina con lo ya dicho en la conversación sin volver a pedirlo, dependiendo de la persistencia de la conversación que define otra spec.
 - RF-29: SI la consulta no es de rutas, ENTONCES el especialista no invoca ninguna herramienta e indica en su nota que no es una consulta de rutas.
 - RF-30: EL SISTEMA registra una traza de cada invocación de `planificar_ruta`.
+- RF-50: EN cada consulta, EL SISTEMA proporciona al especialista "rutas" la fecha y hora actuales, para que pueda convertir horas relativas ("mañana a las 8") a una hora concreta. El especialista ya no recibe lista de títulos de transporte.
+- RF-50b: EL SISTEMA indica al especialista "rutas" que las horas (de salida y de llegada) se pasan a la herramienta en ISO 8601 con hora (p. ej. `2026-10-17T08:00`), porque la herramienta rechaza cualquier otro formato (RF-33).
 
-### Hora de salida y título de transporte
+### Hora de salida, hora de llegada y título de transporte
 
 - RF-31: DONDE la persona pide una hora de salida concreta, EL SISTEMA calcula la ruta con esa hora de salida.
-- RF-32: SI la hora de salida pedida es anterior al momento de la consulta, ENTONCES EL SISTEMA informa de que esa hora ya ha pasado, no calcula nada y pide otra hora.
-- RF-33: SI la hora de salida pedida no se puede interpretar, ENTONCES EL SISTEMA informa de ello, no calcula nada y pide que se indique de nuevo.
-- RF-34: SI la hora de salida pedida supera la antelación máxima configurada, ENTONCES EL SISTEMA informa de esa antelación máxima, no calcula nada y pide otra hora.
-- RF-35: DONDE la persona pide un título de transporte de la lista cerrada (billete sencillo o billete de 10 viajes), EL SISTEMA consulta al RAG el precio de ese título en lugar del billete sencillo.
-- RF-36: SI el título pedido no está en la lista cerrada, ENTONCES EL SISTEMA entrega igualmente la ruta, informa de la zona tarifaria del trayecto (que no depende del título), informa de que ese título no está disponible, muestra los títulos disponibles y omite únicamente el precio.
+- RF-32: SI la hora pedida (de salida o de llegada) es anterior al momento de la consulta, ENTONCES EL SISTEMA informa de que esa hora ya ha pasado, no calcula nada y pide otra hora.
+- RF-33: SI la hora pedida (de salida o de llegada) no se puede interpretar, ENTONCES EL SISTEMA informa de ello, no calcula nada y pide que se indique de nuevo.
+- RF-34: SI la hora pedida (de salida o de llegada) supera la antelación máxima configurada, ENTONCES EL SISTEMA informa de esa antelación máxima, no calcula nada y pide otra hora.
+- RF-35 *(reescrito 2026-10-16)*: DONDE la persona pide un título de transporte, sea cual sea, EL SISTEMA consulta al RAG el precio de ese título en lugar del de billete sencillo.
+- ~~RF-36~~ **OBSOLETO (2026-10-16):** definía una lista cerrada de títulos y el rechazo de los no incluidos. Ya no hay lista cerrada: cualquier título se consulta al RAG y, si el corpus no lo aporta, se aplica RF-37. Sustituido por RF-46 a RF-49. El número no se reutiliza.
 - RF-37: SI el corpus no aporta el precio del título considerado, ENTONCES EL SISTEMA informa de que no pudo determinar el precio de ese título, sin sustituirlo por el de otro (ver RF-21, RF-22 y RF-23).
-- RF-38: EL SISTEMA indica en toda respuesta de `planificar_ruta` la hora de salida y el título de transporte que ha considerado, sean los predeterminados o los pedidos.
-- RF-39: SI la persona pide una hora de llegada, ENTONCES EL SISTEMA informa de que solo se admite hora de salida, no calcula nada y pide una hora de salida.
+- RF-38 *(ampliado)*: EL SISTEMA indica en toda respuesta de `planificar_ruta` la hora considerada (de salida o de llegada, según lo pedido) y el título de transporte que ha considerado, sean los predeterminados o los pedidos. Si el título supera la longitud máxima (RF-48), la cabecera lo muestra cortado a esa longitud seguido de «…», nunca entero.
+- RF-39 *(reescrito 2026-10-16; antes rechazaba la hora de llegada)*: DONDE la persona pide una hora de llegada, EL SISTEMA calcula la ruta en transporte público para llegar a esa hora, delegando en Google Routes el cálculo de la hora de salida, sin calcularla por su cuenta y con una sola llamada a Google Routes.
+- RF-43: SI la persona indica a la vez una hora de salida y una hora de llegada, ENTONCES EL SISTEMA informa de que no se pueden combinar, no calcula nada y pide que elija una de las dos.
+- RF-44: CUANDO se calcula la ruta con hora de llegada y Google Routes devuelve la hora de salida resultante, EL SISTEMA la indica en la respuesta como la hora a la que sale el primer transporte desde su parada (no como la hora a la que la persona sale de su origen).
+- RF-45: SI se calcula la ruta con hora de llegada y Google Routes no devuelve la hora de salida resultante, ENTONCES EL SISTEMA indica la hora de llegada considerada y que no pudo determinar la hora de salida, sin estimarla (ver RF-18). En el resultado estructurado de la herramienta, con hora de llegada la hora de salida es la que devuelve Google o nula (RF-44, RF-45) y la hora pedida va en un campo aparte de hora de llegada (RF-39); el campo exacto se fija en el plan.
+- RF-46: CUANDO consulta el título de transporte considerado, sea cual sea (billete sencillo incluido), EL SISTEMA consulta primero al RAG la zona tarifaria del trayecto y después el precio de ese título en esa zona, porque los abonos se pagan por zona y no por trayecto.
+- RF-47: ANTES de incluir el título pedido en una pregunta al RAG, EL SISTEMA lo sanea para que no contenga saltos de línea.
+- RF-48 *(cerrado 2026-10-16)*: SI el título pedido supera la longitud máxima configurada (valor inicial: 60 caracteres), ENTONCES EL SISTEMA no consulta el precio, informa de que no pudo interpretar el título y entrega la ruta y la zona, mostrando el título en la cabecera cortado a esa longitud seguido de «…» (RF-38).
+- RF-51: SI el título queda vacío tras sanearlo, ENTONCES EL SISTEMA considera el billete sencillo e indica ese título en la cabecera (RF-38).
+- RF-52: SI el RAG no aporta la zona (sin evidencia) o falla al consultarla, ENTONCES EL SISTEMA no consulta el precio e informa de que faltan la zona y el precio, sin sustituirlos por valores propios.
+- RF-53 *(reescrito 2026-10-16)*: ANTES de incluir en la pregunta de precio el texto de zona devuelto por el RAG, EL SISTEMA le quita los saltos de línea y lo pasa entero, sin cortarlo ni extraer identificadores de zona. SI ese texto supera la longitud máxima de zona configurada (propia, distinta de la del título; valor inicial 200), ENTONCES EL SISTEMA no consulta el precio, entrega la ruta y la zona e informa de que no se pudo usar la zona para el precio (como RF-48). *(A comprobar en T17 con el RAG real: el valor 200 y si pasar la frase entera empeora la respuesta del precio.)*
+- RF-49: EL SISTEMA realiza como máximo 2 llamadas al RAG por consulta de ruta: una de zona y una de precio.
+- RF-54 *(nuevo, T22, 2026-10-19)*: EL SISTEMA formula la pregunta de zona al RAG con el municipio del origen y el del destino (dato de Nominatim), no con las paradas de Google, ni cuando hay ruta ni cuando Google falla (RF-20). *(Motivo, T17: con municipios el RAG respondió la zona; con dos paradas respondió «No lo sé».)* Se mantienen RF-46, RF-49, RF-52 y RF-53.
+- RF-55 *(nuevo, T22)*: SI el origen o el destino elegido no tiene municipio, o no se puede verificar que está en la Comunidad de Madrid (código ISO `ES-MD` o nombre «Comunidad de Madrid» en la respuesta de Nominatim), ENTONCES EL SISTEMA no calcula la ruta, no llama a Google ni al RAG y responde con el estado `direccion_no_encontrada`, indicando que no se pudo verificar que esa dirección esté en la Comunidad de Madrid y pidiendo una más precisa. Se comprueba después del filtro de ámbito (RF-3, RF-4) y de la ambigüedad (RF-8).
 
 ## Requisitos no funcionales
 
 - Idioma: todos los mensajes a la persona usuaria están en español.
 - Secretos: la clave de Google Routes se lee solo del entorno (`.env`), nunca del código ni del repositorio.
-- Configuración: ámbito de cobertura, número máximo de candidatos a mostrar, antelación máxima de la hora de salida, lista cerrada de títulos de transporte y demás límites se definen en un único punto de configuración.
+- Configuración: ámbito de cobertura, número máximo de candidatos a mostrar, antelación máxima de la hora pedida, longitud máxima del título de transporte y demás límites se definen en un único punto de configuración.
 - Dependencias: no se añaden dependencias nuevas; el plan valorará la librería estándar de Python para las llamadas HTTP.
 - Tests: ningún test llama a Nominatim, a Google Routes, al RAG ni al LLM; usan dobles de prueba.
 - Uso responsable de Nominatim: no más de 1 petición por segundo e identificación de la aplicación, según su política de uso.
-- Coste: una consulta de ruta realiza como máximo 2 llamadas a Nominatim y 1 a Google Routes.
+- Coste: una consulta de ruta realiza como máximo 2 llamadas a Nominatim, 1 a Google Routes (también con hora de llegada) y 2 al RAG (RF-49).
 
 ## Casos límite
 
@@ -108,14 +122,20 @@ Hoy MadridRumbo responde preguntas sobre el corpus CRTM (RAG), pero no sabe cóm
 - Hora de salida pasada: RF-32.
 - Hora de salida no interpretable: RF-33.
 - Hora de salida demasiado lejana: RF-34.
-- Hora de llegada pedida en lugar de hora de salida: RF-39.
-- Título pedido no incluido en la lista cerrada (incluidos los abonos): RF-36.
+- Hora de llegada pedida: RF-39, RF-44, RF-45.
+- Hora de llegada pasada, no interpretable o demasiado lejana: RF-32, RF-33, RF-34.
+- Hora de salida y hora de llegada a la vez: RF-43.
+- Título cualquiera (billete sencillo, abonos, etc.): RF-35, RF-46.
+- Título con saltos de línea, vacío tras sanear o demasiado largo: RF-47, RF-51, RF-48.
+- Zona sin evidencia o con error del RAG: RF-52 (y RF-41 si es error).
+- Zona devuelta por el RAG con saltos de línea (se quitan) o más larga que el máximo de zona (sin precio, ruta y zona entregadas): RF-53.
+- Origen o destino sin municipio o sin Comunidad de Madrid verificada: RF-55. Zona preguntada por municipio: RF-54.
 - Título sin precio en el corpus: RF-37.
+- ~~Título fuera de la lista cerrada: RF-36~~ (obsoleto).
 
 ## Fuera de alcance
 
-- Elegir hora de llegada.
-- Abonos y cualquier título distinto del billete sencillo y el billete de 10 viajes.
+- Calcular por nuestra cuenta la hora de salida a partir de la hora de llegada.
 - Otros modos de transporte (bici, coche, etc.); a pie solo como tramo de la ruta.
 - Rutas alternativas múltiples.
 - Decidir a quién se deriva una consulta o cuándo termina la conversación (supervisor del grafo).
@@ -131,4 +151,12 @@ Hoy MadridRumbo responde preguntas sobre el corpus CRTM (RAG), pero no sabe cóm
 
 ## Dudas abiertas
 
-- [NECESITA ACLARACIÓN: quién aporta la hora actual (RF-14, RF-32), y si su herramienta entra en esta spec o en otra. No bloquea el plan, pero el plan debe diseñar la fuente de la hora de modo que se pueda sustituir sin tocar el resto]
+- [A COMPROBAR EN T17: con el RAG real, que la zona entera sin saltos de línea (RF-53) produce una pregunta de precio útil, que el máximo de zona de 200 caracteres es razonable y si pasar la frase entera empeora la respuesta del precio.]
+- [RIESGO T22, A COMPROBAR EN LA REPETICIÓN DE T17: no hay ninguna respuesta real de Nominatim guardada (ni en `demos-T17.md` ni en los tests) con `address["ISO3166-2-lvl4"]` ni con `address["state"]`; el único `state` visto es un fixture escrito a mano («Comunidad de Madrid», sin ISO). Hay que comprobar con Nominatim real que Sol, Bernabéu, un municipio pequeño (p. ej. Alcalá de Henares) y una dirección sin ciudad traen `ES-MD` o «Comunidad de Madrid», y que `municipio` (`city`/`town`/`village`/`municipality`) no sale vacío con frecuencia: si no, RF-55 rechazaría rutas válidas. Comprobar también que la pregunta «entre Madrid y Madrid» sigue dando zona con el RAG real.]
+- [T17 CERRADA con dos excepciones (2026-10-19): (1) caso 1, ambigüedad legítima (RF-8: Atocha, Plaza de Castilla), se resuelve en T23; (2) caso 3, zona correcta pero el precio del abono joven depende de que el RAG recupere su tabla de precios, que hoy no recupera: limitación conocida del RAG compartido, a plantear al equipo (no se cambia `rag/` en esta spec). El valor 200 de `ZONA_LONGITUD_MAX` y la zona entera funcionaron con billete sencillo.]
+- [PENDIENTE, T23 (2026-10-19): resolver direcciones ambiguas (Atocha, Plaza de Castilla) con parámetros opcionales de coordenadas de origen y destino, tomadas del candidato que elija la persona, sin volver a geocodificar. **Requiere un cambio en el prompt del especialista (`src/agents/rutas.py`, de Rubén): a coordinar con él.** Debe respetar RF-8 y el límite de llamadas del RNF Coste. Sin RF todavía.]
+- Cerradas el 2026-10-16: título vacío y título largo (RF-51, RF-48), zona sin evidencia o con error (RF-52), orden zona → precio para todos los títulos (RF-46), saneado de la zona (RF-53), formato ISO 8601 en el prompt (RF-50b).
+- Cerrada en T16 (2026-10-16): se acepta `HEAVY_RAIL`; Cercanías y Renfe Avant no se distinguen por tipo de vehículo (limitación conocida de RF-12, ver su nota).
+- Cerrada en T16 (2026-10-16): la búsqueda en Nominatim ya no se restringe a la caja del ámbito; decide el filtro de ámbito, así que una dirección fuera sale como «fuera de cobertura» (RF-4) y «no encontrada» (RF-6) queda para cuando Nominatim no devuelve nada.
+- [VERIFICADO EN T16 (2026-10-16), con 3 peticiones reales: la hora de llegada funciona en modo transporte público con nuestros modos y sin hora de salida, y la máscara actual ya devuelve la hora de salida de la parada del primer tramo de transporte (RF-44 aplicable; RF-45 solo si Google la omite). Texto original de la duda: si la hora de llegada de Google Routes funciona con nuestra configuración (modo transporte público con los modos del CRTM y sin hora de salida) y si el campo de respuesta configurado devuelve la hora de salida. Si no la devuelve, se aplica RF-45. Si la hora de llegada no funcionara con esa configuración, RF-39 se revisa antes de implementarlo.]
+- Cerrada el 2026-10-16: la hora actual (RF-14, RF-32, RF-34, RF-50) la aporta una única fuente, `ahora()` en `src/reloj.py`, tanto para la herramienta como para el prompt del especialista.

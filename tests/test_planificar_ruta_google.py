@@ -222,7 +222,8 @@ def test_secuencia_nominatim_google_rag(esc):
     assert "departureTime" not in cuerpo                  # RF-14: sin hora pedida
     # La ruta y las paradas de Google alimentan al RAG (T10 → T11).
     assert r["ruta"]["duracion_min"] == 22
-    assert "Sol" in esc.preguntas[0] and "Plaza de Castilla" in esc.preguntas[0]
+    # T22 (RF-54): la zona se pregunta con el municipio de Nominatim, no con las paradas de Google.
+    assert esc.preguntas[0] == config.PREGUNTA_ZONA.format(origen="Madrid", destino="Madrid")
 
 
 def test_hora_pedida_llega_a_google_en_rfc3339(esc):
@@ -250,3 +251,89 @@ def test_sin_ruta_no_da_zona_ni_precio_ni_consulta_al_rag(esc, respuesta):
     assert r["zona"]["estado"] == r["precio"]["estado"] == "omitida"
     assert esc.cuantas("rag") == 0
     assert "Zona (RAG)" not in r["mensaje"] and "Precio (RAG)" not in r["mensaje"]
+
+
+# --- T19: hora de llegada (RF-39, RF-44, RF-45) ---
+
+def _google_con_salida(salida_utc):
+    """Copia de la respuesta de ejemplo con la hora de salida de la parada de subida (RFC 3339, UTC)."""
+    from copy import deepcopy
+    from tests.dobles_ruta import RESPUESTA_GOOGLE
+    respuesta = deepcopy(RESPUESTA_GOOGLE)
+    respuesta["routes"][0]["legs"][0]["steps"][1]["transitDetails"]["stopDetails"]["departureTime"] = salida_utc
+    return respuesta
+
+
+def test_consultar_google_con_llegada_envia_arrival_time_sin_departure_time(google):
+    # RF-39: la hora de llegada va como arrivalTime y nunca junto a departureTime (son incompatibles).
+    pr.consultar_google(ORIGEN, DESTINO, None, "2026-07-15T09:00:00+02:00")
+    cuerpo = google.peticiones[0][2]
+    assert cuerpo["arrivalTime"] == "2026-07-15T09:00:00+02:00" and "departureTime" not in cuerpo
+    assert cuerpo["travelMode"] == "TRANSIT"
+    # Sin llegada no se envía arrivalTime.
+    pr.consultar_google(ORIGEN, DESTINO, "2026-07-15T08:30:00+02:00")
+    assert "arrivalTime" not in google.peticiones[1][2]
+
+
+def test_hora_llegada_usa_arrival_time_sin_departure_time(esc):
+    # RF-39: de extremo a extremo, una sola llamada a Google, con arrivalTime en RFC 3339 de Madrid.
+    r = pr.planificar_ruta("Sol", "Bernabéu", hora_llegada="2026-10-16T09:30")
+    assert r["estado"] == "ok"
+    assert esc.cuantas("google") == 1 and esc.cuantas("nominatim") == 2
+    cuerpo = esc.cuerpos_google[0]
+    assert cuerpo["arrivalTime"] == "2026-10-16T09:30:00+02:00" and "departureTime" not in cuerpo
+
+
+def test_la_hora_de_salida_sigue_enviando_departure_time(esc):
+    # Sin regresión: con hora de salida se envía departureTime y no arrivalTime.
+    pr.planificar_ruta("Sol", "Bernabéu", hora_salida="2026-10-16T08:30")
+    cuerpo = esc.cuerpos_google[0]
+    assert cuerpo["departureTime"] == "2026-10-16T08:30:00+02:00" and "arrivalTime" not in cuerpo
+
+
+def test_llegada_indica_hora_de_salida_resultante(esc):
+    # RF-44: si Google devuelve la hora de salida, la respuesta la indica (en hora de Madrid) y la etiqueta como de Google.
+    esc.google = _google_con_salida("2026-10-16T06:35:00Z")
+    r = pr.planificar_ruta("Sol", "Bernabéu", hora_llegada="2026-10-16T09:30")
+    assert r["estado"] == "ok"
+    assert r["salida_resultante"] == "2026-10-16T08:35+02:00" and r["hora_salida"] == "2026-10-16T08:35+02:00"
+    assert r["hora_llegada"] == "2026-10-16T09:30+02:00"
+    # La hora es la del primer transporte en su parada, no la de salida desde el origen.
+    assert "El primer transporte sale el 16/10/2026 a las 08:35 desde Sol (Google Routes)." in r["mensaje"]
+    assert "No se pudo determinar la hora de salida" not in r["mensaje"]
+
+
+def test_llegada_sin_salida_de_google_no_la_estima(esc):
+    # RF-45, RF-18: si Google no devuelve la hora de salida, se dice y no se calcula restando la duración.
+    r = pr.planificar_ruta("Sol", "Bernabéu", hora_llegada="2026-10-16T09:30")
+    assert r["estado"] == "ok" and r["salida_resultante"] is None and r["hora_salida"] is None
+    assert r["mensaje"].startswith("Llegada: 16/10/2026 09:30 · ")
+    assert "No se pudo determinar la hora de salida" in r["mensaje"]
+    assert "primer transporte" not in r["mensaje"] and "09:08" not in r["mensaje"]   # 09:30 - 22 min
+    assert r["ruta"]["duracion_min"] == 22                                          # la ruta sí se entrega
+
+
+@pytest.mark.parametrize("salida", ["no es una hora", "", None, 123])
+def test_salida_de_google_ilegible_se_trata_como_ausente(esc, salida):
+    # RF-45: un valor que no se puede leer cuenta como "Google no la devolvió"; no se inventa nada.
+    esc.google = _google_con_salida(salida)
+    r = pr.planificar_ruta("Sol", "Bernabéu", hora_llegada="2026-10-16T09:30")
+    assert r["salida_resultante"] is None and "No se pudo determinar la hora de salida" in r["mensaje"]
+
+
+def test_hora_de_salida_pedida_no_anade_salida_resultante(esc):
+    # RF-44 y RF-45 solo aplican a las consultas con hora de llegada.
+    esc.google = _google_con_salida("2026-10-16T06:35:00Z")
+    r = pr.planificar_ruta("Sol", "Bernabéu", hora_salida="2026-10-16T08:30")
+    assert r["salida_resultante"] is None and r["hora_llegada"] is None
+    assert "primer transporte" not in r["mensaje"] and "No se pudo determinar la hora de salida" not in r["mensaje"]
+    assert r["mensaje"].startswith("Salida: 16/10/2026 08:30 · ")
+
+
+@pytest.mark.parametrize("fallo", [TimeoutError("t"), {}])
+def test_llegada_con_google_sin_ruta_llama_una_sola_vez(esc, fallo):
+    # RNF Coste: también con hora de llegada, como mucho 1 llamada a Google, sin reintentos.
+    esc.google = fallo
+    r = pr.planificar_ruta("Sol", "Bernabéu", hora_llegada="2026-10-16T09:30")
+    assert r["estado"] in ("ruta_no_calculada", "sin_ruta") and esc.cuantas("google") == 1
+    assert r["mensaje"].startswith("Llegada: ") and r["salida_resultante"] is None

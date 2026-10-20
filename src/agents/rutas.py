@@ -6,9 +6,14 @@ dentro del mismo procesamiento.
 """
 from __future__ import annotations
 
+
+from datetime import datetime
 import re
 import unicodedata
 from typing import Any, Callable, Mapping
+
+from src.reloj import ahora
+from src.tools.hora_actual import hora_actual
 
 
 PROMPT_RUTAS = """Eres el especialista de rutas de MadridRumbo.
@@ -17,13 +22,21 @@ destino. Usa el historial de la conversación para recuperar un extremo aportado
 en un turno anterior.
 
 Tool disponible únicamente:
-- planificar_ruta(origen, destino, hora_salida?, hora_llegada?, titulo?):
+- planificar_ruta(origen, destino, hora_salida?, hora_llegada?, titulo?, opcion_origen?, opcion_destino?):
   calcula la ruta y consulta internamente el RAG para zona y precio.
 
 Reglas:
 - No inventes ni supongas origen o destino. Si falta alguno, responde con una
   nota que pida exactamente el dato pendiente y no pidas la tool.
 - Para una ruta con ambos extremos, solicita planificar_ruta una sola vez.
+- Las horas (hora_salida y hora_llegada) se pasan a la tool en ISO 8601 con hora, por
+  ejemplo 2026-10-17T08:00; la tool rechaza cualquier otro formato. Usa la fecha y hora
+  actuales indicadas abajo para convertir "mañana" o "dentro de una hora".
+- Si la tool devuelve un extremo ambiguo y la persona responde con un número, vuelve a pedir
+  planificar_ruta repitiendo el texto ORIGINAL de ese extremo (el de la primera petición,
+  no la respuesta) y añade opcion_origen u opcion_destino con ese número (entero desde 1).
+  Si en lugar de un número escribe una dirección, envíala como texto nuevo de ese extremo
+  con opcion 1 (opcion_origen=1 u opcion_destino=1).
 - Conserva el JSON, las aclaraciones y los errores que devuelva la tool.
 - No consultes directamente el RAG ni otra tool.
 - Responde SOLO con un JSON por mensaje:
@@ -70,9 +83,14 @@ def _aclaracion_formulacion_incompleta(mensaje: Any) -> str | None:
     return None
 
 
+def construir_prompt(ahora_dt: datetime) -> str:
+    """Prompt del especialista con la fecha y hora actuales, que se recalculan en cada llamada (RF-50)."""
+    return f"{PROMPT_RUTAS}\n{hora_actual(ahora_dt)}\n"
+
+
 def _mensajes_rutas(estado: Mapping[str, Any]) -> list[dict[str, str]]:
     """Copia el historial textual válido y añade el mensaje del turno actual."""
-    mensajes: list[dict[str, str]] = [{"role": "system", "content": PROMPT_RUTAS}]
+    mensajes: list[dict[str, str]] = [{"role": "system", "content": construir_prompt(ahora())}]
     historial = estado.get("historial", [])
     if isinstance(historial, list):
         for entrada in historial:

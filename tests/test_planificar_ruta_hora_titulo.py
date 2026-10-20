@@ -89,13 +89,35 @@ def test_hora_demasiado_lejana(ahora_invierno):
     assert pr.validar_hora(mas_alla.strftime("%Y-%m-%dT%H:%M"))["estado"] == "hora_demasiado_lejana"
 
 
-def test_hora_llegada_no_calcula(ahora_invierno):
-    # RF-39: si se pide hora de llegada no se calcula nada, aunque la hora de salida sea válida o no.
-    assert pr.validar_hora(None, "2026-01-12T09:00")["estado"] == "hora_llegada_no_admitida"
-    assert pr.validar_hora("2026-01-12T08:30", "2026-01-12T09:00")["estado"] == "hora_llegada_no_admitida"
-    assert pr.validar_hora("rara", "9:00")["estado"] == "hora_llegada_no_admitida"
+def test_hora_llegada_valida_se_acepta(ahora_invierno):
+    # RF-39: la hora de llegada se admite; es la hora considerada y se envía a Google en RFC 3339 (no como salida).
+    r = pr.validar_hora(None, "2026-01-15T09:00")
+    assert r["estado"] == "ok" and r["tipo"] == "llegada"
+    assert r["considerada"] == datetime(2026, 1, 15, 9, 0, tzinfo=MADRID)
+    assert r["llegada_rfc3339"] == "2026-01-15T09:00:00+01:00"
+    assert r["salida_rfc3339"] is None
     # Una hora de llegada vacía equivale a no haberla pedido.
-    assert pr.validar_hora("2026-01-12T08:30", "  ")["estado"] == "ok"
+    assert pr.validar_hora("2026-01-12T08:30", "  ")["tipo"] == "salida"
+    assert pr.validar_hora(None, "")["llegada_rfc3339"] is None
+
+
+def test_salida_y_llegada_a_la_vez_no_calcula(ahora_invierno):
+    # RF-43: con salida y llegada a la vez se rechaza, sea cual sea su validez.
+    assert pr.validar_hora("2026-01-12T08:30", "2026-01-12T09:00")["estado"] == "horas_incompatibles"
+    assert pr.validar_hora("rara", "9:00")["estado"] == "horas_incompatibles"
+
+
+@pytest.mark.parametrize("llegada, estado", [
+    ("2026-01-10T09:59", "hora_pasada"),                 # RF-32
+    ("mañana a las 8", "hora_no_interpretable"),         # RF-33
+    ("2026-01-12", "hora_no_interpretable"),             # RF-33: falta la hora
+    ("2027-01-01T08:00", "hora_demasiado_lejana"),       # RF-34
+])
+def test_llegada_rechazada_con_las_mismas_reglas_que_la_salida(ahora_invierno, llegada, estado):
+    # RF-32, RF-33, RF-34: la hora de llegada se valida igual que la de salida (misma función, mismos estados).
+    assert pr.validar_hora(None, llegada)["estado"] == estado
+    assert pr.validar_hora(llegada)["estado"] == estado
+    assert pr.validar_hora(None, llegada)["llegada_rfc3339"] is None
 
 
 def test_titulo_vacio_aplica_billete_sencillo():
@@ -105,16 +127,63 @@ def test_titulo_vacio_aplica_billete_sencillo():
     assert config.TITULO_POR_DEFECTO == "billete sencillo"
 
 
-def test_titulo_de_la_lista_se_normaliza_a_su_valor_canonico():
-    # RF-35: los títulos de la lista cerrada se reconocen sin importar mayúsculas ni espacios.
-    assert pr.resolver_titulo("Billete de 10 viajes ") == ("billete de 10 viajes", True)
-    assert pr.resolver_titulo("BILLETE   SENCILLO") == ("billete sencillo", True)
+def test_titulo_libre_se_acepta_sin_lista_cerrada():
+    # RF-35: cualquier título (abonos, billete sencillo, otros) se acepta tal cual, sin lista cerrada ni forma canónica.
+    assert pr.resolver_titulo("Abono mensual") == ("Abono mensual", True)
+    assert pr.resolver_titulo("Billete de 10 viajes ") == ("Billete de 10 viajes", True)
+    assert pr.resolver_titulo(123) == ("123", True)
+    assert not hasattr(config, "TITULOS_TRANSPORTE")      # RF-36 obsoleto: la lista ya no existe
 
 
-def test_titulo_fuera_de_lista_no_esta_disponible():
-    # RF-36: un título fuera de la lista (p. ej. un abono) se conserva tal cual y se marca no disponible.
-    assert pr.resolver_titulo("abono mensual") == ("abono mensual", False)
-    assert pr.resolver_titulo(123) == ("123", False)
+def test_titulo_sin_saltos_de_linea(esc):
+    # RF-47: el título saneado no contiene saltos de línea, ni en la cabecera ni en la pregunta al RAG.
+    titulo, interpretable = pr.resolver_titulo("abono\njoven\r\nmensual\u2028")
+    assert titulo == "abono joven mensual" and interpretable
+    assert not any(c in titulo for c in "\r\n\u2028\u2029")
+    r = pr.planificar_ruta("Sol", "Bernabéu", titulo="abono\njoven\r\nmensual")
+    assert r["titulo"] == "abono joven mensual" and "Título: abono joven mensual." in r["mensaje"]
+    assert all("\n" not in p and "\r" not in p for p in esc.preguntas)
+    assert "abono joven mensual" in esc.preguntas[1]
+
+
+def test_titulo_respeta_longitud_maxima():
+    # RF-48: hasta TITULO_LONGITUD_MAX se interpreta; un carácter más, no. La longitud se mide ya saneado.
+    assert config.TITULO_LONGITUD_MAX == 60
+    justo = "a" * config.TITULO_LONGITUD_MAX
+    assert pr.resolver_titulo(justo) == (justo, True)
+    assert pr.resolver_titulo(f"\n{justo}\n") == (justo, True)
+    largo = justo + "a"
+    assert pr.resolver_titulo(largo) == (largo, False)
+
+
+def test_titulo_demasiado_largo_no_consulta_el_precio(esc):
+    # RF-48: sin precio, se informa de que no se pudo interpretar el título y se entregan ruta y zona.
+    largo = "abono " + "x" * config.TITULO_LONGITUD_MAX
+    r = pr.planificar_ruta("Sol", "Bernabéu", titulo=largo)
+    assert r["estado"] == "ok" and r["ruta"]["duracion_min"] == 22 and r["zona"]["estado"] == "ok"
+    assert r["precio"] == {"estado": "omitida", "texto": None, "fuente": "RAG"}
+    assert "no se pudo interpretar el título" in r["mensaje"] and "Zona (RAG)" in r["mensaje"]
+    assert esc.cuantas("rag") == 1 and largo not in esc.preguntas[0]      # solo la zona; el título no entra en la pregunta
+    # RF-38: la cabecera muestra el título cortado al máximo más «…», nunca entero (tampoco en el campo `titulo`).
+    cortado = largo[:config.TITULO_LONGITUD_MAX] + "…"
+    assert f"Título: {cortado}." in r["mensaje"] and r["titulo"] == cortado
+    assert largo not in r["mensaje"] and largo not in repr(r)
+
+
+def test_titulo_en_el_limite_no_se_corta(esc):
+    # RF-38: un título que no supera el máximo se muestra entero, sin «…».
+    justo = "a" * config.TITULO_LONGITUD_MAX
+    r = pr.planificar_ruta("Sol", "Bernabéu", titulo=justo)
+    assert f"Título: {justo}." in r["mensaje"] and r["titulo"] == justo
+
+
+def test_titulo_vacio_tras_sanear_usa_sencillo_y_lo_indica(esc):
+    # RF-51: un título que queda vacío al sanearlo equivale a no haberlo indicado; la cabecera (RF-38) lo indica.
+    for vacio in ("\n", " \r\n ", "\u2028"):
+        assert pr.resolver_titulo(vacio) == (config.TITULO_POR_DEFECTO, True)
+    r = pr.planificar_ruta("Sol", "Bernabéu", titulo=" \r\n ")
+    assert r["titulo"] == "billete sencillo" and "Título: billete sencillo." in r["mensaje"]
+    assert "billete sencillo" in esc.preguntas[1]
 
 
 def test_cabecera_con_hora_pedida_incluye_hora_y_titulo():
@@ -155,7 +224,7 @@ def _con(**cambios):
 ESTADOS = {
     "ok": (_con(), {}),
     "faltan_datos": (_con(), {"origen": "", "destino": "  "}),
-    "hora_llegada_no_admitida": (_con(), {"hora_llegada": "2026-10-15T09:00"}),
+    "horas_incompatibles": (_con(), {"hora_salida": "2026-10-15T09:00", "hora_llegada": "2026-10-15T10:00"}),
     "hora_no_interpretable": (_con(), {"hora_salida": "mañana por la tarde"}),
     "hora_pasada": (_con(), {"hora_salida": "2026-10-15T07:00"}),
     "hora_demasiado_lejana": (_con(), {"hora_salida": "2027-01-01T08:00"}),
@@ -196,13 +265,45 @@ def test_hora_no_interpretable_muestra_el_texto_recibido(esc):
     assert "«cuando salga el sol»" in r["mensaje"]
 
 
-@pytest.mark.parametrize("estado", ["hora_llegada_no_admitida", "hora_no_interpretable", "hora_pasada",
+@pytest.mark.parametrize("estado", ["horas_incompatibles", "hora_no_interpretable", "hora_pasada",
                                     "hora_demasiado_lejana", "faltan_datos"])
 def test_validaciones_de_entrada_no_usan_la_red(esc, estado):
     # Orden: las validaciones baratas van primero; con una entrada rechazada no se llama a nada externo.
     configurar, args = ESTADOS[estado]
     pr.planificar_ruta(**{"origen": "Sol", "destino": "Bernabéu", **args})
     assert esc.orden == []
+
+
+def test_salida_y_llegada_a_la_vez_rechaza_sin_llamar_a_nada(esc):
+    # RF-43: informa de que no se pueden combinar y pide elegir una; ni Nominatim ni Google ni el RAG.
+    r = pr.planificar_ruta("Sol", "Bernabéu", hora_salida="2026-10-16T08:00", hora_llegada="2026-10-16T09:00")
+    assert r["estado"] == "horas_incompatibles" and list(r)[0] == "estado"
+    assert "no se pueden combinar" in r["mensaje"].lower() and "elige una" in r["mensaje"].lower()
+    assert r["mensaje"].startswith("Salida: ") and " · Título: billete sencillo." in r["mensaje"]
+    assert r["ruta"] is None and esc.orden == []
+
+
+@pytest.mark.parametrize("llegada, estado", [
+    ("2026-10-15T07:00", "hora_pasada"),
+    ("cuando salga el sol", "hora_no_interpretable"),
+    ("2027-01-01T08:00", "hora_demasiado_lejana"),
+])
+def test_llegada_rechazada_no_usa_la_red_y_lleva_cabecera(esc, llegada, estado):
+    # RF-32, RF-33, RF-34 con hora de llegada: no se llama a nada y el mensaje lleva la hora de llegada y el título.
+    r = pr.planificar_ruta("Sol", "Bernabéu", hora_llegada=llegada)
+    assert r["estado"] == estado and esc.orden == []
+    assert r["mensaje"].startswith("Llegada: ") and " · Título: billete sencillo." in r["mensaje"]
+    assert "llegada" in r["mensaje"].split(". ", 1)[1]        # el rechazo habla de la hora de llegada
+    assert r["hora_llegada"] is not None and r["salida_resultante"] is None
+
+
+def test_cabecera_de_llegada_indica_la_hora_de_llegada_considerada(esc):
+    # RF-38: con hora de llegada la cabecera lleva la hora considerada (de llegada) y el título.
+    esc.nominatim = [[SOL], [BERNABEU]]
+    r = pr.planificar_ruta("Sol", "Bernabéu", hora_llegada="2026-10-16T09:30")
+    assert r["estado"] == "ok"
+    assert r["mensaje"].startswith("Llegada: 16/10/2026 09:30 · Título: billete sencillo. ")
+    assert r["hora_llegada"] == "2026-10-16T09:30+02:00"
 
 
 def test_la_hora_actual_solo_sale_de_reloj_ahora():
@@ -212,10 +313,8 @@ def test_la_hora_actual_solo_sale_de_reloj_ahora():
     assert "from src.reloj import ahora" in codigo
 
 
-def test_titulo_no_disponible_lista_los_disponibles(esc):
-    # RF-36: ruta y zona sí; el precio se omite y se muestran los títulos disponibles.
+def test_titulo_libre_nunca_supera_dos_llamadas_al_rag(esc):
+    # RF-35 y RNF Coste: cualquier título, incluso uno raro, hace como mucho 2 llamadas al RAG (zona y precio).
     r = pr.planificar_ruta("Sol", "Bernabéu", titulo="abono joven")
-    assert r["estado"] == "ok" and r["precio"]["estado"] == "omitida" and r["zona"]["estado"] == "ok"
-    assert "abono joven" in r["mensaje"] and "no está disponible" in r["mensaje"]
-    assert all(t in r["mensaje"] for t in config.TITULOS_TRANSPORTE)
-    assert esc.cuantas("rag") == 1
+    assert r["estado"] == "ok" and r["precio"]["estado"] == "ok" and "abono joven" in r["mensaje"]
+    assert "no está disponible" not in r["mensaje"] and esc.cuantas("rag") == 2

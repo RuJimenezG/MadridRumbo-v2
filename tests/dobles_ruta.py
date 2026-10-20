@@ -15,14 +15,16 @@ from src.tools import planificar_ruta as pr
 AHORA = datetime(2026, 10, 15, 8, 12, tzinfo=ZoneInfo("Europe/Madrid"))
 
 # Resultados de Nominatim (jsonv2 con addressdetails), reducidos a lo que usa el cliente.
-def nominatim(nombre, lat, lon, municipio="Madrid"):
-    return {"display_name": nombre, "lat": str(lat), "lon": str(lon), "address": {"city": municipio}}
+def nominatim(nombre, lat, lon, municipio="Madrid", iso="ES-MD"):
+    # ISO3166-2-lvl4 es el código de comunidad autónoma (T22, RF-55); su presencia en Nominatim real está por comprobar.
+    return {"display_name": nombre, "lat": str(lat), "lon": str(lon),
+            "address": {"city": municipio, "ISO3166-2-lvl4": iso}}
 
 SOL = nominatim("Puerta del Sol, Madrid", 40.4169, -3.7035)
 BERNABEU = nominatim("Estadio Santiago Bernabéu, Madrid", 40.4531, -3.6883)
 ATOCHA = nominatim("Estación de Atocha, Madrid", 40.4065, -3.6895)
 RETIRO = nominatim("Parque del Retiro, Madrid", 40.4153, -3.6845)
-BARCELONA = nominatim("Calle Mayor, Barcelona", 41.3874, 2.1686, "Barcelona")
+BARCELONA = nominatim("Calle Mayor, Barcelona", 41.3874, 2.1686, "Barcelona", "ES-CT")
 
 RESPUESTA_GOOGLE = {"routes": [{"duration": "1320s", "legs": [{"steps": [
     {"travelMode": "WALK", "staticDuration": "180s"},

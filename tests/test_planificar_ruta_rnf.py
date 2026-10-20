@@ -56,13 +56,13 @@ def test_limites_y_listas_de_config():
     assert config.MAX_CANDIDATOS_MOSTRAR >= 1
     assert config.ANTELACION_MAX_DIAS >= 1
     assert config.RADIO_MISMA_UBICACION_M > 0
-    assert config.TITULO_POR_DEFECTO in config.TITULOS_TRANSPORTE
-    assert set(config.TITULOS_TRANSPORTE) == {"billete sencillo", "billete de 10 viajes"}
+    assert config.TITULO_POR_DEFECTO == "billete sencillo" and not hasattr(config, "TITULOS_TRANSPORTE")
+    assert config.TITULO_LONGITUD_MAX == 60 >= len(config.TITULO_POR_DEFECTO)
     assert set(config.MODOS_GOOGLE) == {"SUBWAY", "LIGHT_RAIL", "BUS", "TRAIN"}
     assert config.TIPOS_VEHICULO_ACEPTADOS
     # Las plantillas de pregunta al RAG aceptan los datos de la ruta.
     config.PREGUNTA_ZONA.format(origen="A", destino="B")
-    config.PREGUNTA_PRECIO.format(origen="A", destino="B", titulo="billete sencillo")
+    config.PREGUNTA_PRECIO.format(titulo="billete sencillo", zona="Zona A")
 
 
 def test_intervalo_y_user_agent(monkeypatch):
@@ -239,3 +239,21 @@ def test_mensajes_en_espanol(esc, monkeypatch):
         limpio = mensaje.replace("Google Routes", "")
         assert not ingles.search(limpio), f"{estado}: {mensaje}"
         assert re.search(r"\b(de|la|el|no|se|una|que|hora|ruta|dirección|indica|inténtalo)\b", limpio), estado
+
+
+@pytest.mark.parametrize("cambios, titulo, llamadas", [
+    ({}, None, 2),                                                                  # caso normal
+    ({}, "x" * 61, 1),                                                              # título largo: solo la zona
+    ({"rag": {"zona tarifaria": RuntimeError("x"), "precio": "p"}}, None, 1),       # zona con error: sin precio
+    ({"rag": {"zona tarifaria": "z", "precio": RuntimeError("x")}}, None, 2),       # precio con error: sin reintento
+    ({"rag": {"zona tarifaria": "z" * 201, "precio": "p"}}, None, 1),               # zona demasiado larga
+    ({"google": TimeoutError("t")}, None, 2),                                       # Google caído: municipios, igual
+])
+def test_maximo_2_llamadas_al_rag(esc, cambios, titulo, llamadas):
+    # RF-49: como máximo una llamada de zona y una de precio, sin reintentos, ocurra lo que ocurra.
+    from src.tools import planificar_ruta as pr
+
+    for clave, valor in cambios.items():
+        setattr(esc, clave, valor)
+    pr.planificar_ruta("Sol", "Bernabéu", titulo=titulo)
+    assert esc.cuantas("rag") == llamadas <= 2
