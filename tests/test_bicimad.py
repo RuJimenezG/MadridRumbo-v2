@@ -472,3 +472,169 @@ def test_google_sin_clave_no_llama(google, monkeypatch, clave):
     red = google.con()
     monkeypatch.setattr(config, "GOOGLE_ROUTES_API_KEY", clave)
     assert google.bici.tramo_google("BICYCLE", A, B) == {"estado": "no_disponible"} and red.llamadas == []
+
+
+# --- T6: orquestador `alternativa_bici` y texto del párrafo ---
+
+class Orquesta:
+    """Dobles de `emt_estaciones` y `tramo_google` del módulo, con registro de llamadas."""
+
+    def __init__(self, bici, monkeypatch, estaciones=None, tramos=None):
+        self.emt_llamadas = 0
+        self.google = []                        # (modo, origen, destino)
+        self.estaciones = estaciones if estaciones is not None else {"estado": "ok", "estaciones": [
+            est(1, ORIGEN, 120, bicis=6, huecos=2), est(2, DESTINO, 80, bicis=1, huecos=9)]}
+        self.tramos = list(tramos if tramos is not None else [
+            {"estado": "ok", "duracion_min": 11, "aviso": config.BICI_AVISO_GOOGLE},   # bici
+            {"estado": "ok", "duracion_min": 4, "aviso": config.BICI_AVISO_GOOGLE},    # a pie: origen → estación
+            {"estado": "ok", "duracion_min": 3, "aviso": config.BICI_AVISO_GOOGLE}])   # a pie: estación → destino
+        monkeypatch.setattr(bici, "emt_estaciones", self._emt)
+        monkeypatch.setattr(bici, "tramo_google", self._google)
+
+    def _emt(self):
+        self.emt_llamadas += 1
+        if isinstance(self.estaciones, Exception):
+            raise self.estaciones
+        return self.estaciones
+
+    def _google(self, modo, origen, destino):
+        self.google.append((modo, origen, destino))
+        respuesta = self.tramos.pop(0)
+        if isinstance(respuesta, Exception):
+            raise respuesta
+        return respuesta
+
+
+@pytest.fixture
+def orq(bici, monkeypatch):
+    def crear(**kw):
+        o = Orquesta(bici, monkeypatch, **kw)
+        o.bici = bici
+        return o
+    return crear
+
+
+def test_alternativa_caso_feliz_tres_tramos(orq):
+    o = orq()
+    bici, texto = o.bici.alternativa_bici(ORIGEN, DESTINO, hora_pedida=False)
+    assert bici["estado"] == "ok" and bici["motivo"] is None
+    assert [t["modo"] for t in bici["tramos"]] == ["A pie", "Bici", "A pie"]
+    assert [t["duracion_min"] for t in bici["tramos"]] == [4, 11, 3]
+    assert bici["origen_estacion"] == {"nombre": "E1", "bicis": 6, "distancia_m": 120}
+    assert bici["destino_estacion"] == {"nombre": "E2", "huecos": 9, "distancia_m": 80}
+    # Orden de las llamadas: EMT una vez, Google bici, pie, pie; la bici va entre las dos estaciones.
+    assert o.emt_llamadas == 1 and [g[0] for g in o.google] == ["BICYCLE", "WALK", "WALK"]
+    assert (o.google[0][1]["id"], o.google[0][2]["id"]) == (1, 2)
+    assert o.google[1][1] == ORIGEN and o.google[1][2]["id"] == 1
+    assert o.google[2][1]["id"] == 2 and o.google[2][2] == DESTINO
+    assert texto.startswith("Alternativa en bici (BiciMAD): ")
+
+
+@pytest.mark.parametrize("hora_pedida, destino", [(True, DESTINO), (False, punto_a(500)), (False, punto_a(8000))])
+def test_r1_r2_no_llaman_a_nada(orq, hora_pedida, destino):
+    o = orq()
+    bici, texto = o.bici.alternativa_bici(ORIGEN, destino, hora_pedida=hora_pedida)
+    assert bici["estado"] == "no_ofrecida" and o.emt_llamadas == 0 and o.google == []
+
+
+def test_r3_r4_no_llaman_a_google(orq, monkeypatch):
+    casos = [
+        {"estado": "ok", "estaciones": []},                                        # sin bicis en el origen
+        {"estado": "ok", "estaciones": [est(1, ORIGEN, 50, bicis=3, huecos=0)]},   # sin huecos en el destino
+    ]
+    for estaciones in casos:
+        o = orq(estaciones=estaciones)
+        assert o.bici.alternativa_bici(ORIGEN, DESTINO, hora_pedida=False)[0]["estado"] == "no_ofrecida"
+        assert o.emt_llamadas == 1 and o.google == []
+    monkeypatch.setattr(config, "BICI_ESTACION_RADIO_MAX_M", 10_000)               # R4: la misma estación
+    o = orq(estaciones={"estado": "ok", "estaciones": [est(1, ORIGEN, 1500, bicis=3, huecos=3)]})
+    assert o.bici.alternativa_bici(ORIGEN, DESTINO, hora_pedida=False)[0]["estado"] == "no_ofrecida"
+    assert o.emt_llamadas == 1 and o.google == []
+
+
+def test_motivo_solo_en_r3_r4(orq, monkeypatch):
+    # R1 y R2: sin motivo y sin párrafo (RF-4).
+    o = orq()
+    for hora, destino in [(True, DESTINO), (False, punto_a(500))]:
+        assert o.bici.alternativa_bici(ORIGEN, destino, hora_pedida=hora) == (
+            {"estado": "no_ofrecida", "motivo": None}, "")
+    # R3 y R4: frase breve, que es también el texto que se añade al mensaje.
+    esperadas = [
+        ({"estado": "ok", "estaciones": []}, "No hay estaciones de BiciMAD con bicis cerca del origen."),
+        ({"estado": "ok", "estaciones": [est(1, ORIGEN, 50)]},
+         "No hay estaciones de BiciMAD con huecos libres cerca del destino."),
+    ]
+    for estaciones, frase in esperadas:
+        bici, texto = orq(estaciones=estaciones).bici.alternativa_bici(ORIGEN, DESTINO, hora_pedida=False)
+        assert bici == {"estado": "no_ofrecida", "motivo": frase} and texto == frase
+    monkeypatch.setattr(config, "BICI_ESTACION_RADIO_MAX_M", 10_000)
+    bici, texto = orq(estaciones={"estado": "ok", "estaciones": [est(1, ORIGEN, 1500)]}).bici.alternativa_bici(
+        ORIGEN, DESTINO, hora_pedida=False)
+    assert bici["estado"] == "no_ofrecida" and bici["motivo"] and texto == bici["motivo"]
+    assert "distintas" in texto
+
+
+def test_total_es_la_suma_y_etiqueta_fuentes(orq):
+    bici, texto = orq().bici.alternativa_bici(ORIGEN, DESTINO, hora_pedida=False)
+    assert bici["duracion_min"] == 4 + 11 + 3 == 18
+    assert bici["fuentes"] == {"estaciones": "EMT BiciMAD", "tiempos": "Google Routes"}
+    assert "18 min en total (Google Routes)" in texto and "EMT BiciMAD" in texto
+
+
+def test_mensaje_indica_estaciones_y_disponibilidad(orq):
+    bici, texto = orq().bici.alternativa_bici(ORIGEN, DESTINO, hora_pedida=False)
+    assert "«E1»" in texto and "6 bicis" in texto and "«E2»" in texto and "9 huecos libres" in texto
+    assert "al consultar" in texto and "puede haber cambiado" in texto
+    assert bici["aviso"] == config.BICI_AVISO_GOOGLE and texto.endswith(f"Aviso: {config.BICI_AVISO_GOOGLE}")
+    # Singular cuando solo hay una.
+    una = {"estado": "ok", "estaciones": [est(1, ORIGEN, 120, bicis=1, huecos=2), est(2, DESTINO, 80, bicis=1, huecos=1)]}
+    _, texto = orq(estaciones=una).bici.alternativa_bici(ORIGEN, DESTINO, hora_pedida=False)
+    assert "1 bici " in texto and "1 hueco libre" in texto
+
+
+def test_aviso_distinto_de_google_se_conserva_sin_repetir(orq):
+    def ok(m, a):
+        return {"estado": "ok", "duracion_min": m, "aviso": a}
+    bici, _ = orq(tramos=[ok(11, "Aviso A"), ok(4, "Aviso A"), ok(3, "Aviso B")]).bici.alternativa_bici(
+        ORIGEN, DESTINO, hora_pedida=False)
+    assert bici["aviso"] == "Aviso A Aviso B"
+
+
+@pytest.mark.parametrize("falla_en", [0, 1, 2])
+def test_si_falla_un_tramo_no_hay_alternativa_parcial(orq, falla_en):
+    ok = {"estado": "ok", "duracion_min": 5, "aviso": config.BICI_AVISO_GOOGLE}
+    tramos = [ok, ok, ok]
+    tramos[falla_en] = {"estado": "no_disponible"}
+    o = orq(tramos=tramos)
+    bici, texto = o.bici.alternativa_bici(ORIGEN, DESTINO, hora_pedida=False)
+    assert bici["estado"] == "no_disponible" and bici["motivo"] == texto
+    assert not {"tramos", "duracion_min", "origen_estacion", "destino_estacion", "aviso"} & set(bici)
+    assert len(o.google) == falla_en + 1                    # se corta al primer fallo
+
+
+def test_emt_no_disponible_no_llama_a_google(orq):
+    o = orq(estaciones={"estado": "no_disponible", "estaciones": []})
+    bici, texto = o.bici.alternativa_bici(ORIGEN, DESTINO, hora_pedida=False)
+    assert bici["estado"] == "no_disponible" and o.google == [] and o.emt_llamadas == 1
+    assert texto == "La alternativa en bici (BiciMAD) no está disponible ahora."
+
+
+@pytest.mark.parametrize("donde", ["emt", "google"])
+def test_error_inesperado_no_rompe_la_ruta(orq, caplog, donde):
+    o = orq(estaciones=KeyError("DATO-SENSIBLE")) if donde == "emt" else orq(tramos=[ValueError("DATO-SENSIBLE")])
+    with caplog.at_level("DEBUG"):
+        bici, texto = o.bici.alternativa_bici(ORIGEN, DESTINO, hora_pedida=False)    # no lanza
+    assert bici["estado"] == "no_disponible" and texto == "La alternativa en bici (BiciMAD) no está disponible ahora."
+    assert "DATO-SENSIBLE" not in repr((bici, texto)) + caplog.text
+    assert caplog.records                                                           # queda registrado en el log interno
+
+
+def test_mensajes_de_bici_en_espanol(orq):
+    textos = [orq().bici.alternativa_bici(ORIGEN, DESTINO, hora_pedida=False)[1]]
+    textos.append(orq(estaciones={"estado": "ok", "estaciones": []}).bici.alternativa_bici(ORIGEN, DESTINO, False)[1])
+    textos.append(orq(estaciones={"estado": "no_disponible", "estaciones": []}).bici.alternativa_bici(
+        ORIGEN, DESTINO, False)[1])
+    for texto in textos:
+        assert "BiciMAD" in texto
+        assert not re.search(r"\b(bikes?|stations?|docks?|available|minutes?|walk|cycling)\b", texto, re.I)
+    assert "estación" in textos[0] and "A pie" in textos[0] and "minutos" not in textos[0]

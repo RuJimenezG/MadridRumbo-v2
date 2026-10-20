@@ -4,6 +4,7 @@ No importa nada de `planificar_ruta.py` (evita la dependencia circular; deuda: d
 La `description` del login contiene el usuario y el token: nunca se registra, se devuelve ni entra en un error.
 """
 import json
+import logging
 import math
 import re
 import time
@@ -11,6 +12,8 @@ import urllib.error
 import urllib.request
 
 import config
+
+logger = logging.getLogger(__name__)
 
 FALLO = {"estado": "no_disponible", "estaciones": []}
 
@@ -190,3 +193,71 @@ def tramo_google(modo: str, origen: dict, destino: dict) -> dict:
                 "aviso": " ".join(textos) or config.BICI_AVISO_GOOGLE}
     except Exception:  # noqa: BLE001 - sin detalles: la excepción puede contener datos sensibles
         return fallo
+
+
+FRASES_NO_OFRECIDA = {   # RF-4: solo en R3 y R4
+    "sin_bicis_origen": "No hay estaciones de BiciMAD con bicis cerca del origen.",
+    "sin_huecos_destino": "No hay estaciones de BiciMAD con huecos libres cerca del destino.",
+    "misma_estacion": "No hay una alternativa en bici con estaciones de origen y destino distintas.",
+}
+FRASE_NO_DISPONIBLE = "La alternativa en bici (BiciMAD) no está disponible ahora."   # RF-13, RF-14, RF-15
+
+
+def _no_disponible() -> tuple[dict, str]:
+    return {"estado": "no_disponible", "motivo": FRASE_NO_DISPONIBLE}, FRASE_NO_DISPONIBLE
+
+
+def _cuantos(n: int, singular: str, plural: str) -> str:
+    return f"{n} {singular if n == 1 else plural}"
+
+
+def alternativa_bici(origen: dict, destino: dict, hora_pedida: bool) -> tuple[dict, str]:
+    """Alternativa en bici con BiciMAD: devuelve `(bici, texto)`, con el campo `bici` y el párrafo del mensaje.
+
+    Orden: R1 y R2 (sin llamadas) → EMT → R3 y R4 (sin Google) → Google (bici, pie, pie), cortando al primer
+    fallo y sin alternativa parcial. Nunca lanza: cualquier fallo es `no_disponible` (RF-13 a RF-15).
+    `texto` es "" cuando no hay nada que decir (R1 y R2).
+    """
+    try:
+        if rechazo_oferta(origen, destino, hora_pedida) is not None:
+            return {"estado": "no_ofrecida", "motivo": None}, ""
+        estaciones = emt_estaciones()
+        if estaciones["estado"] != "ok":
+            return _no_disponible()
+        elegidas = elegir_estaciones(estaciones["estaciones"], origen, destino)
+        if elegidas["estado"] != "ok":
+            frase = FRASES_NO_OFRECIDA[elegidas["motivo"]]
+            return {"estado": "no_ofrecida", "motivo": frase}, frase
+        e_o, e_d = elegidas["origen"], elegidas["destino"]
+        bici = tramo_google("BICYCLE", e_o, e_d)
+        pie_1 = tramo_google("WALK", origen, e_o) if bici["estado"] == "ok" else None
+        pie_2 = tramo_google("WALK", e_d, destino) if pie_1 and pie_1["estado"] == "ok" else None
+        if not (pie_2 and pie_2["estado"] == "ok"):
+            return _no_disponible()
+        tramos = [
+            {"modo": "A pie", "desde": "Origen", "hasta": e_o["nombre"], "duracion_min": pie_1["duracion_min"]},
+            {"modo": "Bici", "desde": e_o["nombre"], "hasta": e_d["nombre"], "duracion_min": bici["duracion_min"]},
+            {"modo": "A pie", "desde": e_d["nombre"], "hasta": "Destino", "duracion_min": pie_2["duracion_min"]},
+        ]
+        total = sum(t["duracion_min"] for t in tramos)
+        aviso = " ".join(dict.fromkeys(t["aviso"] for t in (bici, pie_1, pie_2)))
+        resultado = {
+            "estado": "ok", "motivo": None,
+            "origen_estacion": {"nombre": e_o["nombre"], "bicis": e_o["bicis"], "distancia_m": e_o["distancia_m"]},
+            "destino_estacion": {"nombre": e_d["nombre"], "huecos": e_d["huecos"], "distancia_m": e_d["distancia_m"]},
+            "tramos": tramos, "duracion_min": total, "aviso": aviso,
+            "fuentes": {"estaciones": "EMT BiciMAD", "tiempos": "Google Routes"},
+        }
+        texto = (
+            f"Alternativa en bici (BiciMAD): {total} min en total (Google Routes). "
+            f"A pie {tramos[0]['duracion_min']} min hasta la estación «{e_o['nombre']}» "
+            f"(EMT BiciMAD: {_cuantos(e_o['bicis'], 'bici', 'bicis')} al consultar), "
+            f"en bici {tramos[1]['duracion_min']} min hasta la estación «{e_d['nombre']}» "
+            f"({_cuantos(e_d['huecos'], 'hueco libre', 'huecos libres')} al consultar) "
+            f"y a pie {tramos[2]['duracion_min']} min hasta el destino. "
+            f"La disponibilidad puede haber cambiado. Aviso: {aviso}"
+        )
+        return resultado, texto
+    except Exception as e:  # noqa: BLE001 - nunca rompe la ruta; solo el tipo, la excepción puede llevar datos sensibles
+        logger.error("Error inesperado en la alternativa en bici: %s", type(e).__name__)
+        return _no_disponible()
