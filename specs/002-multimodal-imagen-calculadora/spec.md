@@ -46,6 +46,13 @@ El enunciado exige una tool multimodal imagen → texto con una imagen demo de t
 - RF-19: EL SISTEMA solo permite ejecutar `calculadora` como tool si figura en la allowlist.
 - RF-20: CUANDO se ejecuta `calculadora`, EL SISTEMA registra en la traza nombre, argumentos, estado y el resultado.
 
+### Fallos temporales del modelo (cambio del 2026-10-19)
+
+- RF-24: SI el modelo falla por un error temporal (servicio no disponible, límite de peticiones o fallo de red), ENTONCES EL SISTEMA espera un tiempo breve configurable y lo intenta una vez más antes de devolver un error.
+- RF-25: SI el segundo intento también falla, ENTONCES EL SISTEMA devuelve el mismo error controlado del RF-7, sin más reintentos.
+- RF-26: SI el error del modelo no es temporal (clave inválida, modelo no disponible o petición no válida), ENTONCES EL SISTEMA no reintenta.
+- RF-27: CUANDO el modelo falla, EL SISTEMA registra la causa (tipo de error y código) en un registro técnico, sin incluir claves ni el contenido de la imagen, y sigue devolviendo al agente el mismo mensaje genérico del RF-7.
+
 ### Flujo combinado
 
 - RF-21: CUANDO la pregunta pide un total a partir de importes de una imagen, EL SISTEMA invoca `describir_imagen` y después `calculadora`, y no estima el total por su cuenta.
@@ -54,12 +61,19 @@ El enunciado exige una tool multimodal imagen → texto con una imagen demo de t
 
 ## Requisitos no funcionales
 
+- Reintentos: como máximo uno por llamada, con una espera configurable en un único punto (cambio del 2026-10-19).
+
 - Coste: los tests no llaman al modelo; `calculadora` es puramente local.
 - Seguridad: no se usa `eval` sobre texto del usuario o del LLM; el LLM no puede leer archivos fuera de la carpeta autorizada.
 - Configuración: carpeta de imágenes, imagen demo, tamaño máximo, modelo y longitud máxima de la expresión en un único punto.
 - Idioma: salidas en español.
 
 ## Casos límite
+
+- El modelo responde 503 y a la segunda vez funciona: RF-24.
+- El modelo responde 503 las dos veces: RF-25.
+- Clave inválida (400) o modelo retirado (404): RF-26, no se reintenta.
+- El error contiene datos internos: RF-27 solo registra tipo y código y el agente no los ve.
 
 - Imagen inexistente, `.gif`, demasiado grande, ruta `../.env`, sin conexión, sin texto: RF-4 a RF-8.
 - Expresión `2**9999`, `__import__('os')`, `1/0`, `""`: RF-15 a RF-17.
@@ -83,3 +97,10 @@ El enunciado exige una tool multimodal imagen → texto con una imagen demo de t
 
 - [NECESITA ACLARACIÓN: ¿Qué imagen demo se usa (cartel de tarifas CRTM, plano o panel)? Debe tener importes legibles para la demo de cálculo.]
 - [NECESITA ACLARACIÓN: ¿Qué especialista llama a las tools? Se asume la configuración `TOOLS_POR_ESPECIALISTA` descrita en el plan; el especialista que haga el flujo combinado lo decide quien lleve el grafo.]
+
+## Cambios posteriores
+
+- **2026-10-19. RF-24 a RF-27:** la demo real con Gemini mostró que un 503 pasajero, un modelo retirado y una clave inválida daban el mismo mensaje y no se sabía la causa. Se añade un reintento ante errores temporales y un registro de la causa. Aprobado el mismo día.
+
+- **2026-10-19. Superados por la spec 005:** RF-21 a RF-23 describían un único especialista que leía la imagen y calculaba. Al integrarse el grafo, `tarifas` solo lee los importes (RF-15 de la spec 005) y `auxiliar` hace la cuenta (RF-43 y RF-46). Los demás requisitos (RF-1 a RF-20, las dos tools y la allowlist) siguen vigentes.
+- **2026-10-19. Spec 007:** `tarifas` solo se activa con una imagen aportada válida; hoy ningún cliente puede aportarla (ver `validacion.md`).

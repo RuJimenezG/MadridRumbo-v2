@@ -106,3 +106,58 @@ Sin API: cliente falso, LLM falso y `tmp_path` (ver `docs/tests_sin_api.md`).
 | RF-21 | prompt del especialista | `tests/test_flujo_imagen_calculo.py::test_imagen_luego_calculo` |
 | RF-22 | prompt del especialista | `::test_nota_muestra_importes_y_operacion` |
 | RF-23 | prompt del especialista | `::test_sin_importes_no_calcula` |
+
+## Cambio del 2026-10-19: reintento y causa del error (RF-24 a RF-27)
+
+### Archivos afectados
+| Archivo | Crear / Modificar | Qué cambia | RF |
+|---|---|---|---|
+| `src/tools/describir_imagen.py` | Modificar | Reintento ante errores temporales y registro de la causa | RF-24 a RF-27 |
+| `config.py` | Modificar | `IMAGEN_REINTENTO_ESPERA_S` (espera antes del reintento, en segundos) | RF-24 |
+| `tests/test_describir_imagen.py` | Modificar | Tests del reintento y del registro | RF-24 a RF-27 |
+
+### Contrato
+`describir_imagen(ruta, pregunta, cliente)` no cambia: sigue devolviendo texto o `ERROR: el modelo no pudo describir la imagen`. Solo cambia lo que ocurre dentro y lo que se registra.
+
+### Lógica clave
+```text
+intento 1: texto = cliente.generar(...)
+  si falla con un error temporal -> registrar causa; esperar IMAGEN_REINTENTO_ESPERA_S; intento 2
+  si falla con un error no temporal -> registrar causa; devolver el error controlado (sin reintento)
+  si el intento 2 falla -> registrar causa; devolver el error controlado
+
+es_temporal(error):
+  verdadero si el código es 429, 500, 502, 503 o 504, o si es un fallo de red (TimeoutError, ConnectionError)
+  falso para el resto (400, 401, 403, 404...)
+
+registro: "describir_imagen falló (intento N): tipo=ServerError código=503 estado=UNAVAILABLE"
+  nunca se registra el mensaje completo, la clave, la ruta ni los bytes de la imagen
+```
+
+### Decisiones técnicas
+| Decisión | Alternativa descartada | Por qué |
+|---|---|---|
+| Un único reintento con espera fija configurable | Varios reintentos con espera creciente | Acota el coste y el tiempo de espera del agente, que tiene un límite de pasos |
+| Clasificar por código de error | Reintentar ante cualquier excepción | Una clave inválida o un modelo retirado no se arreglan esperando |
+| Registrar solo tipo, código y estado | Registrar el mensaje completo | Evita filtrar datos internos o secretos en un log |
+| El agente sigue viendo el mensaje genérico | Devolverle la causa | Sin detalles internos en lo que lee el LLM (RF-27) |
+| Registro con `logging` | `print` | Se puede capturar en tests y el equipo ya usa `logging` en el RAG |
+
+### Estrategia de tests
+Sin API: cliente falso que falla las veces que se le indique, `time.sleep` sustituido y `caplog` para el registro.
+- RF-24: 503 y después texto correcto -> devuelve el texto, 2 llamadas y una espera con el valor configurado.
+- RF-25: 503 las dos veces -> error controlado y exactamente 2 llamadas.
+- RF-26: 400, 403 y 404 -> error controlado, 1 llamada y ninguna espera.
+- RF-27: el registro trae tipo y código, no trae la clave ni el mensaje completo, y el texto devuelto sigue siendo el genérico.
+
+### Riesgos
+- Un 429 persistente por cuota agotada puede alargar un turno la espera configurada; con 2 s es asumible.
+- El tipo exacto de las excepciones de `google.genai` puede variar entre versiones; se clasifica por el atributo `code`, no por la clase.
+
+### Trazabilidad añadida
+| RF | Parte del plan | Test |
+|---|---|---|
+| RF-24 | `describir_imagen.py`, `config.py` | `tests/test_describir_imagen.py::test_reintenta_ante_un_error_temporal` |
+| RF-25 | `describir_imagen.py` | `tests/test_describir_imagen.py::test_dos_fallos_temporales_dan_error_controlado` |
+| RF-26 | `describir_imagen.py` | `tests/test_describir_imagen.py::test_un_error_no_temporal_no_se_reintenta` |
+| RF-27 | `describir_imagen.py` | `tests/test_describir_imagen.py::test_registra_la_causa_sin_datos_sensibles` |

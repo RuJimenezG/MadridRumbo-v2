@@ -18,6 +18,7 @@
 | `tests/test_supervisor_grafo.py` | Modificar | Cubrir prompt, normalización, categorías, validación estricta, fallback y ausencia de datos sensibles. | RF-1 a RF-14 |
 | `tests/test_grafo_enrutamiento.py` y `tests/test_especialista_rutas.py` | Modificar | Cubrir fallback de rutas hasta `planificar_ruta`, variaciones textuales y aclaraciones sin tool. | RF-17 a RF-21 |
 | `tests/test_agent_contrato.py`, `tests/test_grafo_persistencia.py` y `tests/test_estado_grafo.py` | Modificar | Verificar contrato inalterado, registro técnico seguro disponible solo en el resultado actual y ausencia de diagnóstico en `traza`, checkpoint e invocaciones posteriores. | RF-10 a RF-16, RF-25 |
+| `tests/test_agent_contrato.py` | Modificar | Inyectar especialistas falsos en la regresión del fallback público para impedir que el recorrido por `auxiliar` alcance Gemini; comprobar que el doble se ejecuta. | RF-10 a RF-14; coste |
 
 No se modificarán `main.py`, `app.py`, `requirements.txt`, `rag/rag_cli.py`, contratos de tools ni los archivos de configuración existentes. La CLI y la integración de Streamlit serán objeto de especificaciones futuras; esta entrega deja el resultado público que ambas consumirán.
 
@@ -136,6 +137,7 @@ Todos los tests usarán dobles inyectados y no inicializarán Gemini, APIs, embe
 | Aclaración de rutas | Las tres formulaciones incompletas no invocan LLM de rutas, tool, traza de ruta ni HITL. | RF-21 |
 | No persistencia | Dos turnos del mismo `thread_id`, más reanudación HITL; comprobar que el diagnóstico solo aparece en la primera proyección y no en checkpoint, historial ni resultado posterior. | RF-10, RF-11, RF-25 |
 | Frontera de clientes | Verificar las mismas seis claves y `log: list[str]`; comprobar que el único dato de diagnóstico entregado está en el resultado actual, no en `traza` ni en estado persistido. | RF-15, RF-16, compatibilidad |
+| Regresión sin API del fallback público | Crear el grafo con Supervisor, Sintetizador y los cinco especialistas inyectados; provocar `json_invalido` con «¿Qué hora es?» y comprobar que el doble `auxiliar` se ejecuta sin inicializar un proveedor real. | RF-10 a RF-14, coste |
 | Guía manual | Revisar manualmente, mediante la fachada pública, los escenarios Gemini real y fallback; no se automatiza porque consume proveedor. | RF-22, RF-23 |
 
 La guía manual indicará dos comprobaciones separadas mediante una llamada de desarrollo a `procesar_turno`: una consulta ligera con Gemini configurado, que debe devolver `sin_fallback` en el `log` del resultado; y un fallback reproducible en una consola nueva con una clave de proceso deliberadamente inválida, sin leer, imprimir ni modificar `.env`. La segunda debe producir `proveedor` y un resumen genérico. También indicará cerrar esa consola al acabar y no usar rutas/RAG. Incluirá el contrato que deberán respetar los clientes futuros: la CLI podrá presentar la entrada segura de `log` y Streamlit no deberá mostrar ni conservar `log` o `traza`; su comprobación de interfaz queda expresamente diferida a la spec que implemente esos clientes.
@@ -146,6 +148,7 @@ La guía manual indicará dos comprobaciones separadas mediante una llamada de d
 - El contexto de ejecución requiere la API de LangGraph instalada; la versión presente admite `context_schema` y `invoke(..., context=...)`, y se cubrirá con dobles sin red.
 - La protección visual de RF-16 depende de una futura integración de Streamlit; esta entrega reduce el riesgo al dejar el diagnóstico categorizado, seguro y separado de `traza`, pero no cambia la UI existente.
 - El escenario manual con una clave de proceso inválida puede consumir o contactar con Gemini, por lo que queda fuera de `pytest`, se hará en una consola aislada y no revelará ninguna clave real.
+- Una prueba de contrato que omita el doble del especialista seleccionado por el fallback puede inicializar Gemini, pedir credenciales o abrir conexiones de red. La regresión inyecta los cinco especialistas para que cambios futuros de clasificación tampoco rompan la garantía de coste.
 - El reconocimiento de rutas es deliberadamente acotado a las tres formulaciones aprobadas; no se convertirá en un extractor general de direcciones ni cambiará el contrato de `planificar_ruta`.
 - La copia de trabajo contiene modificaciones ajenas en `config.py` y `output/chunks.json`; esta iteración no las modifica.
 
@@ -159,6 +162,7 @@ La guía manual indicará dos comprobaciones separadas mediante una llamada de d
 | RF-8 | Frontera de proveedor en el adaptador | `tests/test_supervisor_grafo.py::test_fallo_proveedor_activa_fallback` |
 | RF-9 | Validación de forma, tamaño y allowlist | `tests/test_supervisor_grafo.py::test_roles_invalidos_activan_fallback` |
 | RF-10 a RF-14 | Contexto efímero, catálogo seguro y proyección de `log` | `tests/test_supervisor_grafo.py::test_diagnostico_es_seguro` y `tests/test_grafo_persistencia.py::test_diagnostico_no_persiste` |
+| RF-10 a RF-14, coste | Fallback público con todos los especialistas sustituidos por dobles | `tests/test_agent_contrato.py::test_fallback_publico_solo_expone_categoria_y_resumen_canonicos` |
 | RF-15 | Resultado público con diagnóstico técnico seguro para consumo de clientes | `tests/test_agent_contrato.py::test_resultado_expone_diagnostico_seguro` |
 | RF-16 | Límite de integración documentado: diagnóstico separado de la respuesta, el plan y la traza | `tests/test_agent_contrato.py::test_resultado_separa_diagnostico_de_datos_de_chat` |
 | RF-17 a RF-19 | Reglas deterministas de expresiones de ruta | `tests/test_grafo_enrutamiento.py::test_fallback_reconoce_formulaciones_de_ruta` |
