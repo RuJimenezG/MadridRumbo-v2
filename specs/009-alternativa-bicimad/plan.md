@@ -73,7 +73,7 @@ mensaje += línea_clima + texto_bici ; resultado["clima"] = clima ; resultado["b
 alternativa_bici(origen, destino, hora_pedida, clima):              # todo dentro de un try/except local (RF-15)
   si hora_pedida                                  -> no_ofrecida (R1), 0 llamadas
   si clima no ok o no apto                        -> no_ofrecida (R0), 0 llamadas, sin frase propia (RF-23, RF-24)
-  d = distancia_m(origen, destino)                # reutiliza la de planificar_ruta
+  d = distancia_m(origen, destino)                # haversine propio de bicimad.py
   si no BICI_DISTANCIA_MIN_M <= d <= MAX_M        -> no_ofrecida (R2), 0 llamadas
   estaciones = emt_estaciones()                   # <= 2 llamadas (login reutilizado + lista)
   si falla                                        -> no_disponible (RF-13)
@@ -95,7 +95,7 @@ Orden de las llamadas: EMT primero (barata y decide R3/R4), Google solo si hay e
 | Decisión | Alternativa descartada | Por qué |
 |---|---|---|
 | Módulo nuevo `src/tools/bicimad.py` con **cliente HTTP propio** (urllib) y sin tocar `_http_json` | Mover `_http_json` a un módulo común | Decisión aprobada: no tocar `planificar_ruta.py` más allá del enganche. **Deuda** anotada: dos clientes HTTP casi iguales; unificarlos al dividir `planificar_ruta.py`. |
-| `bicimad.py` importa `distancia_m` de `planificar_ruta.py`; `planificar_ruta.py` importa `bicimad` **de forma perezosa** en el enganche | Duplicar el haversine; importación circular | Reutiliza lo existente (3 líneas menos) sin ciclo. Deuda: `distancia_m` también pasará al módulo común. |
+| `bicimad.py` lleva su **propio haversine** (`distancia_m`) y no importa nada de `planificar_ruta.py`; `planificar_ruta.py` importa `bicimad` **de forma perezosa** en el enganche | Importar `distancia_m` de `planificar_ruta.py` (dependencia circular) | Decisión consciente (2026-10-20): evita el ciclo a costa de unas líneas duplicadas. Deuda: dos haversine; unificar al dividir `planificar_ruta.py`. |
 | Regla de oferta en Python con constantes de `config.py` (R1–R4) | Que decida el LLM | Decisión aprobada. Determinista y testeable. |
 | Google WALK para los tramos a pie (3 llamadas de Google en la bici, 4 en total) | Estimación local por distancia | Decisión aprobada: no estimar tiempos (coherente con la spec 004). |
 | Token de la EMT reutilizado en memoria del proceso hasta su caducidad; lista de estaciones **sin caché** | Caché de estaciones | La disponibilidad es de ahora; el límite de la EMT (≤ 2) cuenta el login solo cuando no hay token vigente. Sin caché persistente (fuera de alcance). |
@@ -140,7 +140,7 @@ Todos con `pytest`, sin red ni LLM, en `tests/test_bicimad.py`. **Dobles:** func
 - **Tests de otros afectados** por el campo `bici` y por la llamada real del enganche (tabla anterior).
 - **Archivo compartido.** `config.py` lo tocan otras ramas: añadir al final de la sección de rutas y rebasar.
 - **Nombres `EMT_*` ya existentes.** Estaban en `.env.example` antes de esta spec; si otra spec los usa con otro significado, hay que coordinarlo (no hay uso en el código actual).
-- **Deuda técnica.** Dos clientes HTTP y la dependencia de `bicimad.py` hacia `distancia_m` de `planificar_ruta.py`: se resuelven al dividir `planificar_ruta.py`.
+- **Deuda técnica.** Dos clientes HTTP y dos haversine (`distancia_m` en `planificar_ruta.py` y en `bicimad.py`): se unifican en un módulo común al dividir `planificar_ruta.py`.
 - **Clima.** Open-Meteo (verificado en open-meteo.com: gratuito sin clave para uso no comercial hasta 10.000 llamadas/día, atribución CC BY 4.0) es de uso no comercial; si el proyecto pasara a uso comercial hace falta clave de pago. La atribución puede perderse en la síntesis (T9); por eso irá también en el `README`. `LESS_WALKING` en Google puede devolver rutas más largas o con más trasbordos; es una preferencia, no una garantía.
 - **Facturación de Google.** Cada alternativa añade 3 llamadas de Routes (BICYCLE/WALK pueden tener otra categoría); revisar en la consola.
 

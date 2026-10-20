@@ -138,4 +138,4 @@ Los datos de estaciones y disponibilidad salen de la **API de la EMT** (bloque B
 - [PENDIENTE — T14] En Google Routes `LESS_WALKING` va en `transitPreferences.routingPreference`, no en el `routingPreference` de nivel superior (que es de tráfico). Comprobar en su documentación; los tests no hacen llamadas reales.
 - [PENDIENTE — decisión] La atribución de Open-Meteo puede perderse en la síntesis igual que el aviso de Google (RF-12): se propone cubrirla con la misma opción A de T9. Sin T9, queda «en el JSON y en el `mensaje`, no garantizada en la síntesis».
 - [DECISIÓN propuesta] El clima se consulta solo sin hora pedida (RF-27), porque `LESS_WALKING` y la bici dependen del tiempo de ahora.
-- [PARA EL PLAN, resuelto] Reutilizar `distancia_m` de `planificar_ruta.py` con importación del módulo nuevo desde `planificar_ruta.py` de forma perezosa, para evitar la dependencia circular.
+- [PARA EL PLAN, resuelto; revisado 2026-10-20] `bicimad.py` tiene su propio haversine y no importa `planificar_ruta.py`; `planificar_ruta.py` importa `bicimad` de forma perezosa. Evita la dependencia circular.
