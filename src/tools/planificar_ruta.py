@@ -658,6 +658,12 @@ def _planificar_ruta(origen, destino, hora_salida, hora_llegada, titulo, opcion_
         from src.tools.bicimad import texto_clima
         texto = f"{texto} {texto_clima(clima)}".rstrip()
         extra["clima"] = clima
+    # Spec 009, RF-1/16/17: único punto de enganche de la alternativa en bici. No lanza y nunca cambia la ruta ni su estado.
+    from src.tools.bicimad import alternativa_bici
+    bici, texto_bici = alternativa_bici(lugar_o, lugar_d, clima is None, clima)
+    extra["bici"] = bici
+    if texto_bici:
+        texto = f"{texto} {texto_bici}"
     return salir("ok", texto, **identificados, ruta=ruta, **tarifa, **extra)
 
 

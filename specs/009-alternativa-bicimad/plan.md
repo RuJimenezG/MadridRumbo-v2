@@ -132,6 +132,8 @@ Todos con `pytest`, sin red ni LLM, en `tests/test_bicimad.py`. **Dobles:** func
 
 *(T14, 2026-10-20)* Ningún test existente falló por el campo `clima` ni por la nueva consulta. Sí se cambió el doble `tests/dobles_ruta.py::Escenario`: parchea la red de Open-Meteo (`bicimad._get_json`) con una respuesta real de T12 (apto), registra `llamadas_meteo` y una `secuencia` completa de llamadas (`orden` no incluye Open-Meteo, para no alterar los tests existentes). `LESS_WALKING` va en `transitPreferences.routingPreference` (confirmado en la documentación de Google Routes, 2026-10-20).
 
+*(T7, 2026-10-20)* Ningún test existente falló. `tests/dobles_ruta.py::Escenario` simula también la red de bici (login y estaciones de la EMT, Google de bici y a pie) y **desactiva la alternativa por defecto** (`bici` queda `no_ofrecida` sin llamadas); `Escenario.bici_real()` la activa para los tests de la spec 009. El resultado `ok` de los tests existentes ya lleva `clima` y `bici`.
+
 ## Riesgos
 
 - **API de la EMT verificada en T1** (login v1 y estaciones). Quedan sin confirmar el significado de `no_available`, los límites de uso (el login devuelve `apiCounter`) y que `description` del login **incluye el token y el usuario**: el cliente nunca debe registrarla ni devolverla.

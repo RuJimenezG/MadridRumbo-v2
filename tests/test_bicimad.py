@@ -19,7 +19,7 @@ from pathlib import Path
 import pytest
 
 import config
-from src.tools import planificar_ruta as pr
+from src.tools import bicimad, planificar_ruta as pr
 from tests.dobles_ruta import ATOCHA, BARCELONA, BERNABEU, METEO_APTO, METEO_LLUVIA, SOL, Escenario
 
 RAIZ = Path(__file__).resolve().parent.parent
@@ -902,3 +902,118 @@ def test_limite_open_meteo_1(esc):
         esc.nominatim, esc.llamadas_meteo[:] = nominatim, []
         assert pr.planificar_ruta("Sol", "Bernabéu")["estado"] in ("ambigua", "fuera_cobertura")
         assert esc.llamadas_meteo == []
+
+
+# --- T7: gancho de `alternativa_bici` en `planificar_ruta` y campo `bici` (Escenario con la red de bici simulada) ---
+
+CLAVES_BASE = {"estado", "mensaje", "hora_salida", "titulo", "hora_llegada", "salida_resultante", "origen", "destino",
+               "ruta", "zona", "precio"}
+
+
+def ruta_con_bici(esc, **args):
+    """Consulta Sol → Bernabéu con la alternativa real (y la red de bici simulada) y la misma sin ella."""
+    esc.bici_real()
+    return pr.planificar_ruta("Sol", "Bernabéu", **args)
+
+
+def sin_bici(monkeypatch, **args):
+    """La misma consulta con la alternativa desactivada: referencia de lo que no debe cambiar."""
+    esc = Escenario(monkeypatch)
+    return esc, pr.planificar_ruta("Sol", "Bernabéu", **args)
+
+
+def test_alternativa_junto_a_la_ruta_sin_cambiar_su_estado(monkeypatch):
+    _, base = sin_bici(monkeypatch)
+    esc = Escenario(monkeypatch)
+    r = ruta_con_bici(esc)
+    assert r["estado"] == base["estado"] == "ok"
+    assert r["bici"]["estado"] == "ok" and r["bici"]["duracion_min"] == 18
+    # La ruta en transporte público no se modifica: mismos campos y el mensaje solo crece al final.
+    for campo in CLAVES_BASE - {"mensaje"}:
+        assert r[campo] == base[campo]
+    assert r["mensaje"].startswith(base["mensaje"]) and r["mensaje"] != base["mensaje"]
+    assert "Alternativa en bici (BiciMAD): 18 min en total (Google Routes)." in r["mensaje"]
+    assert r["mensaje"].index("Tiempo en el origen") < r["mensaje"].index("Alternativa en bici")   # la bici va la última
+
+
+def test_campo_bici_solo_en_ok_y_campos_existentes_intactos(monkeypatch):
+    esc = Escenario(monkeypatch)
+    r = ruta_con_bici(esc)
+    assert set(r) == CLAVES_BASE | {"clima", "bici"}                       # solo se añaden clima y bici
+    # Estados que no son ok: sin campo bici (y sin llamadas de bici).
+    for cambio in ({"google": TimeoutError("t")}, {"google": {}}, {"nominatim": [[SOL, ATOCHA], [BERNABEU]]},
+                   {"nominatim": [[BARCELONA], [BERNABEU]]}):
+        e = Escenario(monkeypatch)
+        e.bici_real()
+        for k, v in cambio.items():
+            setattr(e, k, v)
+        r = pr.planificar_ruta("Sol", "Bernabéu")
+        assert r["estado"] != "ok" and "bici" not in r and e.llamadas_bici == []
+
+
+def test_enganche_unico_en_planificar_ruta():
+    import ast
+    fuente = (RAIZ / "src" / "tools" / "planificar_ruta.py").read_text(encoding="utf-8")
+    assert fuente.count("alternativa_bici(") == 1                          # un único punto de enganche
+    for trozo in ("BICYCLE", "emt_estaciones", "elegir_estaciones", "BICI_", "EMT_"):
+        assert trozo not in fuente                                         # sin lógica de BiciMAD en este archivo
+    arbol = ast.parse(fuente)
+    for nodo in arbol.body:                                                 # bicimad solo se importa de forma perezosa
+        if isinstance(nodo, ast.ImportFrom):
+            assert "bicimad" not in (nodo.module or "") and all(a.name != "bicimad" for a in nodo.names)
+
+
+def test_el_rag_mantiene_sus_dos_llamadas(monkeypatch):
+    esc = Escenario(monkeypatch)
+    ruta_con_bici(esc)
+    assert esc.cuantas("rag") == 2 and "zona tarifaria" in esc.preguntas[0] and "precio" in esc.preguntas[1]
+    assert not any("bici" in p.lower() or "bicimad" in p.lower() for p in esc.preguntas)
+
+
+def test_limites_de_llamadas_emt_2_google_4_nominatim_2(monkeypatch):
+    esc = Escenario(monkeypatch)
+    ruta_con_bici(esc)
+    assert esc.cuantas("nominatim") == 2 and len(esc.llamadas_meteo) == 1
+    assert [u for u, _ in esc.llamadas_bici if "emt" in u] == [config.EMT_LOGIN_URL, config.EMT_ESTACIONES_URL]
+    assert esc.cuantas("google") + len([u for u, _ in esc.llamadas_bici if u == config.GOOGLE_ROUTES_URL]) == 4
+    assert esc.secuencia.index("meteo") < esc.secuencia.index("google")
+    # Segunda consulta en el mismo proceso: el token de la EMT se reutiliza (una llamada menos).
+    esc.nominatim = [[SOL], [BERNABEU]]
+    esc.llamadas_bici.clear()
+    pr.planificar_ruta("Sol", "Bernabéu")
+    assert [u for u, _ in esc.llamadas_bici if "emt" in u] == [config.EMT_ESTACIONES_URL]
+
+
+def test_fallo_de_la_emt_deja_la_ruta_intacta_con_aviso(monkeypatch):
+    _, base = sin_bici(monkeypatch)
+    for fallo in ((403, {"code": "84", "description": "", "data": []}), TimeoutError("t")):
+        esc = Escenario(monkeypatch)
+        esc.emt_login = fallo
+        r = ruta_con_bici(esc)
+        assert r["estado"] == "ok" and r["bici"] == {"estado": "no_disponible", "motivo": bicimad.FRASE_NO_DISPONIBLE}
+        assert r["mensaje"].endswith(bicimad.FRASE_NO_DISPONIBLE) and r["mensaje"].startswith(base["mensaje"])
+        assert r["ruta"] == base["ruta"] and r["zona"] == base["zona"] and r["precio"] == base["precio"]
+        assert [u for u, _ in esc.llamadas_bici if u == config.GOOGLE_ROUTES_URL] == []   # sin Google de bici
+
+
+@pytest.mark.parametrize("falla_en, llamadas", [(0, 1), (1, 2), (2, 3)])
+def test_fallo_de_google_en_la_bici_deja_la_ruta_intacta_con_aviso(monkeypatch, falla_en, llamadas):
+    _, base = sin_bici(monkeypatch)
+    esc = Escenario(monkeypatch)
+    esc.tramos_bici[falla_en] = TimeoutError("t")
+    r = ruta_con_bici(esc)
+    assert r["estado"] == "ok" and r["bici"]["estado"] == "no_disponible" and "tramos" not in r["bici"]
+    assert r["mensaje"].endswith(bicimad.FRASE_NO_DISPONIBLE) and r["ruta"] == base["ruta"]
+    assert len([u for u, _ in esc.llamadas_bici if u == config.GOOGLE_ROUTES_URL]) == llamadas
+
+
+def test_sin_oferta_no_hay_llamadas_de_bici(monkeypatch):
+    # R1 (hora pedida) y R0 (mal tiempo): bici no_ofrecida, sin párrafo y sin llamar a la EMT ni a Google de bici.
+    esc = Escenario(monkeypatch)
+    r = ruta_con_bici(esc, hora_salida="2026-10-15T09:00")
+    assert r["bici"] == {"estado": "no_ofrecida", "motivo": None} and "Alternativa en bici" not in r["mensaje"]
+    assert esc.llamadas_bici == []
+    esc = Escenario(monkeypatch)
+    esc.meteo = (200, METEO_LLUVIA)
+    r = ruta_con_bici(esc)
+    assert r["bici"] == {"estado": "no_ofrecida", "motivo": None} and esc.llamadas_bici == []
