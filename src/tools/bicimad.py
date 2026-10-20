@@ -212,16 +212,19 @@ def _cuantos(n: int, singular: str, plural: str) -> str:
     return f"{n} {singular if n == 1 else plural}"
 
 
-def alternativa_bici(origen: dict, destino: dict, hora_pedida: bool) -> tuple[dict, str]:
+def alternativa_bici(origen: dict, destino: dict, hora_pedida: bool, clima: dict | None) -> tuple[dict, str]:
     """Alternativa en bici con BiciMAD: devuelve `(bici, texto)`, con el campo `bici` y el párrafo del mensaje.
 
-    Orden: R1 y R2 (sin llamadas) → EMT → R3 y R4 (sin Google) → Google (bici, pie, pie), cortando al primer
+    `clima` es el tiempo ya consultado (`clima_origen`) o None si no se consultó; sin clima apto no se ofrece (R0).
+    Orden: R0, R1 y R2 (sin llamadas) → EMT → R3 y R4 (sin Google) → Google (bici, pie, pie), cortando al primer
     fallo y sin alternativa parcial. Nunca lanza: cualquier fallo es `no_disponible` (RF-13 a RF-15).
     `texto` es "" cuando no hay nada que decir (R1 y R2).
     """
     try:
         if rechazo_oferta(origen, destino, hora_pedida) is not None:
             return {"estado": "no_ofrecida", "motivo": None}, ""
+        if not (isinstance(clima, dict) and clima.get("estado") == "ok" and clima.get("apto") is True):
+            return {"estado": "no_ofrecida", "motivo": None}, ""    # R0: sin buen tiempo o sin dato no hay bici (RF-23, RF-25)
         estaciones = emt_estaciones()
         if estaciones["estado"] != "ok":
             return _no_disponible()
@@ -314,3 +317,18 @@ def clima_origen(origen: dict) -> dict:
     except Exception as e:  # noqa: BLE001 - sin detalles: solo el tipo de la excepción
         logger.warning("Open-Meteo no disponible: %s", type(e).__name__)
         return fallo
+
+
+def texto_clima(clima: dict) -> str:
+    """Línea del `mensaje` con el tiempo y la atribución a Open-Meteo (RF-24); "" si no hay dato de clima."""
+    if clima.get("estado") != "ok":
+        return ""
+    lluvia = clima["precipitacion_mm"]
+    texto = (f"Tiempo en el origen ahora: {round(clima['temperatura_c'])} °C, "
+             f"{'sin precipitación' if lluvia <= 0 else f'precipitación {lluvia:g} mm'}, "
+             f"viento {round(clima['viento_kmh'])} km/h ")
+    if clima["apto"]:
+        texto += "(apto para exterior). "
+    else:
+        texto += f"(no apto para exterior: {', '.join(clima['motivos'])}; la ruta se pidió con menos tramos a pie). "
+    return texto + f"{config.CLIMA_ATRIBUCION}."

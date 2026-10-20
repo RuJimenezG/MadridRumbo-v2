@@ -19,6 +19,8 @@ from pathlib import Path
 import pytest
 
 import config
+from src.tools import planificar_ruta as pr
+from tests.dobles_ruta import ATOCHA, BARCELONA, BERNABEU, METEO_APTO, METEO_LLUVIA, SOL, Escenario
 
 RAIZ = Path(__file__).resolve().parent.parent
 
@@ -474,6 +476,12 @@ def test_google_sin_clave_no_llama(google, monkeypatch, clave):
     assert google.bici.tramo_google("BICYCLE", A, B) == {"estado": "no_disponible"} and red.llamadas == []
 
 
+# Clima ya consultado (T13) que recibe `alternativa_bici` (T14): apto, no apto y sin dato.
+CLIMA_APTO = {"estado": "ok", "temperatura_c": 16.1, "precipitacion_mm": 0.0, "codigo": 3, "viento_kmh": 11.2,
+              "apto": True, "motivos": [], "fuente": "Open-Meteo", "licencia": "CC BY 4.0"}
+CLIMA_LLUVIA = {**CLIMA_APTO, "precipitacion_mm": 1.4, "codigo": 61, "apto": False, "motivos": ["lluvia"]}
+CLIMA_SIN_DATO = {"estado": "no_disponible"}
+
 # --- T6: orquestador `alternativa_bici` y texto del párrafo ---
 
 class Orquesta:
@@ -516,7 +524,7 @@ def orq(bici, monkeypatch):
 
 def test_alternativa_caso_feliz_tres_tramos(orq):
     o = orq()
-    bici, texto = o.bici.alternativa_bici(ORIGEN, DESTINO, hora_pedida=False)
+    bici, texto = o.bici.alternativa_bici(ORIGEN, DESTINO, hora_pedida=False, clima=CLIMA_APTO)
     assert bici["estado"] == "ok" and bici["motivo"] is None
     assert [t["modo"] for t in bici["tramos"]] == ["A pie", "Bici", "A pie"]
     assert [t["duracion_min"] for t in bici["tramos"]] == [4, 11, 3]
@@ -533,7 +541,7 @@ def test_alternativa_caso_feliz_tres_tramos(orq):
 @pytest.mark.parametrize("hora_pedida, destino", [(True, DESTINO), (False, punto_a(500)), (False, punto_a(8000))])
 def test_r1_r2_no_llaman_a_nada(orq, hora_pedida, destino):
     o = orq()
-    bici, texto = o.bici.alternativa_bici(ORIGEN, destino, hora_pedida=hora_pedida)
+    bici, texto = o.bici.alternativa_bici(ORIGEN, destino, hora_pedida=hora_pedida, clima=CLIMA_APTO)
     assert bici["estado"] == "no_ofrecida" and o.emt_llamadas == 0 and o.google == []
 
 
@@ -544,11 +552,11 @@ def test_r3_r4_no_llaman_a_google(orq, monkeypatch):
     ]
     for estaciones in casos:
         o = orq(estaciones=estaciones)
-        assert o.bici.alternativa_bici(ORIGEN, DESTINO, hora_pedida=False)[0]["estado"] == "no_ofrecida"
+        assert o.bici.alternativa_bici(ORIGEN, DESTINO, hora_pedida=False, clima=CLIMA_APTO)[0]["estado"] == "no_ofrecida"
         assert o.emt_llamadas == 1 and o.google == []
     monkeypatch.setattr(config, "BICI_ESTACION_RADIO_MAX_M", 10_000)               # R4: la misma estación
     o = orq(estaciones={"estado": "ok", "estaciones": [est(1, ORIGEN, 1500, bicis=3, huecos=3)]})
-    assert o.bici.alternativa_bici(ORIGEN, DESTINO, hora_pedida=False)[0]["estado"] == "no_ofrecida"
+    assert o.bici.alternativa_bici(ORIGEN, DESTINO, hora_pedida=False, clima=CLIMA_APTO)[0]["estado"] == "no_ofrecida"
     assert o.emt_llamadas == 1 and o.google == []
 
 
@@ -556,7 +564,7 @@ def test_motivo_solo_en_r3_r4(orq, monkeypatch):
     # R1 y R2: sin motivo y sin párrafo (RF-4).
     o = orq()
     for hora, destino in [(True, DESTINO), (False, punto_a(500))]:
-        assert o.bici.alternativa_bici(ORIGEN, destino, hora_pedida=hora) == (
+        assert o.bici.alternativa_bici(ORIGEN, destino, hora_pedida=hora, clima=CLIMA_APTO) == (
             {"estado": "no_ofrecida", "motivo": None}, "")
     # R3 y R4: frase breve, que es también el texto que se añade al mensaje.
     esperadas = [
@@ -565,30 +573,30 @@ def test_motivo_solo_en_r3_r4(orq, monkeypatch):
          "No hay estaciones de BiciMAD con huecos libres cerca del destino."),
     ]
     for estaciones, frase in esperadas:
-        bici, texto = orq(estaciones=estaciones).bici.alternativa_bici(ORIGEN, DESTINO, hora_pedida=False)
+        bici, texto = orq(estaciones=estaciones).bici.alternativa_bici(ORIGEN, DESTINO, hora_pedida=False, clima=CLIMA_APTO)
         assert bici == {"estado": "no_ofrecida", "motivo": frase} and texto == frase
     monkeypatch.setattr(config, "BICI_ESTACION_RADIO_MAX_M", 10_000)
     bici, texto = orq(estaciones={"estado": "ok", "estaciones": [est(1, ORIGEN, 1500)]}).bici.alternativa_bici(
-        ORIGEN, DESTINO, hora_pedida=False)
+        ORIGEN, DESTINO, hora_pedida=False, clima=CLIMA_APTO)
     assert bici["estado"] == "no_ofrecida" and bici["motivo"] and texto == bici["motivo"]
     assert "distintas" in texto
 
 
 def test_total_es_la_suma_y_etiqueta_fuentes(orq):
-    bici, texto = orq().bici.alternativa_bici(ORIGEN, DESTINO, hora_pedida=False)
+    bici, texto = orq().bici.alternativa_bici(ORIGEN, DESTINO, hora_pedida=False, clima=CLIMA_APTO)
     assert bici["duracion_min"] == 4 + 11 + 3 == 18
     assert bici["fuentes"] == {"estaciones": "EMT BiciMAD", "tiempos": "Google Routes"}
     assert "18 min en total (Google Routes)" in texto and "EMT BiciMAD" in texto
 
 
 def test_mensaje_indica_estaciones_y_disponibilidad(orq):
-    bici, texto = orq().bici.alternativa_bici(ORIGEN, DESTINO, hora_pedida=False)
+    bici, texto = orq().bici.alternativa_bici(ORIGEN, DESTINO, hora_pedida=False, clima=CLIMA_APTO)
     assert "«E1»" in texto and "6 bicis" in texto and "«E2»" in texto and "9 huecos libres" in texto
     assert "al consultar" in texto and "puede haber cambiado" in texto
     assert bici["aviso"] == config.BICI_AVISO_GOOGLE and texto.endswith(f"Aviso: {config.BICI_AVISO_GOOGLE}")
     # Singular cuando solo hay una.
     una = {"estado": "ok", "estaciones": [est(1, ORIGEN, 120, bicis=1, huecos=2), est(2, DESTINO, 80, bicis=1, huecos=1)]}
-    _, texto = orq(estaciones=una).bici.alternativa_bici(ORIGEN, DESTINO, hora_pedida=False)
+    _, texto = orq(estaciones=una).bici.alternativa_bici(ORIGEN, DESTINO, hora_pedida=False, clima=CLIMA_APTO)
     assert "1 bici " in texto and "1 hueco libre" in texto
 
 
@@ -596,7 +604,7 @@ def test_aviso_distinto_de_google_se_conserva_sin_repetir(orq):
     def ok(m, a):
         return {"estado": "ok", "duracion_min": m, "aviso": a}
     bici, _ = orq(tramos=[ok(11, "Aviso A"), ok(4, "Aviso A"), ok(3, "Aviso B")]).bici.alternativa_bici(
-        ORIGEN, DESTINO, hora_pedida=False)
+        ORIGEN, DESTINO, hora_pedida=False, clima=CLIMA_APTO)
     assert bici["aviso"] == "Aviso A Aviso B"
 
 
@@ -606,7 +614,7 @@ def test_si_falla_un_tramo_no_hay_alternativa_parcial(orq, falla_en):
     tramos = [ok, ok, ok]
     tramos[falla_en] = {"estado": "no_disponible"}
     o = orq(tramos=tramos)
-    bici, texto = o.bici.alternativa_bici(ORIGEN, DESTINO, hora_pedida=False)
+    bici, texto = o.bici.alternativa_bici(ORIGEN, DESTINO, hora_pedida=False, clima=CLIMA_APTO)
     assert bici["estado"] == "no_disponible" and bici["motivo"] == texto
     assert not {"tramos", "duracion_min", "origen_estacion", "destino_estacion", "aviso"} & set(bici)
     assert len(o.google) == falla_en + 1                    # se corta al primer fallo
@@ -614,7 +622,7 @@ def test_si_falla_un_tramo_no_hay_alternativa_parcial(orq, falla_en):
 
 def test_emt_no_disponible_no_llama_a_google(orq):
     o = orq(estaciones={"estado": "no_disponible", "estaciones": []})
-    bici, texto = o.bici.alternativa_bici(ORIGEN, DESTINO, hora_pedida=False)
+    bici, texto = o.bici.alternativa_bici(ORIGEN, DESTINO, hora_pedida=False, clima=CLIMA_APTO)
     assert bici["estado"] == "no_disponible" and o.google == [] and o.emt_llamadas == 1
     assert texto == "La alternativa en bici (BiciMAD) no está disponible ahora."
 
@@ -623,17 +631,17 @@ def test_emt_no_disponible_no_llama_a_google(orq):
 def test_error_inesperado_no_rompe_la_ruta(orq, caplog, donde):
     o = orq(estaciones=KeyError("DATO-SENSIBLE")) if donde == "emt" else orq(tramos=[ValueError("DATO-SENSIBLE")])
     with caplog.at_level("DEBUG"):
-        bici, texto = o.bici.alternativa_bici(ORIGEN, DESTINO, hora_pedida=False)    # no lanza
+        bici, texto = o.bici.alternativa_bici(ORIGEN, DESTINO, hora_pedida=False, clima=CLIMA_APTO)    # no lanza
     assert bici["estado"] == "no_disponible" and texto == "La alternativa en bici (BiciMAD) no está disponible ahora."
     assert "DATO-SENSIBLE" not in repr((bici, texto)) + caplog.text
     assert caplog.records                                                           # queda registrado en el log interno
 
 
 def test_mensajes_de_bici_en_espanol(orq):
-    textos = [orq().bici.alternativa_bici(ORIGEN, DESTINO, hora_pedida=False)[1]]
-    textos.append(orq(estaciones={"estado": "ok", "estaciones": []}).bici.alternativa_bici(ORIGEN, DESTINO, False)[1])
+    textos = [orq().bici.alternativa_bici(ORIGEN, DESTINO, hora_pedida=False, clima=CLIMA_APTO)[1]]
+    textos.append(orq(estaciones={"estado": "ok", "estaciones": []}).bici.alternativa_bici(ORIGEN, DESTINO, False, CLIMA_APTO)[1])
     textos.append(orq(estaciones={"estado": "no_disponible", "estaciones": []}).bici.alternativa_bici(
-        ORIGEN, DESTINO, False)[1])
+        ORIGEN, DESTINO, False, CLIMA_APTO)[1])
     for texto in textos:
         assert "BiciMAD" in texto
         assert not re.search(r"\b(bikes?|stations?|docks?|available|minutes?|walk|cycling)\b", texto, re.I)
@@ -778,3 +786,119 @@ def test_error_inesperado_en_clima_no_rompe_la_ruta(meteo, monkeypatch, caplog):
         r = meteo.bici.clima_origen(ORIGEN)
     assert r == {"estado": "no_disponible"}
     assert "DATO-SENSIBLE" not in repr(r) + caplog.text and caplog.records     # registrado sin el texto de la excepción
+
+
+# --- T14: integración del clima (R0, LESS_WALKING, línea y campo `clima`) ---
+
+@pytest.mark.parametrize("clima", [CLIMA_LLUVIA, CLIMA_SIN_DATO])
+def test_no_apto_o_sin_dato_no_ofrece_bici_ni_llama_a_la_emt(orq, clima):
+    o = orq()
+    assert o.bici.alternativa_bici(ORIGEN, DESTINO, hora_pedida=False, clima=clima) == (
+        {"estado": "no_ofrecida", "motivo": None}, "")                         # el clima ya lo explica su línea
+    assert o.emt_llamadas == 0 and o.google == []
+
+
+def test_apto_aplica_la_regla_de_oferta(orq):
+    o = orq()
+    assert o.bici.alternativa_bici(ORIGEN, DESTINO, hora_pedida=False, clima=CLIMA_APTO)[0]["estado"] == "ok"
+    assert o.emt_llamadas == 1
+
+
+def test_texto_del_clima(bici):
+    assert bici.texto_clima(CLIMA_SIN_DATO) == ""
+    apto = bici.texto_clima(CLIMA_APTO)
+    assert apto == ("Tiempo en el origen ahora: 16 °C, sin precipitación, viento 11 km/h (apto para exterior). "
+                    f"{config.CLIMA_ATRIBUCION}.")
+    no_apto = bici.texto_clima({**CLIMA_LLUVIA, "motivos": ["lluvia", "viento fuerte"]})
+    assert "precipitación 1.4 mm" in no_apto and "no apto para exterior: lluvia, viento fuerte" in no_apto
+    assert "menos tramos a pie" in no_apto and no_apto.endswith(f"{config.CLIMA_ATRIBUCION}.")
+
+
+@pytest.fixture
+def esc(monkeypatch):
+    return Escenario(monkeypatch)
+
+
+def cuerpo_google(esc):
+    assert len(esc.cuerpos_google) == 1
+    return esc.cuerpos_google[0]
+
+
+def test_no_apto_pide_less_walking_sin_llamadas_extra(esc):
+    esc.meteo = (200, METEO_LLUVIA)
+    r = pr.planificar_ruta("Sol", "Bernabéu")
+    prefs = cuerpo_google(esc)["transitPreferences"]
+    assert prefs["routingPreference"] == "LESS_WALKING" and prefs["allowedTravelModes"] == config.MODOS_GOOGLE
+    assert esc.cuantas("google") == 1 and len(esc.llamadas_meteo) == 1 and r["estado"] == "ok"
+
+
+def test_consultar_google_sin_preferencia_es_identica(esc):
+    origen, destino = {"lat": 40.4169, "lon": -3.7035}, {"lat": 40.4531, "lon": -3.6883}
+    pr.consultar_google(origen, destino)
+    pr.consultar_google(origen, destino, preferencia_transito=None)
+    pr.consultar_google(origen, destino, preferencia_transito="LESS_WALKING")
+    sin, none, con = esc.cuerpos_google
+    assert sin == none and "routingPreference" not in sin["transitPreferences"]
+    assert con["transitPreferences"] == {**sin["transitPreferences"], "routingPreference": "LESS_WALKING"}
+    assert {k: v for k, v in con.items() if k != "transitPreferences"} == \
+        {k: v for k, v in sin.items() if k != "transitPreferences"}
+
+
+@pytest.mark.parametrize("meteo", [(200, {}), TimeoutError("t"), (429, {"error": True}), (200, METEO_APTO)])
+def test_apto_o_sin_dato_peticion_de_siempre(esc, meteo):
+    esc.meteo = meteo
+    r = pr.planificar_ruta("Sol", "Bernabéu")
+    assert "routingPreference" not in cuerpo_google(esc)["transitPreferences"]
+    assert r["estado"] == "ok" and r["ruta"]["duracion_min"] == 22          # la ruta llega intacta
+    assert len(esc.llamadas_meteo) == 1
+
+
+def test_linea_de_clima_con_atribucion(esc):
+    r = pr.planificar_ruta("Sol", "Bernabéu")
+    assert "Tiempo en el origen ahora: 16 °C, sin precipitación, viento 11 km/h (apto para exterior)." in r["mensaje"]
+    assert r["mensaje"].endswith(f"{config.CLIMA_ATRIBUCION}.")
+    esc.nominatim, esc.meteo = [[SOL], [BERNABEU]], (200, METEO_LLUVIA)
+    r = pr.planificar_ruta("Sol", "Bernabéu")
+    assert "no apto para exterior: lluvia" in r["mensaje"] and "menos tramos a pie" in r["mensaje"]
+    assert config.CLIMA_ATRIBUCION in r["mensaje"]
+    # Sin dato de clima: ni línea ni atribución (RF-25).
+    esc.nominatim, esc.meteo = [[SOL], [BERNABEU]], TimeoutError("t")
+    r = pr.planificar_ruta("Sol", "Bernabéu")
+    assert "Tiempo en el origen" not in r["mensaje"] and "Open-Meteo" not in r["mensaje"]
+
+
+def test_campo_clima_solo_en_ok_sin_hora(esc):
+    r = pr.planificar_ruta("Sol", "Bernabéu")
+    assert r["estado"] == "ok" and r["clima"] == {
+        "estado": "ok", "temperatura_c": 16.1, "precipitacion_mm": 0.0, "codigo": 3, "viento_kmh": 11.2,
+        "apto": True, "motivos": [], "fuente": "Open-Meteo", "licencia": "CC BY 4.0"}
+    # Sin dato: el campo existe con estado no_disponible.
+    esc.nominatim, esc.meteo = [[SOL], [BERNABEU]], TimeoutError("t")
+    assert pr.planificar_ruta("Sol", "Bernabéu")["clima"] == {"estado": "no_disponible"}
+    # Estados que no son ok: sin campo clima, aunque se haya consultado.
+    for google_roto in (TimeoutError("t"), {}):
+        esc.nominatim, esc.meteo, esc.google = [[SOL], [BERNABEU]], (200, METEO_APTO), google_roto
+        r = pr.planificar_ruta("Sol", "Bernabéu")
+        assert r["estado"] != "ok" and "clima" not in r
+
+
+def test_hora_pedida_no_consulta_el_clima(esc):
+    for args in ({"hora_salida": "2026-10-15T09:00"}, {"hora_llegada": "2026-10-15T10:00"}):
+        esc.nominatim = [[SOL], [BERNABEU]]
+        esc.cuerpos_google.clear()
+        r = pr.planificar_ruta("Sol", "Bernabéu", **args)
+        assert r["estado"] == "ok" and "clima" not in r and "Tiempo en el origen" not in r["mensaje"]
+        assert "routingPreference" not in cuerpo_google(esc)["transitPreferences"]
+    assert esc.llamadas_meteo == []
+
+
+def test_limite_open_meteo_1(esc):
+    pr.planificar_ruta("Sol", "Bernabéu")
+    assert len(esc.llamadas_meteo) == 1 and esc.cuantas("google") == 1
+    # El clima se pide después de geocodificar y antes de Google.
+    assert esc.secuencia[:4] == ["nominatim", "nominatim", "meteo", "google"]
+    # Sin Google no hay clima: extremo ambiguo y fuera de cobertura.
+    for nominatim in ([[SOL, ATOCHA], [BERNABEU]], [[BARCELONA], [BERNABEU]]):
+        esc.nominatim, esc.llamadas_meteo[:] = nominatim, []
+        assert pr.planificar_ruta("Sol", "Bernabéu")["estado"] in ("ambigua", "fuera_cobertura")
+        assert esc.llamadas_meteo == []

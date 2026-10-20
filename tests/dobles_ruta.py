@@ -9,7 +9,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 import config
-from src.tools import planificar_ruta as pr
+from src.tools import bicimad, planificar_ruta as pr
 
 # Hora fija de las consultas: jueves 15/10/2026 08:12 en Madrid.
 AHORA = datetime(2026, 10, 15, 8, 12, tzinfo=ZoneInfo("Europe/Madrid"))
@@ -33,6 +33,11 @@ RESPUESTA_GOOGLE = {"routes": [{"duration": "1320s", "legs": [{"steps": [
         "transitLine": {"nameShort": "1", "vehicle": {"type": "SUBWAY"}}}},
 ]}]}]}
 
+# Respuesta real de Open-Meteo (T12) reducida a lo que usa el cliente: nublado, 16,1 °C, 11,2 km/h (apto para exterior).
+METEO_APTO = {"current": {"time": "2026-10-20T13:00", "interval": 900, "temperature_2m": 16.1,
+                          "precipitation": 0.0, "weather_code": 3, "wind_speed_10m": 11.2}}
+METEO_LLUVIA = {"current": {**METEO_APTO["current"], "precipitation": 1.4, "weather_code": 61}}
+
 ZONA = "Zona A según la tabla tarifaria."
 PRECIO = "El billete sencillo cuesta 1,50 €."
 
@@ -45,7 +50,11 @@ class Escenario:
         self.orden = []                          # "nominatim" / "google" / "rag", en el orden de las llamadas
         self.preguntas = []                      # preguntas recibidas por el RAG
         self.cuerpos_google = []
+        self.meteo = (200, METEO_APTO)           # respuesta (o excepción) de Open-Meteo (T14); su red es la de bicimad
+        self.llamadas_meteo = []                 # URLs pedidas a Open-Meteo
+        self.secuencia = []                      # "nominatim" / "meteo" / "google" / "rag" en orden (orden no incluye "meteo")
         monkeypatch.setattr(pr, "_http_json", self._http_json)
+        monkeypatch.setattr(bicimad, "_get_json", self._get_json_meteo)
         monkeypatch.setattr(pr, "ahora", lambda: AHORA)
         monkeypatch.setattr(pr.time, "sleep", lambda s: None)
         monkeypatch.setattr(pr.time, "monotonic", lambda: 1000.0)
@@ -56,13 +65,23 @@ class Escenario:
     def cuantas(self, servicio):
         return self.orden.count(servicio)
 
+    def _get_json_meteo(self, url, headers=None, timeout=10):
+        assert url.startswith(config.OPEN_METEO_URL), f"URL inesperada: {url}"
+        self.llamadas_meteo.append(url)
+        self.secuencia.append("meteo")
+        if isinstance(self.meteo, Exception):
+            raise self.meteo
+        return self.meteo
+
     def _http_json(self, url, *, headers=None, body=None, timeout=10):
         if url.startswith(config.NOMINATIM_URL):
             self.orden.append("nominatim")
+            self.secuencia.append("nominatim")
             respuesta = self.nominatim.pop(0)
         else:
             assert url == config.GOOGLE_ROUTES_URL, f"URL inesperada: {url}"
             self.orden.append("google")
+            self.secuencia.append("google")
             self.cuerpos_google.append(body)
             respuesta = self.google
         if isinstance(respuesta, Exception):
@@ -71,6 +90,7 @@ class Escenario:
 
     def _rag_ask(self, pregunta):
         self.orden.append("rag")
+        self.secuencia.append("rag")
         self.preguntas.append(pregunta)
         for clave, respuesta in self.rag.items():
             if clave in pregunta:
