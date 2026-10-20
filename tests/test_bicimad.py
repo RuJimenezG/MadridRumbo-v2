@@ -20,7 +20,7 @@ import pytest
 
 import config
 from src.tools import bicimad, planificar_ruta as pr
-from tests.dobles_ruta import ATOCHA, BARCELONA, BERNABEU, METEO_APTO, METEO_LLUVIA, SOL, Escenario
+from tests.dobles_ruta import ATOCHA, BARCELONA, BERNABEU, METEO_APTO, METEO_LLUVIA, SOL, TRAMOS_BICI_OK, Escenario
 
 RAIZ = Path(__file__).resolve().parent.parent
 
@@ -1017,3 +1017,104 @@ def test_sin_oferta_no_hay_llamadas_de_bici(monkeypatch):
     esc.meteo = (200, METEO_LLUVIA)
     r = ruta_con_bici(esc)
     assert r["bici"] == {"estado": "no_ofrecida", "motivo": None} and esc.llamadas_bici == []
+
+
+# --- T8: seguridad y coste (credenciales fuera de resultado, traza y log; bici íntegro; sin red real) ---
+
+@pytest.fixture(autouse=True)
+def sin_red_real(monkeypatch):
+    """Todo `urlopen` de este archivo se anota y falla. bicimad captura excepciones: sin este registro, un test que
+    llegara a la red real pasaría en silencio con `no_disponible`. Al terminar no debe quedar ningún intento."""
+    import urllib.request
+    intentos = []
+
+    def bloqueado(*args, **kwargs):
+        intentos.append(args)
+        raise AssertionError("petición HTTP real en un test: usa un doble de prueba")
+
+    monkeypatch.setattr(urllib.request, "urlopen", bloqueado)
+    yield intentos
+    assert intentos == [], "algún test intentó una petición HTTP real"
+
+
+def test_la_red_real_queda_bloqueada_en_el_cliente_propio(bici, sin_red_real):
+    with pytest.raises(AssertionError):
+        bici._get_json("https://openapi.emtmadrid.es/v1/transport/bicimad/stations/")
+    with pytest.raises(AssertionError):
+        bici._post_json(config.GOOGLE_ROUTES_URL, {}, {})
+    assert len(sin_red_real) == 2
+    sin_red_real.clear()                                   # intentos esperados: el guardián no debe fallar al terminar
+
+
+ID_EMT, CLAVE_EMT, USUARIO_EMT, TOKEN_DOBLE = "ID-EMT-FALSO", "CLAVE-EMT-FALSA", "usuario-doble", "TOKEN-DOBLE"
+SECRETOS_T8 = (ID_EMT, CLAVE_EMT, TOKEN_DOBLE, USUARIO_EMT, "CLAVE-DE-TEST")
+LOGIN_CON_SECRETOS = (200, {"code": "00", "datetime": "x", "data": [{"accessToken": TOKEN_DOBLE, "tokenSecExpiration": 86400}],
+                            "description": f"Register user: {USUARIO_EMT} with token: {TOKEN_DOBLE}  Data recovered OK"})
+FILTRA = f"fallo con {ID_EMT} {CLAVE_EMT} {TOKEN_DOBLE} {USUARIO_EMT} CLAVE-DE-TEST"
+
+
+def _rompe_elegir(monkeypatch):
+    def explota(*args, **kwargs):
+        raise RuntimeError(FILTRA)
+    monkeypatch.setattr(bicimad, "elegir_estaciones", explota)
+
+
+ESCENARIOS_T8 = {
+    "todo_ok": lambda e, mp: None,
+    "login_403_con_description": lambda e, mp: setattr(e, "emt_login", (403, {
+        "code": "84", "description": f"Register user: {USUARIO_EMT} with token: {TOKEN_DOBLE}", "data": []})),
+    "estaciones_con_excepcion": lambda e, mp: setattr(e, "emt_estaciones", TimeoutError(FILTRA)),
+    "google_bici_con_excepcion": lambda e, mp: e.tramos_bici.__setitem__(1, OSError(FILTRA)),
+    "open_meteo_con_excepcion": lambda e, mp: setattr(e, "meteo", OSError(FILTRA)),
+    "google_transporte_con_excepcion": lambda e, mp: setattr(e, "google", OSError(FILTRA)),
+    "error_inesperado_en_la_bici": lambda e, mp: _rompe_elegir(mp),
+}
+
+
+def _escenario_t8(monkeypatch, nombre):
+    esc = Escenario(monkeypatch)
+    monkeypatch.setattr(config, "EMT_CLIENT_ID", ID_EMT)
+    monkeypatch.setattr(config, "EMT_PASS_KEY", CLAVE_EMT)
+    esc.emt_login = LOGIN_CON_SECRETOS
+    ESCENARIOS_T8[nombre](esc, monkeypatch)
+    esc.bici_real()
+    return esc
+
+
+@pytest.mark.parametrize("nombre", list(ESCENARIOS_T8))
+def test_credenciales_nunca_en_resultado_ni_log(monkeypatch, caplog, capsys, nombre):
+    from src.tools import ejecutar_tool
+    esc = _escenario_t8(monkeypatch, nombre)
+    traza = []
+    with caplog.at_level("DEBUG"):
+        texto = ejecutar_tool("planificar_ruta", {"origen": "Sol", "destino": "Bernabéu"}, traza)   # planificar_ruta_texto
+    salida = capsys.readouterr()
+    visible = texto + json.dumps(traza, ensure_ascii=False, default=str) + caplog.text + salida.out + salida.err
+    for secreto in SECRETOS_T8:
+        assert secreto not in visible, f"{secreto} aparece en el escenario {nombre}"
+    assert len(traza) == 1 and traza[0]["status"] == "ok" and json.loads(texto)["estado"] in (
+        "ok", "ruta_no_calculada")                           # un fallo de la bici no tumba la herramienta
+    # Las llamadas anotadas del doble sí llevan credenciales: confirma que el escenario las usaba de verdad.
+    if nombre == "todo_ok":
+        assert any(h and h.get("passKey") == CLAVE_EMT for _, h in esc.llamadas_bici)
+
+
+def test_bici_aparece_integro_en_el_json_de_la_tool_y_en_los_resultados(monkeypatch):
+    from src.agents.rutas import nodo_rutas
+    from src.tools import ejecutar_tool
+    esc = _escenario_t8(monkeypatch, "todo_ok")
+    resultado = json.loads(ejecutar_tool("planificar_ruta", {"origen": "Sol", "destino": "Bernabéu"}, []))
+    bici = resultado["bici"]
+    assert set(bici) == {"estado", "motivo", "origen_estacion", "destino_estacion", "tramos", "duracion_min",
+                         "aviso", "fuentes"}
+    assert len(bici["tramos"]) == 3 and bici["fuentes"] == {"estaciones": "EMT BiciMAD", "tiempos": "Google Routes"}
+    assert resultado["clima"]["estado"] == "ok" and bici["aviso"] in resultado["mensaje"]
+    # Por el especialista de rutas: el JSON completo llega a `resultados` (la traza solo guarda un extracto).
+    esc.nominatim = [[SOL], [BERNABEU]]
+    esc.tramos_bici = list(TRAMOS_BICI_OK)
+    respuestas = iter([{"tool": "planificar_ruta", "args": {"origen": "Sol", "destino": "Bernabéu"}}, {"final": "Listo."}])
+    estado = {"mensaje": "Quiero ir de Sol a Bernabéu", "historial": [], "notas": [], "traza": []}
+    salida = nodo_rutas(estado, lambda mensajes: next(respuestas), ejecutar_tool)
+    completo = json.loads(salida["resultados"][0]["resultado"])
+    assert completo["bici"] == bici                          # el mismo contenido, sin recortes
+    assert len(salida["traza"][0]["preview"]) <= 120 < len(salida["resultados"][0]["resultado"])
