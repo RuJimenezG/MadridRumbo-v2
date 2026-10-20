@@ -61,3 +61,18 @@ Nominatim 0,04–0,35; Open-Meteo 0,13–0,46; EMT (login) 0,14; Google transpor
 Tiempo real de esta pasada: 16 °C, sin precipitación, 13 km/h (apto), con atribución en el mensaje.
 
 **Qué sigue sin contrastar con datos reales:** si el login "01" trae `data[0].accessToken`; cuántas estaciones tienen `activate` distinto de 1, `no_available` distinto de 0 o `virtualDelete` verdadero, y si la elegida cumple la regla; si Google devuelve `routes.warnings` en bici y a pie; el mensaje final con la bici y la suma de los tres tramos.
+
+## Prueba aislada de Google Routes para la bici y a pie (2026-10-20, ~14:40)
+
+> **3 llamadas reales** a Google (`bicimad.tramo_google`: 1 `BICYCLE` y 2 `WALK`), ninguna a otro servicio, sin reintentos. Coordenadas fijas de prueba (no son estaciones reales): bici (40.4169, -3.7035) → (40.4530, -3.6883); a pie 1 (40.4169, -3.7035) → (40.4155, -3.7074); a pie 2 (40.4515, -3.6890) → (40.4530, -3.6883). Máscara enviada: `routes.duration,routes.distanceMeters,routes.warnings`.
+
+| Tramo | HTTP | Duración devuelta | Distancia | Tiempo de respuesta | Duración que da el cliente |
+|---|---|---|---|---|---|
+| `BICYCLE` | 200 | 1219 s | 5 323 m | 0,26 s | 20 min |
+| `WALK` 1 | 200 | 370 s | 445 m | 0,17 s | 6 min |
+| `WALK` 2 | 200 | 408 s | 487 m | 0,19 s | 7 min |
+
+- **Cobertura de `BICYCLE` en Madrid:** hay ruta ciclable (≈ 16 km/h de media en ese trayecto). El cuerpo trae solo `routes` con una ruta y, en ella, `distanceMeters` y `duration`.
+- **`routes.warnings`: no llega** en ninguna de las tres respuestas (la clave no existe en la ruta, aunque se pidió en la máscara). Por tanto Google **no** devuelve aquí el aviso beta como campo de la respuesta.
+- **Qué hace nuestro cliente:** al no haber aviso de Google, devuelve en `aviso` el **texto fijo** `BICI_AVISO_GOOGLE` («Las rutas a pie y en bici están en fase beta y pueden carecer de aceras, caminos peatonales o carriles bici claros.») en los tres tramos. Así se cumple RF-12 (sin aviso no se muestra la alternativa) con el texto de respaldo.
+- No se probó con una combinación que pudiera devolver `warnings`; con tres tramos sin ellos, el aviso de Google parece no enviarse nunca en rutas urbanas de Madrid.

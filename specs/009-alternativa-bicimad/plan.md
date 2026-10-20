@@ -142,7 +142,7 @@ Todos con `pytest`, sin red ni LLM, en `tests/test_bicimad.py`. **Dobles:** func
 - **Login de la EMT con dos códigos correctos:** "00" (token nuevo) y "01" (token vigente prorrogado, visto en T10). El cliente acepta ambos si `data[0].accessToken` existe; sin caducidad usa 3600 s (`EMT_TOKEN_CADUCIDAD_DEFECTO_S`). Falta comprobar con datos reales que "01" trae el token.
 - **API de la EMT verificada en T1** (login v1 y estaciones). Quedan sin confirmar el significado de `no_available`, los límites de uso (el login devuelve `apiCounter`) y que `description` del login **incluye el token y el usuario**: el cliente nunca debe registrarla ni devolverla.
 - **El sintetizador puede descartar el aviso de Google** (LLM; confirmado leyendo el código). Mitigación: T9 (opción A, archivo compartido). Si no se aprueba, RF-12 no se cumple en la respuesta final aunque sí en el JSON.
-- **Cobertura y beta de Google BICYCLE/WALK.** Sin confirmar el texto ni el campo del aviso, ni la calidad en Madrid. Se revisa en la demo.
+- **Cobertura y beta de Google BICYCLE/WALK (verificado 2026-10-20, `demos.md`).** `BICYCLE` y `WALK` funcionan en Madrid (0,17–0,26 s por llamada) y `routes.warnings` no llega, así que el aviso es siempre el texto fijo `BICI_AVISO_GOOGLE`. La calidad real de las rutas ciclables sigue sin valorarse.
 - **Latencia.** Hasta 5 peticiones HTTP secuenciales en la alternativa (2 EMT + 3 Google). Se acepta; paralelizar queda para después.
 - **Disponibilidad obsoleta.** Entre la consulta y la llegada a la estación puede cambiar; se avisa en el mensaje.
 - **Tests de otros afectados** por el campo `bici` y por la llamada real del enganche (tabla anterior).

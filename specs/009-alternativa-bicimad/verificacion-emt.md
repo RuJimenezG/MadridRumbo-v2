@@ -98,3 +98,12 @@ Comprobar con la persona titular de la cuenta de la EMT que las claves son váli
 - **Lista de estaciones:** **`TimeoutError` a los 10,37 s** (`EMT_TIMEOUT_S` = 10). No llegó respuesta, así que no hay número de estaciones ni recuento de `activate`, `no_available` ni `virtualDelete`: el punto 3 sigue sin contrastar. `emt_estaciones()` devolvió `no_disponible` tras 16,3 s en total.
 - **Lectura:** la EMT está respondiendo muy lento hoy (login de 5,9 s; lista de más de 10 s para unas 678 estaciones). Con ese timeout, la alternativa en bici falla aunque la EMT funcione. En T1 (mañana del 20/10) la lista llegó bien; no se midió su tiempo.
 - **Decisión (2026-10-20):** login con `EMT_TIMEOUT_S` = 10 s y lista de estaciones con `EMT_TIMEOUT_ESTACIONES_S` = 20 s, sin paralelización ni caché. Con la EMT lenta la consulta puede tardar 25-30 s en el peor caso. Falta repetir la lista de estaciones para contrastar los recuentos de `activate`, `no_available` y `virtualDelete`.
+
+## Intento 6 — prueba aislada tras ampliar el plazo de la lista (2026-10-20, ~14:35)
+
+> **1 llamada real** a la EMT (de las 2 autorizadas), ninguna a otro servicio, sin reintentos y sin guardar la respuesta.
+
+- **Login:** `TimeoutError` a los **11,07 s** (plazo `EMT_TIMEOUT_S` = 10 s). No hubo respuesta: no se sabe el `code` ni si trae `accessToken`. La lista de estaciones **no se pidió**.
+- **Resultado de `emt_estaciones()`:** `no_disponible`, sin excepción, tras 11,07 s.
+- **Lectura:** el problema ya no es solo la lista. En el intento 5 el login tardó 5,9 s y esta vez superó los 10 s (en las primeras pruebas, 0,14 s). La EMT está muy lenta o inestable esta tarde; con el plazo actual del login (10 s) la alternativa puede fallar aunque el servicio acabe respondiendo.
+- **Sigue sin contrastar:** recuento de estaciones y de `activate`, `no_available` y `virtualDelete`; si la lista llega entera con 20 s; qué hace falta de plazo para el login (decidir si subir `EMT_TIMEOUT_S`).
