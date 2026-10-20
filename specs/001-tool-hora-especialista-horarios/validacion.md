@@ -1,6 +1,6 @@
 # Validación — Spec 001
 
-> Fecha: 2026-10-14 · Actualizada el 2026-10-19 tras integrarse el grafo (spec 005) · Resultado de `pytest`: 450 passed, 0 failed
+> Fecha: 2026-10-14 · Actualizada el 2026-10-19 tras integrarse el grafo (spec 005) · Resultado de `pytest`: 623 passed, 0 failed (`develop`)
 
 | RF | Cómo se comprueba | Test o comprobación manual | Resultado |
 |---|---|---|---|
@@ -36,4 +36,4 @@
 - Rubén adaptó `src/agents/horarios.py` y `base.py` para el grafo (prompt con la excepción de horarios y solo sus dos tools, y límite compartido de tools por turno) y añadió tests propios en `tests/test_especialista_horarios.py` y `tests/test_allowlist_horarios.py`. Los requisitos RF-8 a RF-15 siguen cubiertos por los mismos tests.
 
 ## Veredicto
-**Parcial.** Los 16 RF tienen test en verde y la suite completa pasa (450 passed). El especialista `horarios` ya está integrado en el grafo y probado con dobles sin API. Falta la demo con el grafo real, el RAG indexado y Gemini («¿hasta qué hora hay metro hoy?»), que gasta API y todavía no se ha hecho. T11 queda abierta hasta entonces.
+**Parcial.** Los 16 RF tienen test en verde y la suite completa pasa (623 passed en `develop`). El especialista `horarios` ya está integrado en el grafo y probado con dobles sin API. Falta la demo con el grafo real, el RAG indexado y Gemini («¿hasta qué hora hay metro hoy?»), que gasta API y todavía no se ha hecho. T11 queda abierta hasta entonces.

@@ -46,7 +46,7 @@
 | Demo CLI (simulado) | Manual | `python main.py --demo --auto-aprobar`, el chat con rechazo y aprobación y la elección entre dos planes, con `MADRIDRUMBO_GRAFO=falso` | ✅ |
 | Demo web (simulado) | Manual | `AppTest` de Streamlit: horarios sin plan, ruta con un plan, dos planes con selector, rechazo, aprobación, filtro del supervisor y nueva conversación | ✅ |
 | Demo con el grafo real y API | Manual ⚠️ | Horarios, una ruta con aprobación y una pregunta fuera de corpus con Gemini, Nominatim y Google | ⏭ Pendiente |
-| Interfaz en un navegador real | Manual | Aspecto de los botones, el selector y el panel de depuración | ⏭ Pendiente |
+| Interfaz en un navegador real | Manual | `streamlit run app.py` en modo simulado: aviso, planes, selector, aprobar y panel de depuración | ✅ |
 
 ## Comprobaciones realizadas
 
@@ -77,14 +77,14 @@ acredita la transmisión del texto, no la interpretación visual.
 - [x] Demo manual del CLI y de Streamlit con el modo simulado.
 - [x] Pruebas de los clientes contra el grafo real con dobles de prueba, sin API.
 - [ ] Demo manual con el grafo real y API (Gemini, Nominatim y Google).
-- [ ] Interfaz de Streamlit comprobada en un navegador real.
+- [x] Interfaz de Streamlit comprobada en un navegador real.
 
 ## Fuera de spec
 
 - El CLI acepta el identificador del plan (`ruta-2`) además de su número al elegir plan.
 - Con `--auto-aprobar` y varios planes se aprueba el primero (nadie elige).
 - La sesión no llama al grafo cuando hay varios planes y no se indica cuál, o si el identificador no existe. Evita el aviso del grafo real, que deja `hitl_pendiente` en falso aunque siga habiendo un plan.
-- El filtro de entradas técnicas (RF-35) se aplica también al panel de depuración de la web, la lectura más estricta de la spec 006. Pendiente de confirmar con Rubén.
+- El filtro de entradas técnicas (RF-35) se aplica también al panel de depuración de la web, la lectura más estricta de la spec 006. Decisión cerrada: los diagnósticos del supervisor se ocultan en toda la web y se muestran solo en el CLI.
 - La spec se renumeró de 005 a 008 porque las specs 005, 006 y 007 son del grafo y del supervisor.
 
 ## Limitaciones conocidas
@@ -99,5 +99,5 @@ acredita la transmisión del texto, no la interpretación visual.
 verde y la suite completa pasa sin API. Los clientes se han probado contra el
 grafo simulado y contra el grafo real con dobles de prueba. Falta la demo con
 el grafo real y las APIs de verdad, que gasta llamadas y necesita las claves de
-Gemini, Nominatim y Google, y ver la web en un navegador real. T34 y T35
+Gemini, Nominatim y Google. T34 y T35
 quedan abiertas hasta entonces.

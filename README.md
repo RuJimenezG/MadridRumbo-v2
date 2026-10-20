@@ -81,14 +81,14 @@ Debe listar los cuatro precios de la imagen demo (1,50 €, 1,80 €, 5,00 €, 
 - Contenido: captura de la sección «Billetes de autobuses EMT» con cuatro precios: billete sencillo EMT 1,50 €, billete sencillo TransBus 1,80 €, billete Exprés Aeropuerto 5,00 € y Metrobús 10 viajes 7,30 €.
 - Fuente: captura propia de [RedTransporte, precios de billetes y abonos (tarifas 2026)](https://www.redtransporte.com/madrid/precios-abonos.html), © RedTransporte. La página no indica licencia; se usa solo con fines educativos.
 - Fecha de captura: 2026-10-14.
-- Demo prevista: «Según la imagen, ¿cuánto cuestan 3 billetes sencillos EMT y 1 Exprés Aeropuerto?» (3 × 1,50 + 5,00 = 9,50 €). Resultado real de las dos tools en `entregables/informe_decisiones.md`.
+- Demo prevista: «Según assets/imagen_demo.jpg, ¿cuánto cuestan 3 billetes sencillos EMT y 1 Exprés Aeropuerto?» (3 × 1,50 + 5,00 = 9,50 €). Resultado real de las dos tools en `entregables/informe_decisiones.md`.
 
 ## Limitaciones conocidas (parte de José)
 
 - `hora_actual` solo distingue laborable, sábado y domingo; los festivos se tratan como laborables.
 - La lectura de cifras de `describir_imagen` se ha verificado solo con la imagen demo.
 - Los especialistas `horarios` y `tarifas` se probaron con un LLM falso y ahora los usa el grafo, pero `tarifas` solo se activa con una imagen aportada válida y ningún cliente puede aportarla todavía.
-- `describir_imagen` no reintenta ante un error temporal del modelo y no informa de la causa.
+- `describir_imagen` reintenta una sola vez ante un error temporal y registra la causa, pero el mensaje que ve el agente sigue siendo genérico a propósito, para no filtrar detalles internos.
 
 ## Metodología
 
