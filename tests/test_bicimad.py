@@ -10,6 +10,7 @@ Interfaz que fijan estos tests (a implementar después):
 Datos reales de la EMT: ver `specs/009-alternativa-bicimad/verificacion-emt.md`.
 """
 import ast
+import json
 import importlib
 import re
 import time
@@ -368,3 +369,106 @@ def test_misma_estacion_no_se_ofrece(bici, monkeypatch):
     monkeypatch.setattr(config, "BICI_ESTACION_RADIO_MAX_M", 10_000)     # una sola estación sirve a los dos extremos
     r = bici.elegir_estaciones([est(1, ORIGEN, 1500, bicis=3, huecos=3)], ORIGEN, DESTINO)
     assert r == {"estado": "no_ofrecida", "motivo": "misma_estacion"}
+
+
+# --- T5: cliente de Google Routes para bici y a pie ---
+
+CLAVE_GOOGLE = "CLAVE-GOOGLE-FALSA"
+A = {"lat": 40.4169, "lon": -3.7035}
+B = {"lat": 40.4285, "lon": -3.7021}
+
+
+class RedPost:
+    """Doble de `_post_json`: una respuesta (o excepción) por llamada y registro de las llamadas."""
+
+    def __init__(self, *respuestas):
+        self.respuestas = list(respuestas)
+        self.llamadas = []
+
+    def __call__(self, url, headers=None, body=None, timeout=10):
+        self.llamadas.append({"url": url, "headers": dict(headers or {}), "body": body, "timeout": timeout})
+        respuesta = self.respuestas.pop(0)
+        if isinstance(respuesta, Exception):
+            raise respuesta
+        return respuesta
+
+
+@pytest.fixture
+def google(bici, monkeypatch):
+    monkeypatch.setattr(config, "GOOGLE_ROUTES_API_KEY", CLAVE_GOOGLE)
+
+    def con(*respuestas):
+        red = RedPost(*respuestas)
+        monkeypatch.setattr(bici, "_post_json", red)
+        return red
+    return types_namespace(bici, con)
+
+
+def ruta(duracion="660s", **extra):
+    return 200, {"routes": [{"duration": duracion, "distanceMeters": 2300, **extra}]}
+
+
+def test_mascara_incluye_los_avisos():
+    assert "routes.warnings" in config.GOOGLE_FIELD_MASK_BICI
+
+
+def test_tramo_bici_una_llamada_con_bicycle(google):
+    red = google.con(ruta("660s"))
+    r = google.bici.tramo_google("BICYCLE", A, B)
+    assert r["estado"] == "ok" and r["duracion_min"] == 11
+    assert len(red.llamadas) == 1
+    llamada = red.llamadas[0]
+    assert llamada["url"] == config.GOOGLE_ROUTES_URL and llamada["timeout"] == config.GOOGLE_TIMEOUT_S
+    assert llamada["body"]["travelMode"] == "BICYCLE"
+    assert llamada["body"]["origin"] == {"location": {"latLng": {"latitude": A["lat"], "longitude": A["lon"]}}}
+    assert llamada["body"]["destination"] == {"location": {"latLng": {"latitude": B["lat"], "longitude": B["lon"]}}}
+    # Máscara propia (no la de transporte público) y clave solo en la cabecera.
+    assert llamada["headers"] == {"X-Goog-Api-Key": CLAVE_GOOGLE, "X-Goog-FieldMask": config.GOOGLE_FIELD_MASK_BICI}
+    assert CLAVE_GOOGLE not in json.dumps(llamada["body"]) and CLAVE_GOOGLE not in llamada["url"]
+
+
+def test_tramos_a_pie_con_walk(google):
+    red = google.con(ruta("185s"), ruta("90s"))
+    assert google.bici.tramo_google("WALK", A, B)["duracion_min"] == 3
+    assert google.bici.tramo_google("WALK", B, A)["duracion_min"] == 2
+    assert [l["body"]["travelMode"] for l in red.llamadas] == ["WALK", "WALK"]
+    assert red.llamadas[1]["body"]["origin"]["location"]["latLng"]["latitude"] == B["lat"]
+
+
+def test_aviso_de_google_o_texto_fijo(google):
+    google.con(ruta(warnings=["Aviso de Google uno.", "Aviso de Google dos."]),
+               ruta(), ruta(warnings=[]), ruta(warnings=[None, "", 7]))
+    assert google.bici.tramo_google("WALK", A, B)["aviso"] == "Aviso de Google uno. Aviso de Google dos."
+    for _ in range(3):
+        assert google.bici.tramo_google("WALK", A, B)["aviso"] == config.BICI_AVISO_GOOGLE
+
+
+FALLOS_GOOGLE = [
+    (403, {"error": {"message": f"clave {CLAVE_GOOGLE} rechazada"}}),
+    (500, None),
+    (200, {}),                                              # sin rutas
+    (200, {"routes": []}),
+    (200, {"routes": [{}]}),                                # sin duración
+    (200, {"routes": [{"duration": "abc"}]}),
+    (200, {"routes": [{"duration": 660}]}),
+    (200, ["no", "es", "un", "objeto"]),
+    TimeoutError(f"timeout con {CLAVE_GOOGLE}"),
+    OSError(f"sin red {CLAVE_GOOGLE}"),
+    ValueError(f"JSON inválido {CLAVE_GOOGLE}"),
+]
+
+
+@pytest.mark.parametrize("fallo", FALLOS_GOOGLE)
+def test_google_falla_no_disponible(google, fallo, caplog, capsys):
+    red = google.con(fallo)
+    with caplog.at_level("DEBUG"):
+        r = google.bici.tramo_google("BICYCLE", A, B)
+    assert r == {"estado": "no_disponible"} and len(red.llamadas) == 1       # sin excepción ni reintento
+    assert CLAVE_GOOGLE not in repr(r) + caplog.text + "".join(capsys.readouterr())
+
+
+@pytest.mark.parametrize("clave", [None, "", "   "])
+def test_google_sin_clave_no_llama(google, monkeypatch, clave):
+    red = google.con()
+    monkeypatch.setattr(config, "GOOGLE_ROUTES_API_KEY", clave)
+    assert google.bici.tramo_google("BICYCLE", A, B) == {"estado": "no_disponible"} and red.llamadas == []

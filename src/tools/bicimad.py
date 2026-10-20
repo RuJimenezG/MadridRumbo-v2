@@ -5,6 +5,7 @@ La `description` del login contiene el usuario y el token: nunca se registra, se
 """
 import json
 import math
+import re
 import time
 import urllib.error
 import urllib.request
@@ -30,6 +31,23 @@ def _get_json(url, headers=None, timeout=10):
     Lanza OSError (red, timeout) o ValueError (JSON inválido en una respuesta 200).
     """
     peticion = urllib.request.Request(url, headers=headers or {}, method="GET")
+    try:
+        with urllib.request.urlopen(peticion, timeout=timeout) as r:
+            return r.status, json.loads(r.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        try:
+            return e.code, json.loads(e.read().decode("utf-8"))
+        except ValueError:
+            return e.code, None
+
+
+def _post_json(url, headers=None, body=None, timeout=10):
+    """POST con cuerpo JSON que devuelve `(status_http, cuerpo_json)`; el cuerpo es None si un error HTTP no trae JSON.
+
+    Lanza OSError (red, timeout) o ValueError (JSON inválido en una respuesta 200).
+    """
+    peticion = urllib.request.Request(url, data=json.dumps(body).encode("utf-8"), headers=headers or {}, method="POST")
+    peticion.add_header("Content-Type", "application/json")
     try:
         with urllib.request.urlopen(peticion, timeout=timeout) as r:
             return r.status, json.loads(r.read().decode("utf-8"))
@@ -138,3 +156,37 @@ def elegir_estaciones(estaciones: list, origen: dict, destino: dict) -> dict:
     if e_o["id"] == e_d["id"]:
         return {"estado": "no_ofrecida", "motivo": "misma_estacion"}
     return {"estado": "ok", "origen": e_o, "destino": e_d}
+
+
+def tramo_google(modo: str, origen: dict, destino: dict) -> dict:
+    """Tramo a pie (`WALK`) o en bici (`BICYCLE`) con Google Routes: una llamada, sin reintentos (RF-8, RF-9, RF-12).
+
+    Devuelve `{"estado": "ok", "duracion_min": int, "aviso": str}` (el aviso de Google si llega y, si no,
+    `BICI_AVISO_GOOGLE`) o `{"estado": "no_disponible"}`. Nunca lanza ni incluye detalles del error ni la clave.
+    """
+    fallo = {"estado": "no_disponible"}
+    try:
+        clave = config.GOOGLE_ROUTES_API_KEY
+        if not _credencial(clave):
+            return fallo
+
+        def punto(lugar: dict) -> dict:
+            return {"location": {"latLng": {"latitude": lugar["lat"], "longitude": lugar["lon"]}}}
+
+        cuerpo = {"origin": punto(origen), "destination": punto(destino), "travelMode": modo, "languageCode": "es"}
+        estado, respuesta = _post_json(
+            config.GOOGLE_ROUTES_URL,
+            {"X-Goog-Api-Key": clave, "X-Goog-FieldMask": config.GOOGLE_FIELD_MASK_BICI},
+            cuerpo, config.GOOGLE_TIMEOUT_S)
+        if estado != 200 or not isinstance(respuesta, dict):
+            return fallo
+        primera = respuesta["routes"][0]
+        duracion = primera["duration"]
+        if not isinstance(duracion, str) or not re.fullmatch(r"\d+(\.\d+)?s", duracion):
+            return fallo
+        avisos = primera.get("warnings")
+        textos = [a.strip() for a in avisos if isinstance(a, str) and a.strip()] if isinstance(avisos, list) else []
+        return {"estado": "ok", "duracion_min": round(float(duracion[:-1]) / 60),
+                "aviso": " ".join(textos) or config.BICI_AVISO_GOOGLE}
+    except Exception:  # noqa: BLE001 - sin detalles: la excepción puede contener datos sensibles
+        return fallo

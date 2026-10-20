@@ -177,8 +177,8 @@ EMT_TIMEOUT_S = 10
 EMT_CLIENT_ID = os.getenv("EMT_CLIENT_ID")
 EMT_PASS_KEY = os.getenv("EMT_PASS_KEY")
 
-# Google Routes para los tramos en bici y a pie: solo duración y distancia (la facturación depende de los campos).
-GOOGLE_FIELD_MASK_BICI = "routes.duration,routes.distanceMeters"
+# Google Routes para los tramos en bici y a pie: duración, distancia y avisos (el aviso de beta, RF-12) (la facturación depende de los campos).
+GOOGLE_FIELD_MASK_BICI = "routes.duration,routes.distanceMeters,routes.warnings"
 # Texto de respaldo del aviso de beta que exige Google para rutas a pie y en bici (RF-12).
 BICI_AVISO_GOOGLE = ("Las rutas a pie y en bici están en fase beta y pueden carecer de aceras, caminos peatonales "
                      "o carriles bici claros.")
