@@ -145,7 +145,7 @@ MadridRumbo/
 │   └── clientes/                   # contrato, sesión, CLI, presentación y modo simulado
 ├── data/                           # Corpus CRTM
 ├── assets/                         # Icono e imagen demo
-├── output/                         # Artefactos generados y esta propuesta
+├── output/                         # Artefactos generados (esta propuesta está en la raíz: README-propuesta.md)
 ├── chroma/                         # Índice vectorial persistente, generado localmente
 ├── specs/                          # Especificaciones, planes, tareas y validaciones SDD
 ├── docs/                           # Constitución, plantillas y guía de tests
@@ -311,7 +311,7 @@ El grafo valida que sea el archivo demo permitido en `assets/` y solo durante es
 
 Fuente: captura propia de [RedTransporte, precios de billetes y abonos (tarifas 2026)](https://www.redtransporte.com/madrid/precios-abonos.html), © RedTransporte; se utiliza únicamente con fines educativos. Fecha de captura: 2026-10-14.
 
-La consulta «Según la imagen, ¿cuánto cuestan 3 billetes sencillos EMT y 1 Exprés Aeropuerto?» debe seguir el flujo visión → cálculo y producir `9,50 €` cuando se use el grafo real con una API disponible.
+La consulta «Según assets/imagen_demo.jpg, ¿cuánto cuestan 3 billetes sencillos EMT y 1 Exprés Aeropuerto?» (la ruta literal activa el contexto de imagen, spec 007) debe seguir el flujo visión → cálculo y producir `9,50 €` cuando se use el grafo real con una API disponible.
 
 ---
 

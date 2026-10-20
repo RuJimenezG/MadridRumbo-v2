@@ -125,8 +125,7 @@ Esta spec define los dos clientes como **capas finas** sobre el grafo: muestran 
 
 ## Dudas abiertas
 
-Ninguna que bloquee el plan. Queda un punto que José habla con Rubén y se aplica con la lectura indicada mientras tanto:
-- **Alcance de RF-35.** Se ocultan los diagnósticos del supervisor en toda la web de Streamlit (chat y panel de depuración), la lectura más estricta de la spec 006. Si Rubén confirma que basta con el chat, se relaja.
+Ninguna. Cerrada: **alcance de RF-35.** Los diagnósticos del supervisor se ocultan en toda la web de Streamlit (chat y panel de depuración), la lectura más estricta de la spec 006, y se muestran solo en el CLI.
 
 ## Decisiones tomadas
 

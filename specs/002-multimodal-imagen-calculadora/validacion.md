@@ -1,6 +1,6 @@
 # Validación — Spec 002
 
-> Fecha: 2026-10-14 · Actualizada el 2026-10-19 tras integrarse el grafo (specs 005 a 007) · Resultado de `pytest`: 466 passed, 0 failed
+> Fecha: 2026-10-14 · Actualizada el 2026-10-19 tras integrarse el grafo (specs 005 a 007) · Resultado de `pytest`: 623 passed, 0 failed (`develop`)
 
 | RF | Cómo se comprueba | Test o comprobación manual | Resultado |
 |---|---|---|---|
@@ -49,6 +49,6 @@
 - El reintento y el registro de la causa (RF-24 a RF-27) solo se han probado con clientes falsos y con los errores reales de `google.genai` construidos a mano; no se han provocado con un 503 real de Gemini.
 
 ## Veredicto
-**Parcial.** Los 23 RF tienen test en verde y la suite completa pasa (450 passed). El 2026-10-14 se ejecutó la demo real de las dos tools con `gemini-3.8-flash`: `describir_imagen` leyó los cuatro precios de la imagen (RF-1, RF-3, RF-11) y `calculadora` dio 9,50 para `3*1,50+5,00`, con las dos llamadas en la traza (RF-9, RF-10, RF-19, RF-20). RF-21 a RF-23 se reformularon cuando la spec 005 repartió el flujo entre `tarifas` y `auxiliar`; siguen cubiertos con dobles de prueba, pero no se pueden demostrar de punta a punta con el grafo real mientras no se pueda aportar una imagen. T11 quedó hecha a nivel de tools; T12 sigue abierta.
+**Parcial.** Los 27 RF (RF-1 a RF-27) tienen test en verde y la suite completa pasa (623 passed en `develop`). El 2026-10-14 se ejecutó la demo real de las dos tools con `gemini-3.8-flash`: `describir_imagen` leyó los cuatro precios de la imagen (RF-1, RF-3, RF-11) y `calculadora` dio 9,50 para `3*1,50+5,00`, con las dos llamadas en la traza (RF-9, RF-10, RF-19, RF-20). RF-21 a RF-23 se reformularon cuando la spec 005 repartió el flujo entre `tarifas` y `auxiliar`; siguen cubiertos con dobles de prueba, pero no se pueden demostrar de punta a punta con el grafo real mientras no se pueda aportar una imagen. T11 quedó hecha a nivel de tools; T12 sigue abierta.
 
 **Actualización del 2026-10-19 (RF-24 a RF-27).** Se añadieron el reintento ante errores temporales y el registro de la causa del fallo, a raíz de la demo real, donde un 503 pasajero, un modelo retirado y una clave inválida daban el mismo mensaje. Los 4 requisitos nuevos tienen test en verde (466 passed).
