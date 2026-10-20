@@ -502,14 +502,18 @@ def _encabezado(validacion: dict, hora_salida, hora_llegada, titulo_considerado:
 
 
 def planificar_ruta(origen: str, destino: str, hora_salida: str | None = None,
-                    hora_llegada: str | None = None, titulo: str | None = None) -> dict:
+                    hora_llegada: str | None = None, titulo: str | None = None,
+                    opcion_origen: int | None = None, opcion_destino: int | None = None) -> dict:
     """Ruta en transporte público CRTM con zona y precio del RAG. Devuelve siempre un dict con `estado` primero.
+
+    `opcion_origen` / `opcion_destino` (T24): posición, desde 1, del candidato de un extremo ambiguo; se geocodifica
+    el mismo texto y se toma esa posición (si no existe, la 1). Sin opción, un extremo ambiguo no calcula (RF-8).
 
     Nunca lanza excepciones: un fallo inesperado (RF-42) se registra en el log interno y se devuelve como
     `error_interno` con un mensaje genérico en español, sin el texto de la excepción ni datos internos.
     """
     try:
-        return _planificar_ruta(origen, destino, hora_salida, hora_llegada, titulo)
+        return _planificar_ruta(origen, destino, hora_salida, hora_llegada, titulo, opcion_origen, opcion_destino)
     except Exception:
         logger.exception("Error inesperado en planificar_ruta")
     # La cabecera se rehace aparte: si el fallo vino de la propia hora o del título, no debe repetirse aquí.
@@ -526,7 +530,7 @@ def planificar_ruta(origen: str, destino: str, hora_salida: str | None = None,
                       titulo_considerado, **({"hora_llegada": hora_txt} if llegada else {}))
 
 
-def _planificar_ruta(origen, destino, hora_salida, hora_llegada, titulo) -> dict:
+def _planificar_ruta(origen, destino, hora_salida, hora_llegada, titulo, opcion_origen=None, opcion_destino=None) -> dict:
     """Cuerpo de `planificar_ruta`: validar hora y datos (sin red) → geocodificar → Google Routes → RAG.
 
     Si un paso falla, los siguientes no se ejecutan. Como mucho 2 llamadas a Nominatim, 1 a Google y 2 al RAG.
@@ -539,7 +543,10 @@ def _planificar_ruta(origen, destino, hora_salida, hora_llegada, titulo) -> dict
     llegada = validacion["tipo"] == "llegada"
     tipo_txt = "llegada" if llegada else "salida"
 
+    avisos = []   # T24: qué candidato se usó en cada extremo ambiguo resuelto con una opción
+
     def salir(estado: str, texto: str, **extra) -> dict:
+        texto = " ".join([texto, *avisos])
         # Con hora de llegada, `hora_salida` solo lleva la salida que devuelva Google (RF-44); la pedida va en `hora_llegada`.
         if llegada:
             extra.setdefault("salida_resultante", None)
@@ -569,6 +576,14 @@ def _planificar_ruta(origen, destino, hora_salida, hora_llegada, titulo) -> dict
             return salir("geocodificacion_fallida",
                          "No he podido localizar las direcciones ahora mismo. Inténtalo de nuevo más tarde.")
         clasificadas[rol] = clasificar_candidatos(geo["candidatos"])
+        opcion = {"origen": opcion_origen, "destino": opcion_destino}[rol]
+        if opcion is not None and clasificadas[rol]["estado"] == "ambigua":
+            lista = clasificadas[rol]["candidatos"]
+            # bool es int en Python: True no es una posición. Opción inexistente → la 1.
+            n = opcion if isinstance(opcion, int) and not isinstance(opcion, bool) and 1 <= opcion <= len(lista) else 1
+            clasificadas[rol] = {"estado": "ok", "elegido": lista[n - 1], "candidatos": lista}
+            avisos.append(f"Para el {rol} («{texto}») se usó la opción {n}: {lista[n - 1]['direccion']}. "
+                          f"Si no es la que querías, indica otra opción (1 a {len(lista)}) o una dirección más precisa.")
 
     problemas = {rol: c for rol, c in clasificadas.items() if c["estado"] != "ok"}
     if problemas:
