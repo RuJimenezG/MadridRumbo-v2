@@ -46,6 +46,27 @@ def test_enviar_actualiza_estado_e_historial():
     assert sesion.historial[1]["texto"] == sesion.estado["respuesta"]
 
 
+def test_referencia_de_demo_se_reenvia_sin_modificar():
+    """RF-37: la sesión común conserva el texto literal y no añade estado visual."""
+    class AgenteEspia:
+        def __init__(self):
+            self.llamadas = []
+
+        def procesar_turno(self, estado, mensaje, thread_id):
+            self.llamadas.append((dict(estado), mensaje, thread_id))
+            return estado_vacio()
+
+    agente = AgenteEspia()
+    sesion = SesionChat(agente)
+    mensaje = "  Analiza assets/imagen_demo.jpg e indica los precios.  "
+
+    sesion.enviar(mensaje)
+
+    assert agente.llamadas == [(estado_vacio(), mensaje, sesion.thread_id)]
+    assert sesion.historial == [{"rol": "usuario", "texto": mensaje}]
+    assert "imagen" not in agente.llamadas[0][0]
+
+
 def test_plan_pendiente_activa_decision():
     # RF-19: con plan pendiente se puede decidir.
     sesion, _ = sesion_nueva()

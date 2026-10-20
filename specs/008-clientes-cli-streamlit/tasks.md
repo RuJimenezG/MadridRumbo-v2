@@ -75,3 +75,22 @@
        Hecho cuando: los resultados quedan anotados en `validacion.md`.
 - [ ] T35. (Parcial: falta la demo con el grafo real y API, T34) Validación final RF por RF (`/sdd-validar`). (Todos)
        Hecho cuando: `validacion.md` con veredicto «Sí».
+
+## Cambio aprobado 2026-10-19: transmisión de la referencia de imagen demo
+
+> Estas tareas no añaden lógica de imagen a los clientes. Verifican que las capas finas ya preservan el mensaje y documentan la comprobación manual de la web; la activación de tarifas pertenece a la spec 007.
+
+- [x] T36. Escribir la prueba de transmisión exacta en la sesión compartida. (RF-37)
+       Archivos: `tests/test_sesion.py`.
+       Hecho cuando: `test_referencia_de_demo_se_reenvia_sin_modificar` usa un agente espía sin proveedores y demuestra que `SesionChat.enviar()` entrega a `procesar_turno()` exactamente el mensaje que contiene `assets/imagen_demo.jpg`, sin recortes, sustituciones ni claves de imagen añadidas al estado. Pasa `python -m pytest tests/test_sesion.py -q` sin red ni claves.
+       Estado: completada el 2026-10-19. La prueba usa espacios deliberados y confirma igualdad exacta; las pruebas focalizadas y `python -m pytest -q` terminan correctamente.
+
+- [x] T37. Escribir la prueba del bucle CLI con la referencia literal. (RF-37)
+       Archivos: `tests/test_cli.py`.
+       Hecho cuando: `test_cli_reenvia_referencia_de_demo_sin_modificar` inyecta entrada, salida y agente espía; envía el mensaje literal y después `salir`, y verifica que la única llamada conserva el texto exacto. No se modifica `src/clientes/cli.py`, `src/clientes/sesion.py`, `app.py` ni el contrato; pasa `python -m pytest` sin red ni claves.
+       Estado: completada el 2026-10-19. `python -m pytest tests/test_cli.py -q` y `python -m pytest -q` terminan correctamente, sin proveedores reales.
+
+- [x] T38. Documentar la validación de RF-37. (RF-37)
+       Archivos: `specs/008-clientes-cli-streamlit/validacion.md`.
+       Hecho cuando: se sustituye la limitación resuelta de imagen por la evidencia de T36 y T37 y se registra la comprobación manual de Streamlit en modo simulado: escribir el literal, comprobar que se conserva en el historial y que no se realiza ninguna selección de archivo. `python -m pytest` termina correctamente; no se inicia Streamlit ni se usan APIs durante las pruebas automatizadas.
+       Estado: completada el 2026-10-19. La comprobación manual queda descrita sin iniciar Streamlit; `python -m pytest -q` termina correctamente sin proveedores.

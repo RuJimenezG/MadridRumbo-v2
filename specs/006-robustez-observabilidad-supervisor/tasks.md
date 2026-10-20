@@ -58,3 +58,15 @@
   - **Hecho cuando:** `validacion.md` contiene el veredicto correspondiente para todos los RF y `python -m pytest` termina en verde.
 
 Cobertura comprobada: los RF-1 a RF-25 aparecen al menos en una tarea; RF-15 y RF-16 se cubren en la frontera pública preparada en T5 y se documentan para sus futuros clientes en T9, sin modificar `main.py` ni `app.py`.
+
+## Corrección de regresión: test sin Gemini
+
+- [x] T12. Aislar con dobles el fallback público del Supervisor. (RF-10 a RF-14; coste)
+  - Prueba primero: ampliar `tests/test_agent_contrato.py::test_fallback_publico_solo_expone_categoria_y_resumen_canonicos` para inyectar los cinco especialistas falsos y registrar la invocación del doble `auxiliar` para la consulta «¿Qué hora es?».
+  - Implementar: construir el grafo de ese test con `especialistas` inyectados, manteniendo el Supervisor que devuelve texto no JSON, el Sintetizador falso y todas las aserciones actuales sobre el diagnóstico público seguro.
+  - **Hecho cuando:** el test de regresión confirma que se invocó el doble `auxiliar`, no solicita credenciales ni conecta con Gemini, y `python -m pytest` termina en verde.
+
+- [x] T13. Validar y documentar la regresión sin API. (RF-10 a RF-14; coste)
+  - Prueba primero: ejecutar `tests/test_agent_contrato.py::test_fallback_publico_solo_expone_categoria_y_resumen_canonicos` y la suite completa para comprobar que no requieren credenciales ni red.
+  - Implementar: actualizar `specs/006-robustez-observabilidad-supervisor/validacion.md` con la evidencia del test aislado y el resumen de `python -m pytest`, sin modificar comportamiento de producción.
+  - **Hecho cuando:** `validacion.md` identifica el test como cobertura de la regresión y registra una suite completa verde sin APIs ni credenciales reales.

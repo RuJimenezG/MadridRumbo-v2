@@ -181,3 +181,119 @@ Todas las pruebas automáticas usarán `LLMFalso`, `EjecutorFalso`, `monkeypatch
 | RF-18 | Resultado público y frontera de CLI futura | `tests/test_agent_contrato.py::test_resultado_del_turno_expone_diagnostico_seguro_sin_persistirlo` y `validacion.md` |
 | RF-19 | Separación para Streamlit futuro | `tests/test_agent_contrato.py::test_resultado_del_turno_expone_diagnostico_seguro_sin_persistirlo` y `validacion.md` |
 | RF-20 | Guía de observabilidad | `specs/007-guardas-semanticas-tarifas-textuales/validacion.md` |
+
+## Cambio aprobado 2026-10-19: selección explícita de la imagen demo
+
+Este complemento sustituye, para la imagen demo configurada, la limitación
+anterior que dejaba su selección exclusivamente en una integración interna. No
+incorpora subida de archivos ni rutas elegidas por la persona usuaria.
+
+### Archivos afectados
+
+| Archivo | Crear / Modificar | Qué cambia | RF |
+|---|---|---|---|
+| `src/agent.py` | Modificar | Reconocer la referencia literal `assets/imagen_demo.jpg`, validar localmente la demo configurada y trasladar el resultado exclusivamente al contexto efímero del turno. | RF-21 a RF-24 |
+| `tests/test_agent_contrato.py` | Modificar | Cubrir la selección desde la fachada pública, la conservación de sus seis claves, el rechazo seguro de una demo inválida y que la señal no se hereda entre turnos. | RF-21 a RF-24 |
+| `tests/test_flujo_imagen_calculo.py` | Modificar | Reutilizar el recorrido visual existente para comprobar, con modelo y ejecutor falsos, que una demo seleccionada desde la fachada alcanza `tarifas` y la tool permitida. | RF-21, RF-22 |
+| `specs/007-guardas-semanticas-tarifas-textuales/validacion.md` | Modificar | Añadir la matriz de evidencia de los RF-21 a RF-24 y registrar la suite sin API. | RF-21 a RF-24 |
+
+No se modificarán `src/graph.py`, `src/agents/tarifas.py`, `src/tools/describir_imagen.py`, `config.py`, `main.py` ni `app.py`: el grafo ya consume `imagen_valida` desde su contexto efímero y la tool ya usa la demo configurada cuando no recibe ruta. La comprobación de que CLI y Streamlit preservan el mensaje se planificará en la spec 008 (RF-37).
+
+### Contrato
+
+Las firmas y las seis claves públicas permanecen intactas:
+
+```text
+procesar_turno(estado, mensaje, thread_id) -> dict
+aprobar_plan(estado, thread_id, aprobado) -> dict
+```
+
+El campo `estado` no incorpora una imagen ni una ruta. La selección se expresa
+solo en el texto de `mensaje` y no aparece en el resultado ni en el
+checkpoint.
+
+```python
+procesar_turno(
+    {},
+    "Analiza assets/imagen_demo.jpg e indica los precios visibles.",
+    "hilo-demo",
+)
+# Devuelve las mismas seis claves públicas; el grafo puede derivar a tarifas.
+```
+
+Un mensaje como `"Analiza esta imagen"`, una referencia distinta o un turno
+posterior sin la referencia literal no seleccionan la demo y conservan las
+guardas vigentes de tarifas textuales.
+
+### Lógica clave
+
+```text
+imagen_demo_valida_para(mensaje):
+    si mensaje no contiene exactamente "assets/imagen_demo.jpg":
+        devolver falso
+    directorio = resolver IMAGENES_DIR
+    archivo = resolver directorio / IMAGEN_DEMO
+    si archivo queda fuera de directorio, no es fichero, su extensión no está
+       permitida o supera el tamaño máximo configurado:
+        devolver falso
+    devolver verdadero
+
+invocar_turno_con_diagnostico(grafo, estado, thread_id):
+    contexto = diagnóstico vacío + contador de correcciones
+    contexto.imagen_valida = imagen_demo_valida_para(estado.mensaje)
+    invocar el grafo con ese contexto únicamente para este turno
+    proyectar el resultado con las seis claves públicas existentes
+
+siguiente turno del mismo hilo:
+    reconstruir el contexto desde su nuevo mensaje
+    no leer ni persistir la selección del turno anterior
+```
+
+### Decisiones técnicas
+
+| Decisión | Alternativa descartada | Por qué |
+|---|---|---|
+| Activar la demo solo mediante la cadena literal aprobada. | Inferirla por «imagen», «foto» o «cartel». | Evita que una referencia textual sin archivo anule las guardas de RF-9, RF-10 y RF-12. |
+| Validar localmente la demo configurada antes de activar la señal. | Llamar a `describir_imagen` para comprobarla. | La selección no debe consumir Vision ni depender de credenciales; la tool seguirá aplicando su propia defensa antes de leer el archivo. |
+| Calcular `imagen_valida` a partir de `mensaje` en la fachada. | Añadir `estado["imagen"]`, una clave pública o una ruta nueva. | Mantiene firmas, seis claves de salida y aislamiento del checkpoint. |
+| Reutilizar el contexto efímero y el valor por defecto de la tool. | Cambiar el grafo, el especialista o pasar una ruta controlada por el LLM. | El contexto ya llega al Supervisor y a `tarifas`; la tool ya abre exclusivamente `IMAGEN_DEMO`. |
+| No modificar CLI ni Streamlit. | Añadir selector, uploader o lógica visual específica. | Ambos clientes ya reenvían el mensaje a la misma fachada; la comprobación contractual de ese límite pertenece a RF-37 de la spec 008. |
+
+### Estrategia de tests
+
+Todos los casos nuevos usarán un grafo real con Supervisor, especialistas,
+modelo y ejecutor falsos, o bien rutas temporales mediante `monkeypatch`. No
+invocarán Gemini, Vision, RAG, embeddings ni ChromaDB.
+
+| Área | Prueba y dobles | Cobertura |
+|---|---|---|
+| Selección pública | `procesar_turno` con un Supervisor falso que selecciona `tarifas`, especialista falso contador y mensaje con la referencia literal; comprobar contexto válido, recorrido por tarifas y seis claves públicas. | RF-21, RF-22 |
+| Validación local | Sustituir temporalmente directorio, nombre, extensión o tamaño de la demo; comprobar que una configuración inválida no activa tarifas, no llama a visión y se redirige a RAG. | RF-22, RF-23 |
+| No persistencia | Dos llamadas de fachada con el mismo `thread_id`: la primera contiene la referencia y la segunda no; comprobar `tarifas` y después `rag`, sin señal visual en checkpoint ni resultado público. | RF-24 |
+| Recorrido de tool | Modelo de tarifas y ejecutor falsos; comprobar que la demo seleccionada conserva la única llamada permitida a `describir_imagen`, sin red. | RF-21, RF-22 |
+| Regresión existente | Mantener los escenarios de tarjeta, cartel o imagen sin referencia literal como consultas sin imagen válida. | RF-9, RF-10, RF-12 |
+
+La prueba de CLI y Streamlit no se añade a esta spec porque no cambia sus
+archivos ni su contrato: se cubrirá al planificar RF-37 en la spec 008.
+
+### Riesgos
+
+- La referencia es deliberadamente literal y sensible a cambios en su texto;
+  una variante como `imagen_demo.jpg` sin `assets/` no seleccionará la demo.
+- Un error de configuración de la demo debe resultar en redirección segura a
+  RAG, nunca en una lectura de una ruta alternativa.
+- El modo simulado de clientes no sustituye la comprobación del grafo real;
+  la evidencia de la propagación de mensajes de ambos clientes se mantiene en
+  la spec 008.
+- La validación local duplica la decisión de admisibilidad antes de la defensa
+  final de la tool; ambas deben seguir basándose en los límites centralizados
+  de `config.py`.
+
+### Trazabilidad del cambio
+
+| RF | Parte del plan | Test |
+|---|---|---|
+| RF-21 | Detección literal y contexto efímero en la fachada | `tests/test_agent_contrato.py::test_referencia_literal_de_demo_habilita_tarifas` |
+| RF-22 | Validación local y recorrido visual falso | `tests/test_agent_contrato.py::test_demo_configurada_valida_habilita_tarifas` y `tests/test_flujo_imagen_calculo.py::test_demo_seleccionada_describe_imagen` |
+| RF-23 | Configuración de demo inválida | `tests/test_agent_contrato.py::test_demo_invalida_se_redirige_a_rag_sin_vision` |
+| RF-24 | Contexto reconstruido en el siguiente turno | `tests/test_agent_contrato.py::test_demo_no_se_hereda_entre_turnos_de_la_fachada` |

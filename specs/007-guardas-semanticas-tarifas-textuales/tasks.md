@@ -28,3 +28,24 @@
 
 - [x] T8. Validación final RF por RF (`/sdd-validar`): crear `validacion.md`, documentar cómo distinguir corrección semántica de fallback y cómo los futuros clientes técnico y Streamlit deben tratar `log` y `traza`, sin implementar ni modificar dichos clientes. (RF-18, RF-19, RF-20)
       Hecho cuando: `specs/007-guardas-semanticas-tarifas-textuales/validacion.md` contiene la matriz RF-1 a RF-20 con veredicto «Sí» y evidencia de pruebas, y `python -m pytest -ra` termina en verde.
+
+## Cambio aprobado 2026-10-19: selección explícita de la imagen demo
+
+- [x] T9. Escribir pruebas de contrato de la fachada para la referencia literal de la demo. (RF-21, RF-22, RF-23, RF-24)
+      Hecho cuando: las pruebas, sin proveedores reales, verifican que solo el literal `assets/imagen_demo.jpg` activa `imagen_valida` para ese turno; que una demo configurada no válida conserva las guardas textuales; y que un turno posterior sin literal no hereda esa validez. Antes de implementar T10, las nuevas aserciones fallan por el valor fijo actual.
+      Estado: completada el 2026-10-19. La regresión esperada falla de forma aislada: la fachada entrega `[False, False]` donde debe entregar `[True, False]`; no hay otros fallos en la suite.
+
+- [x] T10. Calcular de forma efímera la validez de la demo en la fachada pública. (RF-21, RF-22, RF-23, RF-24)
+      Archivos: `src/agent.py`.
+      Hecho cuando: `procesar_turno()` mantiene su contrato y solo pasa `imagen_valida=True` al contexto del turno cuando el mensaje contiene el literal aprobado y la imagen demo configurada es un archivo permitido dentro de `config.IMAGENES_DIR`; no se añade estado persistente ni se modifica CLI, Streamlit, el grafo ni la tool de visión. Pasan las pruebas de T9 y `python -m pytest` sin red ni claves.
+      Estado: completada el 2026-10-19. `python -m pytest tests/test_agent_contrato.py -q` y `python -m pytest -q` terminan correctamente.
+
+- [x] T11. Cubrir la ruta visual de tarifas seleccionada desde la fachada. (RF-21, RF-22, RF-23)
+      Archivos: `tests/test_flujo_imagen_calculo.py`, `tests/test_agent_contrato.py`.
+      Hecho cuando: con modelos, especialistas y ejecutor de tools falsos, las pruebas comprueban que la selección válida alcanza la ruta de `tarifas` y puede invocar `describir_imagen`; una referencia genérica o una demo inválida no la invocan y se mantienen en la ruta textual. Pasa `python -m pytest` sin red ni claves.
+      Estado: completada el 2026-10-19. Las pruebas focalizadas y `python -m pytest -q` terminan correctamente, sin proveedores reales.
+
+- [x] T12. Registrar la validación del cambio de imagen demo. (RF-21, RF-22, RF-23, RF-24)
+      Archivos: `specs/007-guardas-semanticas-tarifas-textuales/validacion.md`.
+      Hecho cuando: se documentan los comandos, resultados y comprobaciones manuales de no persistencia entre turnos; `python -m pytest` termina correctamente y no se usan credenciales ni red.
+      Estado: completada el 2026-10-19. `python -m pytest -q` termina correctamente; la demostración manual que consume proveedores queda documentada y no se ejecutó.

@@ -1,6 +1,6 @@
 # Spec 007 — Guardas semánticas para consultas textuales de tarifas
 
-> Estado: Aprobada · Fecha: 2026-10-18
+> Estado: Aprobada · Cambio del 2026-10-19 aprobado el mismo día · Fecha original: 2026-10-18
 
 ## Contexto y objetivo
 
@@ -42,6 +42,10 @@ El Supervisor puede recibir una decisión JSON formalmente válida que deriva un
 - RF-18: CUANDO un cliente técnico usa la CLI, EL SISTEMA permite consultar el indicador y el resumen seguro de una corrección semántica.
 - RF-19: CUANDO una persona usa el chat de Streamlit, EL SISTEMA no muestra el indicador ni el resumen técnico de una corrección semántica.
 - RF-20: EL SISTEMA documenta cómo distinguir una corrección semántica de un fallback y cómo revisar su diagnóstico seguro.
+- RF-21: CUANDO una consulta contiene la referencia literal `assets/imagen_demo.jpg`, EL SISTEMA interpreta la referencia como una aportación explícita de la imagen demo configurada únicamente durante ese turno.
+- RF-22: CUANDO una consulta selecciona la imagen demo mediante la referencia de RF-21, EL SISTEMA verifica que la imagen demo configurada es un archivo permitido dentro de la carpeta autorizada antes de considerarla una imagen válida.
+- RF-23: SI la imagen demo seleccionada no supera la verificación de RF-22, ENTONCES EL SISTEMA trata la consulta como textual sin imagen válida y aplica las guardas de RF-9, RF-10 y RF-12.
+- RF-24: CUANDO comienza un turno posterior del mismo hilo sin la referencia de RF-21, EL SISTEMA no conserva la imagen demo como imagen válida de ese turno.
 
 ## Requisitos no funcionales
 
@@ -58,6 +62,9 @@ El Supervisor puede recibir una decisión JSON formalmente válida que deriva un
 - Una consulta textual sobre tarifas que menciona un cartel o una foto sin aportar una imagen válida: RF-10.
 - Una consulta que aporta una imagen válida sin tarifas o usa la imagen demo configurada: RF-11.
 - Una llegada directa a `tarifas` sin imagen válida pese a las guardas de derivación: RF-12.
+- Una consulta que menciona literalmente `assets/imagen_demo.jpg`: RF-21 y RF-22.
+- Una consulta que menciona la imagen demo pero esta no existe, no es un archivo permitido o queda fuera de la carpeta autorizada: RF-22 y RF-23.
+- Un turno posterior del mismo hilo que ya no menciona `assets/imagen_demo.jpg`: RF-24.
 - Un fallo de proveedor, JSON inválido o roles inválidos: conserva el fallback y su diagnóstico definidos en la spec 006.
 - Una decisión correcta sin incompatibilidad semántica: conserva la categoría `sin_fallback` definida en la spec 006 sin registrar una corrección semántica.
 - Un turno posterior al que contiene una corrección semántica: no conserva su indicador ni su resumen técnico: RF-15.
@@ -76,6 +83,8 @@ El Supervisor puede recibir una decisión JSON formalmente válida que deriva un
 - Todos los RF tienen pruebas automatizadas en verde con `pytest` y dobles sin APIs ni credenciales reales.
 - Una prueba con una decisión LLM válida pero errónea, `{"roles": ["tarifas"]}`, para una consulta textual de Combinado Metro demuestra una llamada a `rag_ask`, conserva su respuesta anclada y su traza, y demuestra cero llamadas a `describir_imagen`.
 - Una prueba con una imagen válida de tarifas demuestra que se mantiene el recorrido por `tarifas` y una llamada a `describir_imagen`.
+- Una prueba que invoca la operación pública de turno con una consulta que menciona literalmente `assets/imagen_demo.jpg` demuestra que se mantiene el recorrido por `tarifas` sin añadir campos al contrato público.
+- Una prueba demuestra que, si la imagen demo no supera su verificación o si un turno posterior no contiene su referencia literal, la consulta se trata sin imagen válida y no invoca `describir_imagen`.
 - Una prueba con roles `tarifas` repetidos demuestra que cada aparición se sustituye por `rag` sin alterar el orden de la derivación.
 - Una prueba demuestra que la corrección semántica es observable mediante su indicador y resumen seguro, conserva `sin_fallback` solo en el resultado del turno y no expone la respuesta cruda del LLM.
 - La documentación explica cómo revisar la corrección semántica y distinguirla de un fallback.

@@ -139,18 +139,23 @@ def test_tarifas_sin_imagen_no_inicia_llm_ni_vision_y_pide_redireccion():
     assert salida["traza"] == []
 
 
-def test_contexto_de_imagen_demo_explicita_conserva_tarifas_sin_persistirla():
-    """RF-11: solo una integración interna que la marca habilita la visión."""
-    llamadas = []
+def test_contexto_de_imagen_demo_valida_llega_a_tarifas_y_vision_sin_persistirla():
+    """RF-11 y RF-22: una señal válida conserva la única tool visual permitida."""
+    llm = LLMFalso([
+        {"tool": "describir_imagen", "args": {"pregunta": "precios"}},
+        {"final": "La imagen muestra los precios solicitados."},
+    ])
+    ejecutor = EjecutorFalso({"describir_imagen": TEXTO_IMAGEN})
     grafo = crear_grafo(
         modelo_supervisor=lambda mensajes: {"roles": ["tarifas"]},
-        especialistas={"tarifas": lambda estado: llamadas.append("tarifas") or {}},
+        modelos_especialistas={"tarifas": llm},
+        ejecutar=ejecutor,
         modelo_sintetizador=lambda contexto: "Resumen controlado.",
     )
     contexto_demo = {
         "diagnostico_supervisor": None,
         "correcciones_tarifas": 0,
-        # Una integración futura seleccionó explícitamente la demo configurada.
+        # La fachada ya seleccionó explícitamente una demo configurada válida.
         "imagen_valida": True,
     }
 
@@ -162,7 +167,8 @@ def test_contexto_de_imagen_demo_explicita_conserva_tarifas_sin_persistirla():
     )
     snapshot = recuperar_estado(grafo, "imagen-demo-explicita")
 
-    assert llamadas == ["tarifas"]
+    assert ejecutor.llamadas == [("describir_imagen", {"pregunta": "precios"})]
+    assert [entrada["tool"] for entrada in salida["traza"]] == ["describir_imagen"]
     assert contexto_demo["diagnostico_supervisor"]["categoria"] == "sin_fallback"
     assert contexto_demo["correcciones_tarifas"] == 0
     assert "imagen_valida" not in salida

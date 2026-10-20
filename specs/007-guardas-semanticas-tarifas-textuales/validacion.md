@@ -1,6 +1,7 @@
 # Validación — Spec 007
 
-> Fecha: 2026-10-18 · Resultado de `python -m pytest -ra`: **450 passed en 11,21 s**.
+> Fecha original: 2026-10-18 · Actualizada: 2026-10-19 · Resultado de
+> `python -m pytest -q`: **correcto, sin errores**.
 >
 > La ejecución usa dobles de prueba; no invoca proveedores, APIs, embeddings ni
 > ChromaDB reales.
@@ -17,7 +18,7 @@
 | RF-8 | Automático | `tests/test_catalogo_roles.py::test_instrucciones_reutilizan_catalogo_y_exclusiones_de_tarifas` y `tests/test_agent_contrato.py::test_procesar_turno_inicializa_el_contexto_sin_imagen_valida` | Sí |
 | RF-9 | Automático | `tests/test_catalogo_roles.py::test_corrige_tarifas_sin_imagen_y_conserva_orden_y_repeticiones` y `tests/test_supervisor_grafo.py::test_repeticiones_tarifas_informan_contador_seguro_y_conservan_orden` | Sí |
 | RF-10 | Automático | `tests/test_catalogo_roles.py::test_referencia_a_cartel_sin_archivo_sigue_siendo_consulta_textual` y `tests/test_supervisor_grafo.py::test_referencia_textual_a_cartel_sin_imagen_va_a_rag` | Sí |
-| RF-11 | Automático | `tests/test_supervisor_grafo.py::test_imagen_valida_conserva_tarifas_en_una_decision_valida` y `tests/test_flujo_imagen_calculo.py::test_contexto_de_imagen_demo_explicita_conserva_tarifas_sin_persistirla` | Sí |
+| RF-11 | Automático | `tests/test_supervisor_grafo.py::test_imagen_valida_conserva_tarifas_en_una_decision_valida` y `tests/test_flujo_imagen_calculo.py::test_contexto_de_imagen_demo_valida_llega_a_tarifas_y_vision_sin_persistirla` | Sí |
 | RF-12 | Automático | `tests/test_flujo_imagen_calculo.py::test_tarifas_sin_imagen_no_inicia_llm_ni_vision_y_pide_redireccion` y `tests/test_grafo_enrutamiento.py::test_tarifas_sin_imagen_redirige_a_rag_sin_vision` | Sí |
 | RF-13 | Automático | `tests/test_grafo_enrutamiento.py::test_combinado_metro_corregido_llama_rag_ask_y_conserva_traza` | Sí |
 | RF-14 | Automático | `tests/test_estado_grafo.py::test_proyeccion_anade_indicador_de_correccion_semantica_seguro_y_separado` | Sí |
@@ -27,6 +28,10 @@
 | RF-18 | Contrato y documentación | La proyección pública conserva seis claves y sitúa el diagnóstico seguro en `log`: `tests/test_estado_grafo.py::test_proyeccion_publica_tiene_solo_las_seis_claves_y_traza_normalizada`. La integración de clientes se describe en «Consumo por clientes futuros». | Sí |
 | RF-19 | Contrato y documentación | El mismo contrato no añade campos públicos técnicos y el contexto no persiste: `tests/test_agent_contrato.py::test_correccion_semantica_se_expone_solo_en_el_turno_que_la_origina`. La pauta de Streamlit en «Consumo por clientes futuros» excluye esas líneas de su UI. | Sí |
 | RF-20 | Documentación | Secciones «Diagnóstico seguro» y «Consumo por clientes futuros» de este documento. | Sí |
+| RF-21 | Automático | `tests/test_agent_contrato.py::test_referencia_literal_de_demo_activa_solo_el_turno_que_la_contiene` y `::test_referencia_de_demo_valida_alcanza_tarifas_e_invoca_vision_falsa` | Sí |
+| RF-22 | Automático | Las pruebas anteriores usan una demo temporal permitida; `::test_demo_referenciada_invalida_conserva_el_contexto_textual` rechaza una inexistente. | Sí |
+| RF-23 | Automático | `tests/test_agent_contrato.py::test_consultas_sin_demo_valida_se_mantienen_en_rag_sin_vision` | Sí |
+| RF-24 | Automático y comprobación manual descrita | `tests/test_agent_contrato.py::test_referencia_literal_de_demo_activa_solo_el_turno_que_la_contiene`; sección «Aislamiento entre turnos». | Sí |
 
 ## Diagnóstico seguro
 
@@ -90,31 +95,17 @@ correspondía registrar una corrección semántica.
 
 ### 2. Análisis de la imagen demo: debe usar `tarifas`
 
-La fachada pública inicializa siempre el turno sin imagen; para esta prueba la
-integración interna marca explícitamente como válida la demo configurada, sin
-alterar el contrato público. En una consola Python del entorno configurado,
+La fachada pública selecciona la demo solo si el mensaje contiene literalmente
+`assets/imagen_demo.jpg`. En una consola Python del entorno configurado,
 ejecutar:
 
 ```python
-from src.estado import crear_estado_inicial, proyectar_resultado
-from src.graph import crear_grafo, invocar_grafo
+from src.agent import procesar_turno
 
-grafo = crear_grafo()
-contexto = {
-    "diagnostico_supervisor": None,
-    "correcciones_tarifas": 0,
-    "imagen_valida": True,
-}
-estado_final = invocar_grafo(
-    grafo,
-    crear_estado_inicial("Analiza la imagen demo configurada e indica los precios visibles."),
+resultado = procesar_turno(
+    {},
+    "Analiza assets/imagen_demo.jpg e indica los precios visibles.",
     "validacion-manual-imagen-demo",
-    contexto=contexto,
-)
-resultado = proyectar_resultado(
-    estado_final,
-    diagnostico_supervisor=contexto["diagnostico_supervisor"],
-    correcciones_tarifas=contexto["correcciones_tarifas"],
 )
 print(resultado["respuesta"])
 print(resultado["log"])
@@ -126,11 +117,42 @@ que no se registra una corrección semántica y que el diagnóstico conserva
 `categoria=sin_fallback`. La tool utiliza `config.IMAGEN_DEMO` si el especialista
 no indica una ruta, por lo que la comprobación analiza la demo configurada.
 
-**Resultado registrado (2026-10-18): Conforme.** La respuesta extrajo cuatro
-tarifas visibles de la imagen demo y la `traza` contiene una única llamada
-correcta a `describir_imagen`, sin llamadas RAG. El diagnóstico fue una decisión
-estructurada válida (`categoria=sin_fallback`) y no registró corrección
-semántica, como corresponde a una imagen marcada explícitamente como válida.
+**Evidencia automática registrada (2026-10-19): Conforme.**
+`test_referencia_de_demo_valida_alcanza_tarifas_e_invoca_vision_falsa` comprueba
+la misma ruta desde la fachada pública con un ejecutor falso: una llamada a
+`describir_imagen`, ninguna a RAG y las seis claves públicas intactas. La
+demostración manual anterior no se repitió en esta tarea porque requiere
+proveedores y puede consumir API.
+
+### 3. Aislamiento entre turnos de la selección de demo
+
+Para una demostración manual con proveedores autorizados, usar el mismo
+`thread_id` en dos llamadas: la primera contiene la referencia literal y la
+segunda no.
+
+```python
+primero = procesar_turno(
+    {},
+    "Analiza assets/imagen_demo.jpg e indica los precios visibles.",
+    "validacion-manual-demo-efimera",
+)
+segundo = procesar_turno(
+    {},
+    "Ahora dime cuánto cuesta el abono.",
+    "validacion-manual-demo-efimera",
+)
+print(primero["traza"])
+print(segundo["traza"])
+```
+
+Se debe observar `describir_imagen` solo en el primer turno y ninguna llamada
+visual en el segundo; además, ninguna respuesta pública contiene
+`imagen_valida`. Esta demostración no se ejecutó durante T12 porque puede
+consumir Gemini o RAG. Su equivalente sin proveedores,
+`test_referencia_literal_de_demo_activa_solo_el_turno_que_la_contiene`, verifica
+el contexto interno `[True, False]`, y
+`test_consultas_sin_demo_valida_se_mantienen_en_rag_sin_vision` verifica la
+redirección textual sin visión.
 
 ## Consumo por clientes futuros
 
@@ -157,6 +179,10 @@ resultado ya proyectado:
   a `rag_ask`, conserva respuesta y traza ancladas y no llama a visión.
 - [x] Una imagen válida, incluida la demo marcada explícitamente, conserva el
   recorrido por `tarifas` y la llamada visual.
+- [x] La referencia literal `assets/imagen_demo.jpg` selecciona la demo solo
+  para el turno actual, tras validarla dentro de la carpeta autorizada.
+- [x] Una referencia genérica o una demo inválida se mantiene en la ruta
+  textual y no invoca `describir_imagen`.
 - [x] Las apariciones repetidas de `tarifas` se sustituyen posicionalmente por
   `rag` sin alterar el orden.
 - [x] La corrección queda observable con contador y resumen seguro, separada
@@ -173,6 +199,6 @@ la allowlist ni las herramientas RAG o de visión.
 
 ## Veredicto
 
-**Sí.** La spec se cumple: los 20 requisitos cuentan con evidencia, la
-regresión completa pasa con dobles y se mantienen fuera de alcance los
-clientes públicos y los contratos de RAG y visión.
+**Sí.** La spec se cumple: los 24 requisitos cuentan con evidencia, la
+regresión completa pasa con dobles y se mantienen fuera de alcance las subidas
+de archivos, los clientes públicos y los contratos de RAG y visión.
