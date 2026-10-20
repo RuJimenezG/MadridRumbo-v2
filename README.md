@@ -167,3 +167,7 @@ En Streamlit es lo mismo con el selector y los botones de la barra lateral.
 ### Código de los clientes
 
 Todo está en `src/clientes/`: `contrato.py` (claves del estado que devuelve el grafo), `planes.py` (resumen de planes y filtro del log), `presentacion.py` (formato común), `sesion.py` (lógica de la conversación, compartida), `cargar.py` (grafo real o simulado), `grafo_falso.py` y `cli.py`. `main.py` y `app.py` son capas finas que solo dibujan. Los tests (`python -m pytest`) no gastan API: usan el grafo simulado y el grafo real con especialistas falsos (`tests/test_clientes_grafo_real.py`). La especificación está en `specs/008-clientes-cli-streamlit/`.
+
+## Créditos
+
+- Datos meteorológicos de [Open-Meteo.com](https://open-meteo.com/), licencia CC BY 4.0.

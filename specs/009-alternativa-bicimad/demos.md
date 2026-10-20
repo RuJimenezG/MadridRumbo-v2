@@ -76,3 +76,21 @@ Tiempo real de esta pasada: 16 °C, sin precipitación, 13 km/h (apto), con atri
 - **`routes.warnings`: no llega** en ninguna de las tres respuestas (la clave no existe en la ruta, aunque se pidió en la máscara). Por tanto Google **no** devuelve aquí el aviso beta como campo de la respuesta.
 - **Qué hace nuestro cliente:** al no haber aviso de Google, devuelve en `aviso` el **texto fijo** `BICI_AVISO_GOOGLE` («Las rutas a pie y en bici están en fase beta y pueden carecer de aceras, caminos peatonales o carriles bici claros.») en los tres tramos. Así se cumple RF-12 (sin aviso no se muestra la alternativa) con el texto de respaldo.
 - No se probó con una combinación que pudiera devolver `warnings`; con tres tramos sin ellos, el aviso de Google parece no enviarse nunca en rutas urbanas de Madrid.
+
+## Demo 1 completa: evidencia aportada por la persona usuaria en Streamlit (2026-10-20)
+
+> **Procedencia:** observación de la persona usuaria en Streamlit con servicios reales y la EMT respondiendo, no una ejecución de este agente. Consulta sin hora pedida, «Puerta del Sol» → «Estadio Santiago Bernabéu». **No se contó el número de llamadas ni se anotaron los recuentos de estaciones inactivas**, así que esos datos no constan.
+
+**Resultado:** estado `ok`. Ruta de transporte de 20 min (Cercanías C4a), línea de clima con atribución a Open-Meteo (16,4 °C, sin precipitación, 12,6 km/h, apto) y alternativa BiciMAD de **29 min**:
+
+| Tramo | Duración | Detalle |
+|---|---|---|
+| A pie | 1 min | hasta «33 - Puerta del Sol» (19 bicis) |
+| Bici | 22 min | hasta «253 - Doctor Fleming - Estadio S. Bernabéu» (2 huecos libres) |
+| A pie | 6 min | hasta el destino |
+
+Aviso beta (texto fijo) y atribución al final del mensaje. Los totales cuadran (1 + 22 + 6 = 29).
+
+**Qué cierra:** con la EMT operativa el login («01» o «00»), la lista de estaciones y la elección por disponibilidad funcionan de extremo a extremo; BICYCLE y WALK dan una alternativa coherente; RF-1, RF-7, RF-10 y RF-12 se ven en la respuesta final de Streamlit (el aviso y la atribución también sobreviven a la síntesis, aunque T9 sigue pendiente de Rubén).
+
+**Qué sigue como supuesto:** «estación activa» (`activate == 1`, `no_available == 0`, `virtualDelete` falso). La regla funcionó con estas dos estaciones (ambas con disponibilidad real), pero **no se contrastaron los recuentos** de `activate` ≠ 1, `no_available` ≠ 0 ni `virtualDelete` verdadero, ni el significado de `no_available`. Tampoco se confirmó con datos propios que el login «01» trae `accessToken` por sí solo, salvo en cuanto que la demo llegó a las estaciones.

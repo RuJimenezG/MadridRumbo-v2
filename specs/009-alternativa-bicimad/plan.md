@@ -1,6 +1,6 @@
 # Plan técnico — Spec 009 (alternativa en bici con BiciMAD)
 
-> Basado en `spec.md` (estado: Aprobada; ampliación del clima, RF-20 a RF-28, pendiente de aprobación). No añade comportamiento que no esté en la spec. Sin código todavía.
+> Basado en `spec.md` (estado: Aprobada; ampliación del clima, RF-20 a RF-28, pendiente de aprobación). No añade comportamiento que no esté en la spec. Implementado (T1–T10); validación en `validacion.md`.
 > La API de la EMT se verificó en T1 (2026-10-20, `verificacion-emt.md`) y la de Open-Meteo en T12 (`verificacion-open-meteo.md`). Normalización de la EMT a `{id, nombre, lat, lon, bicis, huecos, activa}`: `id`←`id`, `nombre`←`name`, `lon, lat`←`geometry.coordinates[0], [1]` (orden lon/lat), `bicis`←`dock_bikes`, `huecos`←`free_bases`, `activa`←`activate == 1 and no_available == 0 and not virtualDelete` (criterio por confirmar).
 
 ## Archivos afectados
@@ -110,7 +110,7 @@ Orden de las llamadas: EMT primero (barata y decide R3/R4), Google solo si hay e
 
 ## Estrategia de tests
 
-Todos con `pytest`, sin red ni LLM, en `tests/test_bicimad.py`. **Dobles:** funciones de red del propio módulo (`_get_json`/`_post_json`, que se parchean donde se usan), `ahora`/tiempo si hiciera falta, y el `Escenario` de `tests/dobles_ruta.py` para el enganche de extremo a extremo (se reutiliza sin modificarlo). Las respuestas de la EMT en los tests son **dicts mínimos en el propio test** con los campos reales que fije T1 (no se guarda la respuesta completa ni archivos de datos).
+Todos con `pytest`, sin red ni LLM, en `tests/test_bicimad.py`. **Dobles:** funciones de red del propio módulo (`_get_json`/`_post_json`, que se parchean donde se usan), `ahora`/tiempo si hiciera falta, y el `Escenario` de `tests/dobles_ruta.py` para el enganche de extremo a extremo (ampliado en T7 y T14, ver más abajo). Las respuestas de la EMT en los tests son **dicts mínimos en el propio test** con los campos reales que fije T1 (no se guarda la respuesta completa ni archivos de datos).
 
 - **Config y secretos (RNF):** constantes `BICI_*` definidas; credenciales solo de `os.getenv`; `.env.example` conserva `EMT_CLIENT_ID=` y `EMT_PASS_KEY=` sin valor; ninguna credencial en el resultado ni en el log.
 - **Regla (RF-2, 3):** función pura con R1 (hora pedida), R2 (justo en el borde de 1 000 y 6 000 m, dentro y fuera); verifica 0 llamadas.
@@ -139,17 +139,18 @@ Todos con `pytest`, sin red ni LLM, en `tests/test_bicimad.py`. **Dobles:** func
 ## Riesgos
 
 - **Latencia de la EMT (limitación conocida, 2026-10-20):** en T10 el login tardó 5,9 s (normalmente 0,14 s) y la lista de estaciones superó los 10 s. Plazos: login `EMT_TIMEOUT_S` = 10 s y lista `EMT_TIMEOUT_ESTACIONES_S` = 20 s. Con la EMT lenta la consulta puede tardar 25-30 s en el peor caso; si algo agota su plazo, `bici` queda `no_disponible` y la ruta de transporte nunca se pierde. **Mejora futura (no se hace ahora):** paralelizar la bici con el RAG; tampoco hay caché de estaciones.
-- **Login de la EMT con dos códigos correctos:** "00" (token nuevo) y "01" (token vigente prorrogado, visto en T10). El cliente acepta ambos si `data[0].accessToken` existe; sin caducidad usa 3600 s (`EMT_TOKEN_CADUCIDAD_DEFECTO_S`). Falta comprobar con datos reales que "01" trae el token.
+- **Login de la EMT con dos códigos correctos:** "00" (token nuevo) y "01" (token vigente prorrogado, visto en T10). El cliente acepta ambos si `data[0].accessToken` existe; sin caducidad usa 3600 s (`EMT_TOKEN_CADUCIDAD_DEFECTO_S`). Comprobado en la demo 1 de Streamlit (T10): con la EMT operativa se llegó a las estaciones.
 - **API de la EMT verificada en T1** (login v1 y estaciones). Quedan sin confirmar el significado de `no_available`, los límites de uso (el login devuelve `apiCounter`) y que `description` del login **incluye el token y el usuario**: el cliente nunca debe registrarla ni devolverla.
 - **El sintetizador puede descartar el aviso de Google** (LLM; confirmado leyendo el código). Mitigación: T9 (opción A, archivo compartido). Si no se aprueba, RF-12 no se cumple en la respuesta final aunque sí en el JSON.
 - **Cobertura y beta de Google BICYCLE/WALK (verificado 2026-10-20, `demos.md`).** `BICYCLE` y `WALK` funcionan en Madrid (0,17–0,26 s por llamada) y `routes.warnings` no llega, así que el aviso es siempre el texto fijo `BICI_AVISO_GOOGLE`. La calidad real de las rutas ciclables sigue sin valorarse.
+- **«Estación activa» es un supuesto** (`activate == 1`, `no_available == 0`, `virtualDelete` falso): funcionó con las dos estaciones de la demo 1, pero no se contrastaron los recuentos de inactivas ni el significado de `no_available`.
 - **Latencia.** Hasta 5 peticiones HTTP secuenciales en la alternativa (2 EMT + 3 Google). Se acepta; paralelizar queda para después.
 - **Disponibilidad obsoleta.** Entre la consulta y la llegada a la estación puede cambiar; se avisa en el mensaje.
 - **Tests de otros afectados** por el campo `bici` y por la llamada real del enganche (tabla anterior).
 - **Archivo compartido.** `config.py` lo tocan otras ramas: añadir al final de la sección de rutas y rebasar.
 - **Nombres `EMT_*` ya existentes.** Estaban en `.env.example` antes de esta spec; si otra spec los usa con otro significado, hay que coordinarlo (no hay uso en el código actual).
 - **Deuda técnica.** Dos clientes HTTP y dos haversine (`distancia_m` en `planificar_ruta.py` y en `bicimad.py`): se unifican en un módulo común al dividir `planificar_ruta.py`.
-- **Clima.** Open-Meteo (verificado en open-meteo.com: gratuito sin clave para uso no comercial hasta 10.000 llamadas/día, atribución CC BY 4.0) es de uso no comercial; si el proyecto pasara a uso comercial hace falta clave de pago. La atribución puede perderse en la síntesis (T9); por eso irá también en el `README`. `LESS_WALKING` en Google puede devolver rutas más largas o con más trasbordos; es una preferencia, no una garantía.
+- **Clima.** Open-Meteo (verificado en open-meteo.com: gratuito sin clave para uso no comercial hasta 10.000 llamadas/día, atribución CC BY 4.0) es de uso no comercial; si el proyecto pasara a uso comercial hace falta clave de pago. La atribución puede perderse en la síntesis (T9); por eso irá también en el `README`. `LESS_WALKING` en Google puede devolver rutas más largas o con más trasbordos; es una preferencia, no una garantía. **Única muestra real (demo 4, desfavorable):** 20 → 36 min de viaje a cambio de 4 min menos a pie.
 - **Facturación de Google.** Cada alternativa añade 3 llamadas de Routes (BICYCLE/WALK pueden tener otra categoría); revisar en la consola.
 
 ## Trazabilidad
@@ -160,7 +161,7 @@ Todos con `pytest`, sin red ni LLM, en `tests/test_bicimad.py`. **Dobles:** func
 | RF-2 | Regla R1–R4 | `::test_regla_hora_pedida_no_ofrece`, `::test_regla_distancia_en_los_bordes` |
 | RF-3 | Orden de las llamadas | `::test_r1_r2_no_llaman_a_nada`, `::test_r3_r4_no_llaman_a_google` |
 | RF-4 | Frases de `no_ofrecida` | `::test_motivo_solo_en_r3_r4` |
-| RF-5 | Cliente EMT | `::test_estaciones_una_consulta_y_token_reutilizado` |
+| RF-5 | Cliente EMT | `::test_login_y_estaciones_rutas_cabeceras_y_dos_llamadas`, `::test_token_reutilizado_en_la_segunda_consulta`; login «01»: `::test_login_00_y_01_con_token_son_correctos`; plazos: `::test_login_usa_el_plazo_corto_y_la_lista_el_largo` |
 | RF-6 | Elección de estaciones | `::test_estacion_con_bicis_y_con_huecos`, `::test_inactiva_y_radio` |
 | RF-7 | Texto con disponibilidad | `::test_mensaje_indica_estaciones_y_disponibilidad` |
 | RF-8 | Google BICYCLE | `::test_tramo_bici_una_llamada_con_bicycle` |
@@ -168,14 +169,14 @@ Todos con `pytest`, sin red ni LLM, en `tests/test_bicimad.py`. **Dobles:** func
 | RF-10 | Total y fuentes | `::test_total_es_la_suma_y_etiqueta_fuentes` |
 | RF-11 | Sin alternativa parcial | `::test_si_falla_un_tramo_no_hay_alternativa_parcial` |
 | RF-12 | Aviso | `::test_aviso_de_google_o_texto_fijo`; en la síntesis, `test_sintetizador.py::test_avisos_obligatorios_sobreviven_a_la_sintesis` *(T9, si se aprueba)* |
-| RF-13 | Fallo de la EMT | `::test_emt_falla_no_disponible_y_ruta_intacta` |
+| RF-13 | Fallo de la EMT | `::test_fallo_de_la_emt_deja_la_ruta_intacta_con_aviso`, `::test_fallo_de_login_no_disponible_sin_excepcion_ni_reintento`, `::test_fallo_de_estaciones_no_disponible_sin_excepcion_ni_reintento` |
 | RF-14 | Fallo de Google | `::test_google_falla_no_disponible` |
 | RF-15 | Error inesperado | `::test_error_inesperado_no_rompe_la_ruta` |
 | RF-16 | Contrato aditivo | `::test_campo_bici_solo_en_ok_y_campos_existentes_intactos` |
 | RF-17 | Módulo y enganche | `::test_enganche_unico_en_planificar_ruta` (el módulo existe, `planificar_ruta.py` no contiene lógica de BiciMAD) |
 | RF-18 | RAG sin cambios | `::test_el_rag_mantiene_sus_dos_llamadas` |
 | RF-19 | Español | `::test_mensajes_de_bici_en_espanol` |
-| RF-20 | `clima_origen` | `::test_clima_una_llamada_con_las_cuatro_variables`, `::test_sin_hora_pedida_consulta_el_clima_antes_de_google` |
+| RF-20 | `clima_origen` | `::test_clima_una_llamada_con_las_cuatro_variables`, `::test_limite_open_meteo_1` |
 | RF-21 | `apto_exterior` | `::test_apto_exterior_cada_causa_y_los_bordes` |
 | RF-22 | `LESS_WALKING` | `::test_no_apto_pide_less_walking_sin_llamadas_extra`, `::test_apto_o_sin_dato_peticion_de_siempre` |
 | RF-23 | Regla R0 | `::test_no_apto_o_sin_dato_no_ofrece_bici_ni_llama_a_la_emt` |
