@@ -10,6 +10,7 @@ from copy import deepcopy
 import json
 from typing import Any, Callable, Mapping
 
+import config
 from src.modelos import crear_modelo_sintetizador
 
 
@@ -26,6 +27,27 @@ def contexto_anclado(estado: Mapping[str, Any]) -> dict[str, list[Any]]:
         "resultados": deepcopy(resultados) if isinstance(resultados, list) else [],
         "traza": deepcopy(traza) if isinstance(traza, list) else [],
     }
+
+
+def _avisos_obligatorios(contexto: Mapping[str, Any]) -> list[str]:
+    """Avisos que el LLM no puede omitir (spec 009): el de Google de la bici (RF-12) y la atribución a Open-Meteo."""
+    avisos: list[str] = []
+    try:
+        for resultado in contexto.get("resultados", []):
+            if not isinstance(resultado, Mapping) or resultado.get("tool") != "planificar_ruta":
+                continue
+            bruto = resultado.get("resultado")
+            datos = json.loads(bruto) if isinstance(bruto, str) else bruto
+            if not isinstance(datos, Mapping):
+                continue
+            bici, clima = datos.get("bici"), datos.get("clima")
+            if isinstance(bici, Mapping) and bici.get("estado") == "ok" and isinstance(bici.get("aviso"), str):
+                avisos.append(bici["aviso"].strip())
+            if isinstance(clima, Mapping) and clima.get("estado") == "ok":
+                avisos.append(f"{config.CLIMA_ATRIBUCION}.")
+    except Exception:  # un resultado ilegible no debe activar el respaldo: solo se omite el aviso
+        pass
+    return [a for a in dict.fromkeys(avisos) if a]
 
 
 def _lineas_respaldo(contexto: Mapping[str, Any]) -> tuple[list[str], bool]:
@@ -81,7 +103,8 @@ def nodo_sintetizador(
         respuesta = modelo_efectivo(contexto)
         if not isinstance(respuesta, str) or not respuesta.strip():
             raise ValueError("Respuesta del sintetizador no interpretable.")
-        return {"respuesta": respuesta}
+        faltan = [a for a in _avisos_obligatorios(contexto) if a not in respuesta]
+        return {"respuesta": "\n\n".join([respuesta, *faltan])}
     except Exception:
         return {
             "respuesta": renderizar_respaldo(contexto),
