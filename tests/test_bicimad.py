@@ -280,3 +280,91 @@ def test_description_del_login_y_token_nunca_salen(emt, respuestas, caplog, caps
 def test_haversine_propio(bici):
     assert bici.distancia_m(40.4169, -3.7035, 40.4169, -3.7035) == 0
     assert 1000 < bici.distancia_m(40.4169, -3.7035, 40.4065, -3.6895) < 3000
+
+
+# --- T3: regla de oferta (R1, R2) y elección de estaciones (R3, R4): funciones puras ---
+
+ORIGEN = {"lat": 40.4169, "lon": -3.7035}
+DESTINO = {"lat": 40.4439, "lon": -3.7035}          # unos 3 km al norte
+
+
+def punto_a(metros_al_norte):
+    return {"lat": ORIGEN["lat"] + metros_al_norte / 111_195, "lon": ORIGEN["lon"]}
+
+
+def est(id_, lugar, desplazamiento_lat_m=0, bicis=5, huecos=5, activa=True):
+    """Estación a `desplazamiento_lat_m` metros al norte de `lugar`."""
+    return {"id": id_, "nombre": f"E{id_}", "lat": lugar["lat"] + desplazamiento_lat_m / 111_195, "lon": lugar["lon"],
+            "bicis": bicis, "huecos": huecos, "activa": activa}
+
+
+def test_regla_hora_pedida_no_ofrece(bici):
+    assert bici.rechazo_oferta(ORIGEN, DESTINO, hora_pedida=True) == "R1"
+    assert bici.rechazo_oferta(ORIGEN, DESTINO, hora_pedida=False) is None
+    # R1 va antes que R2: con hora pedida y distancia fuera de rango sigue siendo R1.
+    assert bici.rechazo_oferta(ORIGEN, punto_a(100), hora_pedida=True) == "R1"
+
+
+def test_regla_distancia_en_los_bordes(bici, monkeypatch):
+    for metros, esperado in [(900, "R2"), (1100, None), (5900, None), (6100, "R2")]:
+        assert bici.rechazo_oferta(ORIGEN, punto_a(metros), hora_pedida=False) == esperado
+    # Bordes exactos (inclusivos): la distancia justo igual al mínimo o al máximo se ofrece.
+    d = bici.distancia_m(ORIGEN["lat"], ORIGEN["lon"], DESTINO["lat"], DESTINO["lon"])
+    monkeypatch.setattr(config, "BICI_DISTANCIA_MIN_M", d)
+    assert bici.rechazo_oferta(ORIGEN, DESTINO, hora_pedida=False) is None
+    monkeypatch.setattr(config, "BICI_DISTANCIA_MIN_M", d + 0.001)
+    assert bici.rechazo_oferta(ORIGEN, DESTINO, hora_pedida=False) == "R2"
+    monkeypatch.setattr(config, "BICI_DISTANCIA_MIN_M", 1000)
+    monkeypatch.setattr(config, "BICI_DISTANCIA_MAX_M", d)
+    assert bici.rechazo_oferta(ORIGEN, DESTINO, hora_pedida=False) is None
+    monkeypatch.setattr(config, "BICI_DISTANCIA_MAX_M", d - 0.001)
+    assert bici.rechazo_oferta(ORIGEN, DESTINO, hora_pedida=False) == "R2"
+
+
+def test_estacion_con_bicis_y_con_huecos(bici, monkeypatch):
+    estaciones = [
+        est(1, ORIGEN, 100, bicis=0, huecos=9),      # la más cercana al origen, sin bicis: se salta
+        est(2, ORIGEN, 200, bicis=4, huecos=0),      # con bicis (origen); sin huecos (no vale de destino)
+        est(3, DESTINO, 100, bicis=9, huecos=0),     # la más cercana al destino, llena: se salta
+        est(4, DESTINO, 300, bicis=0, huecos=6),     # con huecos
+    ]
+    r = bici.elegir_estaciones(estaciones, ORIGEN, DESTINO)
+    assert r["estado"] == "ok"
+    assert r["origen"]["id"] == 2 and r["destino"]["id"] == 4
+    assert r["origen"]["distancia_m"] == 200 and r["destino"]["distancia_m"] == 300
+    # Los mínimos son los de config.
+    monkeypatch.setattr(config, "BICI_MIN_BICIS", 5)
+    assert bici.elegir_estaciones(estaciones, ORIGEN, DESTINO) == {"estado": "no_ofrecida", "motivo": "sin_bicis_origen"}
+    monkeypatch.setattr(config, "BICI_MIN_BICIS", 1)
+    monkeypatch.setattr(config, "BICI_MIN_HUECOS", 7)
+    assert bici.elegir_estaciones(estaciones, ORIGEN, DESTINO) == {"estado": "no_ofrecida", "motivo": "sin_huecos_destino"}
+
+
+def test_la_mas_cercana_gana_aunque_este_despues_en_la_lista(bici):
+    estaciones = [est(1, ORIGEN, 400), est(2, ORIGEN, 50), est(3, DESTINO, 400), est(4, DESTINO, 50)]
+    r = bici.elegir_estaciones(estaciones, ORIGEN, DESTINO)
+    assert (r["origen"]["id"], r["destino"]["id"]) == (2, 4)
+
+
+def test_inactiva_y_radio(bici, monkeypatch):
+    destino_ok = est(9, DESTINO, 50)
+    # Una inactiva más cercana se descarta y se usa la siguiente activa.
+    r = bici.elegir_estaciones([est(1, ORIGEN, 50, activa=False), est(2, ORIGEN, 300), destino_ok], ORIGEN, DESTINO)
+    assert r["origen"]["id"] == 2
+    # Solo hay una a más de BICI_ESTACION_RADIO_MAX_M: no vale, aunque tenga bicis.
+    lejos = est(3, ORIGEN, 600)
+    assert bici.elegir_estaciones([lejos, destino_ok], ORIGEN, DESTINO) == {"estado": "no_ofrecida", "motivo": "sin_bicis_origen"}
+    assert bici.elegir_estaciones([est(4, ORIGEN, 50), est(5, DESTINO, 600)], ORIGEN, DESTINO) == \
+        {"estado": "no_ofrecida", "motivo": "sin_huecos_destino"}
+    # El radio es inclusivo.
+    d = bici.distancia_m(ORIGEN["lat"], ORIGEN["lon"], lejos["lat"], lejos["lon"])
+    monkeypatch.setattr(config, "BICI_ESTACION_RADIO_MAX_M", d)
+    assert bici.elegir_estaciones([lejos, destino_ok], ORIGEN, DESTINO)["origen"]["id"] == 3
+    # Sin estaciones.
+    assert bici.elegir_estaciones([], ORIGEN, DESTINO) == {"estado": "no_ofrecida", "motivo": "sin_bicis_origen"}
+
+
+def test_misma_estacion_no_se_ofrece(bici, monkeypatch):
+    monkeypatch.setattr(config, "BICI_ESTACION_RADIO_MAX_M", 10_000)     # una sola estación sirve a los dos extremos
+    r = bici.elegir_estaciones([est(1, ORIGEN, 1500, bicis=3, huecos=3)], ORIGEN, DESTINO)
+    assert r == {"estado": "no_ofrecida", "motivo": "misma_estacion"}

@@ -99,3 +99,42 @@ def emt_estaciones() -> dict:
         return {"estado": "ok", "estaciones": estaciones}
     except Exception:  # noqa: BLE001 - sin detalles: la excepción puede contener datos sensibles
         return dict(FALLO)
+
+
+def rechazo_oferta(origen: dict, destino: dict, hora_pedida: bool) -> str | None:
+    """Regla de oferta R1 y R2 (RF-2): "R1" si hay hora pedida, "R2" si la distancia está fuera de rango, o None."""
+    if hora_pedida:
+        return "R1"
+    d = distancia_m(origen["lat"], origen["lon"], destino["lat"], destino["lon"])
+    if not config.BICI_DISTANCIA_MIN_M <= d <= config.BICI_DISTANCIA_MAX_M:
+        return "R2"
+    return None
+
+
+def _mas_cercana(estaciones: list, lugar: dict, campo: str, minimo: int) -> dict | None:
+    """Estación activa más cercana a `lugar` con al menos `minimo` en `campo` y dentro del radio (RF-6)."""
+    mejor = None
+    for e in estaciones:
+        if not e["activa"] or e[campo] < minimo:
+            continue
+        d = distancia_m(lugar["lat"], lugar["lon"], e["lat"], e["lon"])
+        if d <= config.BICI_ESTACION_RADIO_MAX_M and (mejor is None or d < mejor[0]):
+            mejor = (d, e)
+    return None if mejor is None else {**mejor[1], "distancia_m": round(mejor[0])}
+
+
+def elegir_estaciones(estaciones: list, origen: dict, destino: dict) -> dict:
+    """Estación de origen (con bicis) y de destino (con huecos): R3 y R4 (RF-2, RF-6).
+
+    Devuelve `{"estado": "ok", "origen": {...}, "destino": {...}}` o
+    `{"estado": "no_ofrecida", "motivo": "sin_bicis_origen" | "sin_huecos_destino" | "misma_estacion"}`.
+    """
+    e_o = _mas_cercana(estaciones, origen, "bicis", config.BICI_MIN_BICIS)
+    if e_o is None:
+        return {"estado": "no_ofrecida", "motivo": "sin_bicis_origen"}
+    e_d = _mas_cercana(estaciones, destino, "huecos", config.BICI_MIN_HUECOS)
+    if e_d is None:
+        return {"estado": "no_ofrecida", "motivo": "sin_huecos_destino"}
+    if e_o["id"] == e_d["id"]:
+        return {"estado": "no_ofrecida", "motivo": "misma_estacion"}
+    return {"estado": "ok", "origen": e_o, "destino": e_d}
