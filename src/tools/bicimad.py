@@ -111,7 +111,7 @@ def emt_estaciones() -> dict:
         token = _obtener_token()
         if token is None:
             return dict(FALLO)
-        estado, cuerpo = _get_json(config.EMT_ESTACIONES_URL, {"accessToken": token}, config.EMT_TIMEOUT_S)
+        estado, cuerpo = _get_json(config.EMT_ESTACIONES_URL, {"accessToken": token}, config.EMT_TIMEOUT_ESTACIONES_S)
         if estado != 200 or not isinstance(cuerpo, dict) or cuerpo.get("code") != "00" \
                 or not isinstance(cuerpo.get("data"), list):
             _token = None   # un token rechazado no se reutiliza

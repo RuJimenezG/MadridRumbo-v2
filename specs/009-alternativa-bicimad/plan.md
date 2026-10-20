@@ -134,10 +134,11 @@ Todos con `pytest`, sin red ni LLM, en `tests/test_bicimad.py`. **Dobles:** func
 
 *(T7, 2026-10-20)* Ningún test existente falló. `tests/dobles_ruta.py::Escenario` simula también la red de bici (login y estaciones de la EMT, Google de bici y a pie) y **desactiva la alternativa por defecto** (`bici` queda `no_ofrecida` sin llamadas); `Escenario.bici_real()` la activa para los tests de la spec 009. El resultado `ok` de los tests existentes ya lleva `clima` y `bici`.
 
-*(T10, 2026-10-20)* Demos reales parciales (`demos.md`): el login de la EMT devolvió `code` "01" y no se pudo ver la alternativa real. Latencia medida: 7,8–8,8 s por consulta sin bici, dominada por el RAG (1,9–4,7 s por llamada); la alternativa añadirá lista de estaciones y 3 llamadas de Google de bici (sin medir).
+*(T10, 2026-10-20; segundo intento de la demo 1: timeout del login de la EMT a los 10 s, sin estaciones)* Demos reales parciales (`demos.md`): el login de la EMT devolvió `code` "01" y no se pudo ver la alternativa real. Latencia medida: 7,8–8,8 s por consulta sin bici, dominada por el RAG (1,9–4,7 s por llamada); la alternativa añadirá lista de estaciones y 3 llamadas de Google de bici (sin medir).
 
 ## Riesgos
 
+- **Latencia de la EMT (limitación conocida, 2026-10-20):** en T10 el login tardó 5,9 s (normalmente 0,14 s) y la lista de estaciones superó los 10 s. Plazos: login `EMT_TIMEOUT_S` = 10 s y lista `EMT_TIMEOUT_ESTACIONES_S` = 20 s. Con la EMT lenta la consulta puede tardar 25-30 s en el peor caso; si algo agota su plazo, `bici` queda `no_disponible` y la ruta de transporte nunca se pierde. **Mejora futura (no se hace ahora):** paralelizar la bici con el RAG; tampoco hay caché de estaciones.
 - **Login de la EMT con dos códigos correctos:** "00" (token nuevo) y "01" (token vigente prorrogado, visto en T10). El cliente acepta ambos si `data[0].accessToken` existe; sin caducidad usa 3600 s (`EMT_TOKEN_CADUCIDAD_DEFECTO_S`). Falta comprobar con datos reales que "01" trae el token.
 - **API de la EMT verificada en T1** (login v1 y estaciones). Quedan sin confirmar el significado de `no_available`, los límites de uso (el login devuelve `apiCounter`) y que `description` del login **incluye el token y el usuario**: el cliente nunca debe registrarla ni devolverla.
 - **El sintetizador puede descartar el aviso de Google** (LLM; confirmado leyendo el código). Mitigación: T9 (opción A, archivo compartido). Si no se aprueba, RF-12 no se cumple en la respuesta final aunque sí en el JSON.

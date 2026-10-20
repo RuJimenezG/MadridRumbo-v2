@@ -49,3 +49,15 @@ Nominatim 0,04–0,35; Open-Meteo 0,13–0,46; EMT (login) 0,14; Google transpor
 2. **`routes.warnings` de Google para bici y a pie:** no se hicieron las llamadas de bici.
 3. **Cobertura de `BICYCLE` en Madrid** y coherencia del total de la alternativa (suma de los tres tramos).
 4. **Significado del `code` "01" del login de la EMT:** no se guardó su `description` (puede contener el usuario y el token). Esta mañana el mismo login devolvió "00".
+
+## Repetición de la demo 1 (2026-10-20, ~14:10) — tampoco llegó a la lista de estaciones
+
+> Tras corregir el cliente para aceptar el `code` "01" del login. Mismo trayecto, sin hora pedida. Sin reintentos.
+
+**Llamadas reales gastadas:** Nominatim 2, Open-Meteo 1, EMT 1 (login), Google transporte 1, Google bici 0, RAG 2. Autorizadas como máximo: EMT 2 y Google 4. No se gastaron la lista de estaciones ni las 3 llamadas de Google de bici.
+
+**Qué pasó:** el login de la EMT no respondió en 10 s (`EMT_TIMEOUT_S`): `TimeoutError` a los 10,05 s. Es la primera vez que falla así; en las pruebas anteriores respondió en 0,14 s. El sistema se comportó como la spec (RF-13): `bici = no_disponible`, ruta de transporte intacta (20 min, Cercanías C4a; antes C4b/C3, solo cambia la línea concreta) y la frase «La alternativa en bici (BiciMAD) no está disponible ahora.». El tiempo de la consulta subió a 18,0 s por esa espera.
+
+Tiempo real de esta pasada: 16 °C, sin precipitación, 13 km/h (apto), con atribución en el mensaje.
+
+**Qué sigue sin contrastar con datos reales:** si el login "01" trae `data[0].accessToken`; cuántas estaciones tienen `activate` distinto de 1, `no_available` distinto de 0 o `virtualDelete` verdadero, y si la elegida cumple la regla; si Google devuelve `routes.warnings` en bici y a pie; el mensaje final con la bici y la suma de los tres tramos.

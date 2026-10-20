@@ -150,7 +150,7 @@ def test_login_y_estaciones_rutas_cabeceras_y_dos_llamadas(emt):
     (url1, cab1, t1), (url2, cab2, t2) = red.llamadas
     assert url1 == config.EMT_LOGIN_URL and cab1 == {"X-ClientId": ID_FALSO, "passKey": CLAVE_FALSA}
     assert url2 == config.EMT_ESTACIONES_URL and cab2 == {"accessToken": TOKEN_FALSO}
-    assert t1 == t2 == config.EMT_TIMEOUT_S
+    assert t1 == config.EMT_TIMEOUT_S and t2 == config.EMT_TIMEOUT_ESTACIONES_S      # la lista, más pesada, tiene su plazo
 
 
 def test_coordenadas_lon_lat_se_convierten_a_lat_lon(emt):
@@ -1211,3 +1211,29 @@ def test_login_01_no_filtra_description_ni_secretos(emt, caplog, capsys):
     visible = repr(r) + caplog.text + "".join(capsys.readouterr())
     assert r["estado"] == "ok" and not any(s in visible for s in SECRETOS)
     assert set(r) == {"estado", "estaciones"}
+
+
+# --- Plazos de la EMT: la lista de estaciones (unas 678) tarda más que el login ---
+
+def test_plazos_de_la_emt():
+    assert config.EMT_TIMEOUT_S == 10 and config.EMT_TIMEOUT_ESTACIONES_S == 20
+
+
+def test_login_usa_el_plazo_corto_y_la_lista_el_largo(emt):
+    red = emt.con(login_ok(), estaciones_ok(estacion()))
+    emt.bici.emt_estaciones()
+    assert [t for _, _, t in red.llamadas] == [10, 20]
+    red = emt.con(estaciones_ok(estacion()))                                        # token reutilizado: solo la lista
+    emt.bici.emt_estaciones()
+    assert [t for _, _, t in red.llamadas] == [20]
+
+
+@pytest.mark.parametrize("donde", ["login", "estaciones"])
+def test_timeout_en_cualquier_llamada_no_disponible_sin_reintento_ni_fugas(emt, donde, caplog, capsys):
+    fallo = TimeoutError(f"timeout con {TOKEN_FALSO} {CLAVE_FALSA} {ID_FALSO} {USUARIO_FALSO}")
+    respuestas = [fallo] if donde == "login" else [login_ok(), fallo]
+    red = emt.con(*respuestas)
+    with caplog.at_level("DEBUG"):
+        r = emt.bici.emt_estaciones()                                               # no lanza
+    assert r == FALLO and len(red.llamadas) == len(respuestas)                      # sin reintentos
+    assert not any(s in repr(r) + caplog.text + "".join(capsys.readouterr()) for s in SECRETOS)
