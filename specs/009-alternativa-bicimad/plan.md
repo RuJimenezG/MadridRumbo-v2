@@ -134,6 +134,8 @@ Todos con `pytest`, sin red ni LLM, en `tests/test_bicimad.py`. **Dobles:** func
 
 *(T7, 2026-10-20)* Ningún test existente falló. `tests/dobles_ruta.py::Escenario` simula también la red de bici (login y estaciones de la EMT, Google de bici y a pie) y **desactiva la alternativa por defecto** (`bici` queda `no_ofrecida` sin llamadas); `Escenario.bici_real()` la activa para los tests de la spec 009. El resultado `ok` de los tests existentes ya lleva `clima` y `bici`.
 
+*(T10, 2026-10-20)* Demos reales parciales (`demos.md`): el login de la EMT devolvió `code` "01" y no se pudo ver la alternativa real. Latencia medida: 7,8–8,8 s por consulta sin bici, dominada por el RAG (1,9–4,7 s por llamada); la alternativa añadirá lista de estaciones y 3 llamadas de Google de bici (sin medir).
+
 ## Riesgos
 
 - **API de la EMT verificada en T1** (login v1 y estaciones). Quedan sin confirmar el significado de `no_available`, los límites de uso (el login devuelve `apiCounter`) y que `description` del login **incluye el token y el usuario**: el cliente nunca debe registrarla ni devolverla.
