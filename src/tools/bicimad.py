@@ -9,6 +9,7 @@ import math
 import re
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 
 import config
@@ -261,3 +262,55 @@ def alternativa_bici(origen: dict, destino: dict, hora_pedida: bool) -> tuple[di
     except Exception as e:  # noqa: BLE001 - nunca rompe la ruta; solo el tipo, la excepción puede llevar datos sensibles
         logger.error("Error inesperado en la alternativa en bici: %s", type(e).__name__)
         return _no_disponible()
+
+
+# --- Clima (Open-Meteo): funciones internas, no una tool (spec 009, RF-20 a RF-26) ---
+
+def apto_exterior(temperatura_c: float, precipitacion_mm: float, codigo: int, viento_kmh: float) -> tuple[bool, list]:
+    """`(apto, motivos)` para ir al aire libre (RF-21). Los umbrales están en `config.py` y son inclusivos."""
+    motivos = []
+    if temperatura_c < config.CLIMA_TEMP_MIN_C:
+        motivos.append("temperatura baja")
+    elif temperatura_c > config.CLIMA_TEMP_MAX_C:
+        motivos.append("temperatura alta")
+    if codigo in config.CLIMA_CODIGOS_NO_APTOS:
+        motivos.append(config.CLIMA_CODIGOS_NO_APTOS[codigo])
+    elif precipitacion_mm > config.CLIMA_PRECIPITACION_MAX_MM:
+        motivos.append("precipitación")
+    if viento_kmh > config.CLIMA_VIENTO_MAX_KMH:
+        motivos.append("viento fuerte")
+    return not motivos, motivos
+
+
+def _numero(x) -> bool:
+    return isinstance(x, (int, float)) and not isinstance(x, bool) and math.isfinite(x)
+
+
+def clima_origen(origen: dict) -> dict:
+    """Tiempo actual del origen con Open-Meteo: una llamada, sin clave ni reintentos (RF-20, RF-25, RF-26).
+
+    Devuelve `{"estado": "ok", temperatura_c, precipitacion_mm, codigo, viento_kmh, apto, motivos, fuente, licencia}`
+    o `{"estado": "no_disponible"}` si falla algo o falta alguna de las cuatro variables. Nunca lanza.
+    """
+    fallo = {"estado": "no_disponible"}
+    try:
+        if not (isinstance(origen, dict) and _numero(origen.get("lat")) and _numero(origen.get("lon"))):
+            return fallo
+        consulta = urllib.parse.urlencode({
+            "latitude": origen["lat"], "longitude": origen["lon"],
+            "current": "temperature_2m,precipitation,weather_code,wind_speed_10m"})
+        estado, cuerpo = _get_json(f"{config.OPEN_METEO_URL}?{consulta}", timeout=config.OPEN_METEO_TIMEOUT_S)
+        if estado != 200 or not isinstance(cuerpo, dict) or not isinstance(cuerpo.get("current"), dict):
+            return fallo
+        actual = cuerpo["current"]
+        temp, lluvia, codigo, viento = (actual.get(k) for k in
+                                        ("temperature_2m", "precipitation", "weather_code", "wind_speed_10m"))
+        if not (_numero(temp) and _numero(lluvia) and _numero(viento) and isinstance(codigo, int)
+                and not isinstance(codigo, bool)):
+            return fallo
+        apto, motivos = apto_exterior(temp, lluvia, codigo, viento)
+        return {"estado": "ok", "temperatura_c": temp, "precipitacion_mm": lluvia, "codigo": codigo,
+                "viento_kmh": viento, "apto": apto, "motivos": motivos, "fuente": "Open-Meteo", "licencia": "CC BY 4.0"}
+    except Exception as e:  # noqa: BLE001 - sin detalles: solo el tipo de la excepción
+        logger.warning("Open-Meteo no disponible: %s", type(e).__name__)
+        return fallo

@@ -638,3 +638,143 @@ def test_mensajes_de_bici_en_espanol(orq):
         assert "BiciMAD" in texto
         assert not re.search(r"\b(bikes?|stations?|docks?|available|minutes?|walk|cycling)\b", texto, re.I)
     assert "estación" in textos[0] and "A pie" in textos[0] and "minutos" not in textos[0]
+
+
+# --- T13: clima con Open-Meteo (apto_exterior pura y clima_origen). Campos reales: verificacion-open-meteo.md ---
+
+def test_constantes_del_clima():
+    assert config.OPEN_METEO_URL == "https://api.open-meteo.com/v1/forecast"
+    assert config.OPEN_METEO_TIMEOUT_S > 0
+    assert (config.CLIMA_TEMP_MIN_C, config.CLIMA_TEMP_MAX_C) == (5, 32)
+    assert config.CLIMA_VIENTO_MAX_KMH == 30 and config.CLIMA_PRECIPITACION_MAX_MM == 0
+    assert config.CLIMA_ATRIBUCION == "Datos meteorológicos de Open-Meteo.com (CC BY 4.0)"
+    # Códigos WMO no aptos: llovizna y lluvia, nieve y tormenta (documentación de Open-Meteo).
+    esperados = set(range(51, 58)) | set(range(61, 68)) | set(range(80, 83)) | set(range(71, 78)) \
+        | {85, 86} | set(range(95, 100))
+    assert set(config.CLIMA_CODIGOS_NO_APTOS) == esperados
+
+
+def test_apto_exterior_cada_causa_y_los_bordes(bici):
+    def apto(temp=16.1, lluvia=0.0, codigo=3, viento=11.2):
+        return bici.apto_exterior(temp, lluvia, codigo, viento)
+
+    assert apto() == (True, [])                                     # caso real de T12: nublado, 16,1 °C, 11,2 km/h
+    # Bordes inclusivos: justo en el umbral es apto.
+    assert apto(temp=5)[0] and apto(temp=32)[0] and apto(viento=30)[0] and apto(lluvia=0)[0]
+    assert apto(temp=4.9) == (False, ["temperatura baja"])
+    assert apto(temp=32.1) == (False, ["temperatura alta"])
+    assert apto(viento=30.1) == (False, ["viento fuerte"])
+    assert apto(lluvia=0.1) == (False, ["precipitación"])           # con código de cielo despejado
+    for codigo in (0, 1, 2, 3, 45, 48):
+        assert apto(codigo=codigo)[0]
+    for codigo, motivo in [(51, "lluvia"), (57, "lluvia"), (61, "lluvia"), (67, "lluvia"), (80, "lluvia"), (82, "lluvia"),
+                           (71, "nieve"), (77, "nieve"), (85, "nieve"), (86, "nieve"),
+                           (95, "tormenta"), (96, "tormenta"), (99, "tormenta")]:
+        assert apto(codigo=codigo) == (False, [motivo])
+    for codigo in (58, 68, 78, 83, 87, 94):                         # fuera de los intervalos no aptos
+        assert apto(codigo=codigo)[0]
+    # Varias causas a la vez, sin repetir motivos (lluvia con precipitación).
+    assert apto(temp=2, lluvia=1.2, codigo=61, viento=40) == (
+        False, ["temperatura baja", "lluvia", "viento fuerte"])
+    # Los umbrales son los de config.
+    assert apto(temp=40)[0] is False
+
+
+def test_apto_exterior_usa_los_umbrales_de_config(bici, monkeypatch):
+    monkeypatch.setattr(config, "CLIMA_TEMP_MAX_C", 40)
+    monkeypatch.setattr(config, "CLIMA_VIENTO_MAX_KMH", 50)
+    monkeypatch.setattr(config, "CLIMA_PRECIPITACION_MAX_MM", 0.5)
+    assert bici.apto_exterior(38, 0.4, 3, 45)[0]
+    assert not bici.apto_exterior(41, 0, 3, 0)[0]
+    assert not bici.apto_exterior(20, 0.6, 3, 0)[0]
+
+
+RESPUESTA_METEO = {"latitude": 40.417583, "longitude": -3.739399, "elevation": 666.0,
+                   "current_units": {"temperature_2m": "°C", "precipitation": "mm", "weather_code": "wmo code",
+                                     "wind_speed_10m": "km/h"},
+                   "current": {"time": "2026-10-20T13:00", "interval": 900, "temperature_2m": 16.1,
+                               "precipitation": 0.00, "weather_code": 3, "wind_speed_10m": 11.2}}
+
+
+def con_current(**cambios):
+    actual = {**RESPUESTA_METEO["current"], **cambios}
+    return 200, {**RESPUESTA_METEO, "current": actual}
+
+
+@pytest.fixture
+def meteo(bici, monkeypatch):
+    def con(*respuestas):
+        red = Red(*respuestas)
+        monkeypatch.setattr(bici, "_get_json", red)
+        return red
+    return types_namespace(bici, con)
+
+
+def test_clima_una_llamada_con_las_cuatro_variables(meteo):
+    from urllib.parse import parse_qs, urlsplit
+    red = meteo.con((200, RESPUESTA_METEO))
+    r = meteo.bici.clima_origen(ORIGEN)
+    assert r == {"estado": "ok", "temperatura_c": 16.1, "precipitacion_mm": 0.0, "codigo": 3, "viento_kmh": 11.2,
+                 "apto": True, "motivos": [], "fuente": "Open-Meteo", "licencia": "CC BY 4.0"}
+    assert len(red.llamadas) == 1
+    url, cabeceras, timeout = red.llamadas[0]
+    partes = urlsplit(url)
+    assert f"{partes.scheme}://{partes.netloc}{partes.path}" == config.OPEN_METEO_URL
+    consulta = parse_qs(partes.query)
+    assert consulta["latitude"] == [str(ORIGEN["lat"])] and consulta["longitude"] == [str(ORIGEN["lon"])]
+    assert consulta["current"] == ["temperature_2m,precipitation,weather_code,wind_speed_10m"]
+    assert cabeceras == {} and timeout == config.OPEN_METEO_TIMEOUT_S          # sin clave ni credenciales
+
+
+def test_clima_no_apto_lleva_los_motivos(meteo):
+    meteo.con(con_current(weather_code=61, precipitation=1.4, wind_speed_10m=35.0))
+    r = meteo.bici.clima_origen(ORIGEN)
+    assert r["estado"] == "ok" and r["apto"] is False and r["motivos"] == ["lluvia", "viento fuerte"]
+    assert r["precipitacion_mm"] == 1.4 and r["codigo"] == 61
+
+
+def _sin(clave):
+    actual = {k: v for k, v in RESPUESTA_METEO["current"].items() if k != clave}
+    return 200, {**RESPUESTA_METEO, "current": actual}
+
+
+FALLOS_METEO = [
+    (429, {"reason": "Too many requests", "error": True}),
+    (500, None),
+    (200, {}),
+    (200, {"current": None}),
+    (200, {"current": "no es un objeto"}),
+    (200, ["no", "es", "un", "objeto"]),
+    _sin("temperature_2m"), _sin("precipitation"), _sin("weather_code"), _sin("wind_speed_10m"),
+    con_current(temperature_2m=None),
+    con_current(temperature_2m="16.1"),
+    con_current(wind_speed_10m=True),
+    con_current(weather_code=3.5),
+    con_current(precipitation=float("nan")),
+    TimeoutError("timeout"),
+    OSError("sin red"),
+    ValueError("JSON inválido"),
+]
+
+
+@pytest.mark.parametrize("fallo", FALLOS_METEO)
+def test_open_meteo_falla_ruta_intacta_y_sin_bici(meteo, fallo):
+    red = meteo.con(fallo)
+    assert meteo.bici.clima_origen(ORIGEN) == {"estado": "no_disponible"}     # sin excepción, sin datos inventados
+    assert len(red.llamadas) == 1                                              # sin reintentos
+
+
+@pytest.mark.parametrize("origen", [{}, None, {"lat": "x", "lon": None}])
+def test_origen_invalido_no_llama_y_no_rompe(meteo, origen):
+    red = meteo.con()
+    assert meteo.bici.clima_origen(origen) == {"estado": "no_disponible"} and red.llamadas == []
+
+
+def test_error_inesperado_en_clima_no_rompe_la_ruta(meteo, monkeypatch, caplog):
+    def explota(*args, **kwargs):
+        raise RuntimeError("DATO-SENSIBLE")
+    monkeypatch.setattr(meteo.bici, "_get_json", explota)
+    with caplog.at_level("DEBUG"):
+        r = meteo.bici.clima_origen(ORIGEN)
+    assert r == {"estado": "no_disponible"}
+    assert "DATO-SENSIBLE" not in repr(r) + caplog.text and caplog.records     # registrado sin el texto de la excepción

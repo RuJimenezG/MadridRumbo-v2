@@ -183,6 +183,22 @@ GOOGLE_FIELD_MASK_BICI = "routes.duration,routes.distanceMeters,routes.warnings"
 BICI_AVISO_GOOGLE = ("Las rutas a pie y en bici están en fase beta y pueden carecer de aceras, caminos peatonales "
                      "o carriles bici claros.")
 
+# Clima con Open-Meteo (sin clave; verificado en T12, 2026-10-20). "No apto para exterior" si llueve, nieva o hay
+# tormenta (precipitación o código WMO), la temperatura sale de [MIN, MAX] o el viento supera el máximo. Ajustables.
+OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast"
+OPEN_METEO_TIMEOUT_S = 10
+CLIMA_TEMP_MIN_C = 5
+CLIMA_TEMP_MAX_C = 32
+CLIMA_VIENTO_MAX_KMH = 30
+CLIMA_PRECIPITACION_MAX_MM = 0
+# Códigos WMO no aptos y su motivo: llovizna y lluvia (51-57, 61-67, 80-82), nieve (71-77, 85-86), tormenta (95-99).
+CLIMA_CODIGOS_NO_APTOS = {
+    **dict.fromkeys([*range(51, 58), *range(61, 68), *range(80, 83)], "lluvia"),
+    **dict.fromkeys([*range(71, 78), 85, 86], "nieve"),
+    **dict.fromkeys(range(95, 100), "tormenta"),
+}
+CLIMA_ATRIBUCION = "Datos meteorológicos de Open-Meteo.com (CC BY 4.0)"
+
 # Hora de salida pedida: antelación máxima en días (valor provisional).
 ANTELACION_MAX_DIAS = 7
 
