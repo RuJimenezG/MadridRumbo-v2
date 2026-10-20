@@ -1118,3 +1118,96 @@ def test_bici_aparece_integro_en_el_json_de_la_tool_y_en_los_resultados(monkeypa
     completo = json.loads(salida["resultados"][0]["resultado"])
     assert completo["bici"] == bici                          # el mismo contenido, sin recortes
     assert len(salida["traza"][0]["preview"]) <= 120 < len(salida["resultados"][0]["resultado"])
+
+
+# --- Login de la EMT: code "00" (token nuevo) y "01" (token vigente prorrogado), hallazgo real de T10 ---
+
+DESCRIPCION_01 = "Token extend  into control-cache Data recovered OK"
+
+
+def login(code="01", token=TOKEN_FALSO, caducidad=86400, descripcion=DESCRIPCION_01, **extra):
+    """Respuesta de login con el `code` y el contenido de `data[0]` que se pidan (sin caducidad si es None)."""
+    datos = {"accessToken": token, "username": USUARIO_FALSO, **extra}
+    if caducidad is not None:
+        datos["tokenSecExpiration"] = caducidad
+    return 200, {"code": code, "description": descripcion, "datetime": "x", "data": [datos]}
+
+
+def test_constante_de_caducidad_por_defecto():
+    assert config.EMT_TOKEN_CADUCIDAD_DEFECTO_S == 3600
+
+
+@pytest.mark.parametrize("code", ["00", "01"])
+def test_login_00_y_01_con_token_son_correctos(emt, code):
+    red = emt.con(login(code), estaciones_ok(estacion()))
+    r = emt.bici.emt_estaciones()
+    assert r["estado"] == "ok" and len(r["estaciones"]) == 1 and len(red.llamadas) == 2
+    assert red.llamadas[1][1] == {"accessToken": TOKEN_FALSO}                       # el token del login se usa en la lista
+
+
+def test_login_01_reutiliza_el_token_y_respeta_su_caducidad(emt, monkeypatch):
+    ahora = [1000.0]
+    monkeypatch.setattr(time, "monotonic", lambda: ahora[0])
+    red = emt.con(login("01", caducidad=7200), estaciones_ok(estacion()), estaciones_ok(estacion()),
+                  login("01", caducidad=7200), estaciones_ok(estacion()))
+    emt.bici.emt_estaciones()
+    ahora[0] += 7199
+    emt.bici.emt_estaciones()                                                       # sigue vigente: sin nuevo login
+    assert [u for u, _, _ in red.llamadas].count(config.EMT_LOGIN_URL) == 1
+    ahora[0] += 2                                                                   # ya ha caducado (7201 s)
+    emt.bici.emt_estaciones()
+    assert [u for u, _, _ in red.llamadas].count(config.EMT_LOGIN_URL) == 2
+
+
+@pytest.mark.parametrize("code", ["00", "01"])
+@pytest.mark.parametrize("caducidad", [None, "abc", 0, -5, True, float("nan")])
+def test_sin_caducidad_valida_se_usa_la_de_config(emt, monkeypatch, code, caducidad):
+    ahora = [1000.0]
+    monkeypatch.setattr(time, "monotonic", lambda: ahora[0])
+    datos = login(code, caducidad=None)
+    if caducidad is not None:
+        datos[1]["data"][0]["tokenSecExpiration"] = caducidad
+    red = emt.con(datos, estaciones_ok(estacion()), estaciones_ok(estacion()), login(code, caducidad=None),
+                  estaciones_ok(estacion()))
+    emt.bici.emt_estaciones()
+    ahora[0] += config.EMT_TOKEN_CADUCIDAD_DEFECTO_S - 1
+    emt.bici.emt_estaciones()
+    assert [u for u, _, _ in red.llamadas].count(config.EMT_LOGIN_URL) == 1
+    ahora[0] += 2
+    emt.bici.emt_estaciones()
+    assert [u for u, _, _ in red.llamadas].count(config.EMT_LOGIN_URL) == 2
+
+
+@pytest.mark.parametrize("code", ["00", "01"])
+@pytest.mark.parametrize("token", [None, "", "   ", 123, ["x"]])
+def test_login_sin_access_token_valido_no_disponible(emt, code, token):
+    red = emt.con(login(code, token=token))
+    assert emt.bici.emt_estaciones() == FALLO and len(red.llamadas) == 1            # sin pedir estaciones ni reintentar
+
+
+@pytest.mark.parametrize("data", [[], None, "x", {}, [None], ["x"], [[]], [{}], [{"username": USUARIO_FALSO}]])
+def test_login_01_con_data_vacia_o_mal_formada_no_disponible(emt, data):
+    red = emt.con((200, {"code": "01", "description": DESCRIPCION_01, "datetime": "x", "data": data}))
+    assert emt.bici.emt_estaciones() == FALLO and len(red.llamadas) == 1
+
+
+@pytest.mark.parametrize("code", ["02", "80", "84", "1", "0", "", None, 0, 1, ["01"]])
+def test_otros_code_no_disponible_aunque_venga_token(emt, code):
+    red = emt.con(login(code))
+    assert emt.bici.emt_estaciones() == FALLO and len(red.llamadas) == 1
+
+
+@pytest.mark.parametrize("estado_http", [201, 204, 401, 403, 500])
+def test_login_01_con_http_no_200_no_disponible(emt, estado_http):
+    red = emt.con((estado_http, login("01")[1]))
+    assert emt.bici.emt_estaciones() == FALLO and len(red.llamadas) == 1
+
+
+def test_login_01_no_filtra_description_ni_secretos(emt, caplog, capsys):
+    descripcion = f"Token extend {USUARIO_FALSO} {TOKEN_FALSO} {CLAVE_FALSA} {ID_FALSO}"
+    emt.con(login("01", descripcion=descripcion), estaciones_ok(estacion()))
+    with caplog.at_level("DEBUG"):
+        r = emt.bici.emt_estaciones()
+    visible = repr(r) + caplog.text + "".join(capsys.readouterr())
+    assert r["estado"] == "ok" and not any(s in visible for s in SECRETOS)
+    assert set(r) == {"estado", "estaciones"}

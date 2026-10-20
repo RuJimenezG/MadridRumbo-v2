@@ -174,6 +174,8 @@ BICI_MIN_HUECOS = 1
 EMT_LOGIN_URL = "https://openapi.emtmadrid.es/v1/mobilitylabs/user/login/"
 EMT_ESTACIONES_URL = "https://openapi.emtmadrid.es/v1/transport/bicimad/stations/"
 EMT_TIMEOUT_S = 10
+# Caducidad (s) que se supone al token de la EMT si el login no la trae (el real dura 86 400 s): prudente, 1 h.
+EMT_TOKEN_CADUCIDAD_DEFECTO_S = 3600
 EMT_CLIENT_ID = os.getenv("EMT_CLIENT_ID")
 EMT_PASS_KEY = os.getenv("EMT_PASS_KEY")
 

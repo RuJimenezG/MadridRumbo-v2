@@ -76,13 +76,17 @@ def _obtener_token():
     estado, cuerpo = _get_json(config.EMT_LOGIN_URL,
                                {"X-ClientId": config.EMT_CLIENT_ID, "passKey": config.EMT_PASS_KEY},
                                config.EMT_TIMEOUT_S)
-    if estado != 200 or not isinstance(cuerpo, dict) or cuerpo.get("code") != "00":
+    # "00": token nuevo. "01" («Token extend into control-cache»): la EMT devuelve el token que ya estaba vigente.
+    if estado != 200 or not isinstance(cuerpo, dict) or cuerpo.get("code") not in ("00", "01"):
         return None
     datos = cuerpo["data"][0]
     token = datos["accessToken"]
     if not _credencial(token):
         return None
-    _token = (token, time.monotonic() + float(datos["tokenSecExpiration"]))
+    caducidad = datos.get("tokenSecExpiration")
+    if not (_numero(caducidad) and caducidad > 0):
+        caducidad = config.EMT_TOKEN_CADUCIDAD_DEFECTO_S
+    _token = (token, time.monotonic() + float(caducidad))
     return token
 
 

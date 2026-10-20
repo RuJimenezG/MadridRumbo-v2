@@ -138,6 +138,7 @@ Todos con `pytest`, sin red ni LLM, en `tests/test_bicimad.py`. **Dobles:** func
 
 ## Riesgos
 
+- **Login de la EMT con dos códigos correctos:** "00" (token nuevo) y "01" (token vigente prorrogado, visto en T10). El cliente acepta ambos si `data[0].accessToken` existe; sin caducidad usa 3600 s (`EMT_TOKEN_CADUCIDAD_DEFECTO_S`). Falta comprobar con datos reales que "01" trae el token.
 - **API de la EMT verificada en T1** (login v1 y estaciones). Quedan sin confirmar el significado de `no_available`, los límites de uso (el login devuelve `apiCounter`) y que `description` del login **incluye el token y el usuario**: el cliente nunca debe registrarla ni devolverla.
 - **El sintetizador puede descartar el aviso de Google** (LLM; confirmado leyendo el código). Mitigación: T9 (opción A, archivo compartido). Si no se aprueba, RF-12 no se cumple en la respuesta final aunque sí en el JSON.
 - **Cobertura y beta de Google BICYCLE/WALK.** Sin confirmar el texto ni el campo del aviso, ni la calidad en Madrid. Se revisa en la demo.
