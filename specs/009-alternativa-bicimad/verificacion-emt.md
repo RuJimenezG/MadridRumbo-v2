@@ -79,3 +79,13 @@ Comprobar con la persona titular de la cuenta de la EMT que las claves son váli
 - Los **huecos libres** son `free_bases` y las **bicis**, `dock_bikes`: ambos datos llegan en la misma consulta (supuesto confirmado).
 - Límites de uso: no documentados en la respuesta; el login trae `apiCounter` (sin interpretar). Sin reintentos y como mucho 2 peticiones por consulta (el token se reutiliza 24 h).
 - No se vio ningún error nuevo; los de 401, 429 y timeout siguen sin comprobar y se cubren con dobles.
+
+## Intento 4 — diagnóstico del `code` "01" del login (2026-10-20)
+
+> **1 petición real** a la EMT (login con el cliente actual de `bicimad.py`), sin reintentos y sin guardar la respuesta. Solo se anota lo que se imprimió, con las secuencias largas y el usuario ocultos.
+
+- **HTTP:** 200. **`code`:** "01".
+- **`description` (recortada y saneada):** «Token extend  into control-cache Data recovered OK».
+- **`data`:** lista de 1 elemento. **`apiCounter` (solo números):** `[3, 250000, 0]` (sin los nombres de los campos no se puede asegurar qué es cada número; el segundo parece un límite de uso).
+- **Lectura:** "01" no es un error: la EMT devuelve el token que ya estaba vigente («Token extend into control-cache») en lugar de crear uno nuevo, que es lo que indica "00". Cuando ya hay una sesión activa, el login responde "01" y, previsiblemente, lleva el `accessToken` en `data`.
+- **Consecuencia para el cliente (pendiente, sin cambiar todavía):** `bicimad._obtener_token` solo acepta `code` "00", así que trata "01" como fallo y la alternativa en bici queda `no_disponible` aunque la EMT esté bien. Habría que aceptar "00" y "01" siempre que `data[0].accessToken` exista, y añadir un test. Que `data[0]` de "01" lleve `accessToken` y `tokenSecExpiration` no se ha comprobado (no se imprimió).
