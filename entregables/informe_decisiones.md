@@ -1,7 +1,11 @@
 # Informe de decisiones — MadridRumbo (Project Break 2)
 
 > Grupo 3: Rubén Jiménez Gutiérrez, Guzmán López Barceló, José Manuel Gil Ruiz.
-> Este borrador recoge la parte de **José Manuel Gil Ruiz**: tool auxiliar de hora y su especialista, tool multimodal y calculadora (secciones 1 a 5) y los clientes CLI y Streamlit (sección 6). Las secciones del grafo, el RAG y las rutas las completan Rubén y Guzmán. Actualizado el 2026-10-19, ya con el grafo real en `develop`.
+> Este borrador recoge la parte de **José Manuel Gil Ruiz**: tool auxiliar de hora y su especialista, tool multimodal y calculadora (secciones 1 a 5) y los clientes CLI y Streamlit (sección 6). Las secciones del grafo, el RAG y las rutas las completan Rubén y Guzmán. La sección 8 incorpora las decisiones de alto impacto aprobadas en las specs de todo el proyecto. Actualizado el 2026-10-21.
+
+## 0. Ampliación del alcance
+
+Se ha decidido ampliar el alcance del proyecto. Originalmente este se restringía a tarifas y normativa relacionada con la red de transporte del Consorcio Regional de Transportes de Madrid. Al convertir el proyecto de un sistema RAG a otro multiagente las posibilidades de resolución de consultas se amplían enormemente, permitiendo ampliar el alcance a la consulta de rutas, horarios e información relacionada con el viaje.
 
 ## 1. Grafo: especialistas y momento HITL
 
@@ -79,7 +83,7 @@ Los precios que aparecen en la imagen son los siguientes:
 
 Después `calculadora` con `3*1,50+5,00` devolvió **9,50**, el total correcto. La traza muestra las dos llamadas en este orden, ambas con estado «ok».
 
-**Qué no demuestra esta prueba.** La expresión `3*1,50+5,00` la escribió el script de la demo; no la construyó un LLM a partir del texto de la imagen. El flujo completo (un LLM leyendo la imagen y otro proponiendo la operación) sigue sin probarse con un modelo real. Hoy, además, **no se puede ejecutar de punta a punta desde los clientes**: la spec 007 solo activa `tarifas` con una imagen aportada válida, pero `src/agent.py` fija `imagen_valida=False` en cada turno y la API pública no ofrece forma de aportarla. Una consulta sobre una imagen se desvía al RAG, que no ve imágenes (fallo 5).
+**Qué no demuestra esta prueba.** La expresión `3*1,50+5,00` la escribió el script de la demo; no la construyó un LLM a partir del texto de la imagen. El flujo completo (un LLM leyendo la imagen y otro proponiendo la operación) sigue sin probarse con un modelo real. Desde el cambio aprobado en las specs 007 y 008, los clientes pueden seleccionar la imagen demo solo al mencionar literalmente `assets/imagen_demo.jpg` en el mensaje. No admiten subida de archivos ni otras rutas: una referencia genérica a una imagen sigue sin acreditar una imagen válida y se deriva al RAG.
 
 **Incidencias durante la demo.** Antes de que funcionara hubo tres fallos externos al código, todos con el mismo mensaje genérico de la tool:
 - `gemini-3.6-flash` (el modelo configurado en el proyecto) devolvió `503 UNAVAILABLE` por demanda alta.
@@ -94,7 +98,7 @@ Con `gemini-3.8-flash` funcionó a la primera llamada válida, por lo que `MODEL
 2. **La lectura de cifras solo se ha verificado en una imagen.** Con la captura de cuatro precios el modelo acertó, pero no hay garantía en imágenes más densas o de peor calidad: un error al leer «1,50» o «5,00» llevaría a un total incorrecto. *Siguiente paso:* mostrar los importes leídos en la nota para que el humano los valide en el HITL y probar con más imágenes.
 3. **`hora_actual` no conoce los festivos.** Solo distingue laborable, sábado y domingo, así que un festivo se trata como un día laborable y el especialista podría dar un horario equivocado. *Siguiente paso:* incorporar un calendario de festivos como dato (CSV) o consultarlo al RAG.
 4. **El bucle depende de que el LLM cumpla el protocolo JSON** (`{"tool","args"}` o `{"final"}`). Si no lo cumple, el especialista devuelve una nota de error controlada, pero la pregunta queda sin responder. *Siguiente paso:* pasar a `bind_tools` de LangChain o validar y reintentar una vez antes de rendirse; en MLOps, medir la tasa de respuestas no interpretables.
-5. **El flujo multimodal es inalcanzable desde los clientes.** `src/agent.py` fija `imagen_valida=False` en cada turno (hay un test que lo exige) y la API pública no permite aportar una imagen. Antes de la PR #7 la pregunta «según la imagen…» llegaba a `tarifas`; desde ella se desvía al RAG. Es una regresión del requisito multimodal del enunciado. *Siguiente paso:* un campo opcional en `estado` (por ejemplo `estado["imagen"]`) que el agente valide contra `assets/` antes de marcar la imagen como válida; hay que decidirlo con quien lleva el grafo.
+5. **El flujo multimodal está limitado a la imagen demo.** Las specs 007 y 008 aprobaron que la referencia literal `assets/imagen_demo.jpg` seleccione la demo únicamente para ese turno. No hay subida de archivos ni selección de otras rutas; una mención genérica a una imagen se desvía al RAG. Esta restricción evita que una referencia textual active visión sin un archivo autorizado. *Siguiente paso:* si se necesitan imágenes aportadas por la persona usuaria, definir una nueva spec para su validación y transporte seguro, sin ampliar el contrato actual de forma implícita.
 6. **Un test del grafo llama a Gemini de verdad.** `tests/test_agent_contrato.py::test_fallback_publico_solo_expone_categoria_y_resumen_canonicos` no inyecta los especialistas: con una clave en el entorno hace 8 intentos de conexión a Google y sin clave pide la clave por terminal. Rompe el principio de tests sin API. *Siguiente paso:* inyectar `especialistas` falsos, como el resto de tests.
 7. **La demo con las APIs reales no se ha hecho.** El RAG no está indexado en mi máquina y faltan las claves de Google Routes y el contacto de Nominatim, por lo que no hay plan de ruta ni HITL real. La validación de las specs 001, 002 y 008 sigue en **Parcial** por esto.
 
@@ -124,11 +128,11 @@ El enunciado pide que el CLI y Streamlit sean clientes del mismo grafo, con la p
 - **Contrato aislado en un solo archivo.** Adaptar el cliente al grafo real fue cambiar el formato de `plan` y añadir el identificador del plan, no reescribir nada.
 - **No llamar al grafo sin elección con varios planes.** El grafo respondería con un aviso que deja `hitl_pendiente=False` aunque el plan siga pendiente, y la pantalla quedaría desincronizada.
 - **El simulado se parece al real a propósito.** La primera versión pausaba con cualquier mensaje y habría dado una demo engañosa: con el grafo real solo pausan las rutas.
-- **Demo cambiada.** Se sustituyó el pedido de la imagen por una ruta, porque la imagen no es alcanzable (fallo 5) y la ruta es lo único que enseña el HITL.
+- **Demo cambiada.** Se sustituyó el pedido de la imagen por una ruta porque la ruta es el único flujo que enseña el HITL. La imagen demo puede seleccionarse mediante su referencia literal, pero no genera una pausa HITL ni habilita subida de archivos.
 
 **Cómo se comprobó.** 37 requisitos con test en verde y 623 tests sin API en `develop`. 11 de ellos recorren los clientes contra el **grafo real** con los especialistas, el supervisor y el sintetizador sustituidos por dobles, y no hacen ninguna conexión a la red; la web se recorrió con la herramienta de pruebas de Streamlit y se vio en un navegador real (modo simulado). Pendiente: la demo con las APIs reales.
 
-**Limitaciones.** Ningún cliente puede aportar una imagen (fallo 5); con el grafo real la sesión vive en memoria y se pierde al reiniciar el proceso; y el filtro de los diagnósticos del supervisor se aplica a toda la web, lectura más estricta que la de la spec 006, pendiente de confirmar con Rubén.
+**Limitaciones.** Los clientes no permiten aportar imágenes arbitrarias: solo reconocen la imagen demo mediante la referencia literal aprobada; con el grafo real la sesión vive en memoria y se pierde al reiniciar el proceso; y el filtro de los diagnósticos del supervisor se aplica a toda la web, lectura más estricta que la de la spec 006, pendiente de confirmar con Rubén.
 
 ## 7. Trabajo con SDD
 
@@ -137,3 +141,14 @@ Las tres funcionalidades de esta parte se desarrollaron con Spec-Driven Developm
 El SDD se notó sobre todo en tres momentos. Primero, cuando el grafo real llegó y obligó a cambiar el diseño: había una spec y un plan que actualizar en lugar de un código que reescribir a ciegas. Segundo, al renumerar la spec de los clientes de 005 a 008 porque colisionaba con la del grafo. Y tercero, al comprobar que los tests que citaban mis validaciones seguían existiendo: cinco habían desaparecido cuando Rubén reescribió `tests/test_flujo_imagen_calculo.py`, y la validación habría quedado diciendo algo falso.
 
 Las validaciones de las tres specs están en estado **Parcial** por las demos con APIs reales que quedan pendientes.
+
+## 8. Decisiones de alto impacto del proyecto
+
+Esta sección completa las decisiones que afectan a la arquitectura y al comportamiento global del sistema, más allá de las funcionalidades desarrolladas en las secciones anteriores.
+
+- **RAG: tablas Markdown como unidades de evidencia.** Las tablas Markdown válidas se detectan durante la fragmentación, se conservan con su título como un único chunk indivisible y se marcan con la estrategia `tabla_markdown`. El resto del documento continúa con el fragmentado ordinario. Así se evita separar filas y perder el contexto de una tarifa o condición.
+- **Rutas: fuentes, límites y evidencia.** `planificar_ruta` geocodifica con Nominatim dentro del ámbito configurado, pide el itinerario de transporte público a Google Routes y consulta el RAG para la zona y el precio. La zona se consulta antes que el precio, porque este depende de aquella; ningún tiempo, zona o importe se estima cuando la fuente no aporta evidencia. Las horas de salida y llegada son excluyentes y se validan antes de llamar a servicios externos.
+- **Grafo: estado y control de la orquestación.** El grafo LangGraph conserva cada conversación mediante un checkpointer por `thread_id`; su fachada pública mantiene las seis claves `respuesta`, `plan`, `log`, `traza`, `hitl_pendiente` y `done`. El supervisor entrega una cola finita de roles admitidos, y Python mantiene los límites transversales de turnos e invocaciones de tools. El HITL solo se activa para planes de ruta válidos.
+- **Supervisor: decisiones estructuradas y observabilidad segura.** La respuesta del Supervisor se solicita como JSON y se valida de forma estricta en Python. Si falla el proveedor, el JSON o los roles, se aplica el fallback determinista. El diagnóstico usa solo las categorías `proveedor`, `json_invalido`, `roles_invalidos` y `sin_fallback`, con resúmenes fijos y no sensibles; se expone solo en el resultado del turno, sin persistirlo en el historial, el checkpoint o la traza.
+- **Tarifas textuales e imagen demo.** Un catálogo único define roles y restricciones. Una pregunta textual de tarifas sin imagen válida se redirige de `tarifas` a RAG, preservando la allowlist y la evidencia documental. La señal de imagen es efímera y la demo exige la referencia literal aprobada; una corrección semántica se registra en una línea segura adicional de `log`, sin alterar la categoría de fallback ni el contrato público.
+- **Alternativa BiciMAD y clima.** La oferta de BiciMAD se decide en Python con reglas configurables de distancia, disponibilidad y estaciones distintas; no la decide el LLM. La disponibilidad procede de EMT y los tiempos de los tramos a pie y bici de Google Routes, sin estimaciones ni alternativas parciales. Sin hora solicitada se consulta el clima actual del origen con Open-Meteo: un tiempo no apto evita ofrecer bici y solicita la ruta de transporte con preferencia de menos trayectos a pie. Los campos `bici` y `clima` se añaden de forma aditiva al resultado de ruta, sin cambiar RAG ni el contrato previo.
