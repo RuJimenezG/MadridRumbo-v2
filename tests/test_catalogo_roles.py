@@ -38,7 +38,8 @@ def test_instrucciones_reutilizan_catalogo_y_exclusiones_de_tarifas():
 
     for rol, capacidad in CATALOGO_ROLES.items():
         assert f"- {rol}: {capacidad.responsabilidad}." in instrucciones
-    assert "Una consulta textual de tarifa sin imagen debe seleccionar rag." in instrucciones
+    # Spec 010: la regla de exclusión se amplía (consulta con origen y destino → rutas); antes era solo «…debe seleccionar rag.».
+    assert "Una consulta textual de tarifa sin imagen y sin origen ni destino debe seleccionar rag; con origen y destino selecciona rutas, que incluye la zona y el precio del trayecto, también para un título concreto (p. ej. abono joven)." in instrucciones
     assert "No selecciones tarifas salvo que exista una imagen aportada válida." in instrucciones
     assert "Referirse solo a una imagen, foto o cartel no constituye una imagen aportada." in instrucciones
 
@@ -129,3 +130,12 @@ def test_ficha_de_rutas_incluye_zona_y_precio_y_las_preguntas_de_seguimiento():
     assert "zona y el precio del trayecto" in limites
     assert "seguimiento" in limites and "van a rutas" in limites
     assert "Límite: " + ficha.limites[0] in instrucciones_para_supervisor()      # llega al prompt del supervisor
+
+
+def test_ficha_y_regla_incluyen_el_titulo_concreto():
+    """Spec 010: la ficha de `rutas` y la regla de exclusión dicen que zona y precio valen también para un título concreto."""
+    frase = "también para un título concreto (p. ej. abono joven)"
+    assert frase in " ".join(CATALOGO_ROLES["rutas"].limites)
+    instrucciones = instrucciones_para_supervisor()
+    assert instrucciones.count(frase) == 2                                  # una vez en la ficha y otra en la regla
+    assert "con origen y destino selecciona rutas" in instrucciones

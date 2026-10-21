@@ -7,6 +7,7 @@ import json
 import logging
 import math
 import re
+import ssl
 import time
 import urllib.error
 import urllib.parse
@@ -29,14 +30,31 @@ def distancia_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     return 2 * 6_371_000 * math.asin(math.sqrt(a))
 
 
-def _get_json(url, headers=None, timeout=10):
+def _contexto_ssl(usar_certifi: bool):
+    """Contexto SSL con el bundle de `certifi` si se pide y existe; None = el contexto por defecto de urllib.
+
+    Ambos verifican siempre el certificado y el nombre del servidor: nunca se desactiva la verificación (spec 010, RF-35).
+    """
+    if not usar_certifi:
+        return None
+    try:
+        import certifi
+        return ssl.create_default_context(cafile=certifi.where())
+    except Exception:  # noqa: BLE001 - sin certifi o con el bundle ilegible: contexto por defecto, que también verifica
+        return None
+
+
+def _get_json(url, headers=None, timeout=10, contexto_certifi=False):
     """GET que devuelve `(status_http, cuerpo_json)`; el cuerpo es None si un error HTTP no trae JSON.
 
-    Lanza OSError (red, timeout) o ValueError (JSON inválido en una respuesta 200).
+    Lanza OSError (red, timeout) o ValueError (JSON inválido en una respuesta 200). Con `contexto_certifi` verifica el
+    certificado con el bundle de `certifi` (Open-Meteo: el almacén de Windows fallaba con «certificate has expired»).
     """
     peticion = urllib.request.Request(url, headers=headers or {}, method="GET")
+    contexto = _contexto_ssl(contexto_certifi)
+    opciones = {"context": contexto} if contexto is not None else {}
     try:
-        with urllib.request.urlopen(peticion, timeout=timeout) as r:
+        with urllib.request.urlopen(peticion, timeout=timeout, **opciones) as r:
             return r.status, json.loads(r.read().decode("utf-8"))
     except urllib.error.HTTPError as e:
         try:
@@ -343,7 +361,8 @@ def clima_origen(origen: dict) -> dict:
         consulta = urllib.parse.urlencode({
             "latitude": origen["lat"], "longitude": origen["lon"],
             "current": "temperature_2m,precipitation,weather_code,wind_speed_10m"})
-        estado, cuerpo = _get_json(f"{config.OPEN_METEO_URL}?{consulta}", timeout=config.OPEN_METEO_TIMEOUT_S)
+        estado, cuerpo = _get_json(f"{config.OPEN_METEO_URL}?{consulta}", timeout=config.OPEN_METEO_TIMEOUT_S,
+                                   contexto_certifi=True)
         if estado != 200 or not isinstance(cuerpo, dict) or not isinstance(cuerpo.get("current"), dict):
             return fallo
         actual = cuerpo["current"]

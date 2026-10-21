@@ -46,6 +46,9 @@ Reglas:
 - Si la tool devuelve "ruta_no_calculada", no reescribas el resultado: copia el `mensaje` de la tool tal cual.
 - Si la persona pregunta después «¿y cuánto cuesta?» (o por otro título), vuelve a pedir planificar_ruta
   con los mismos origen y destino del historial y el `titulo` pedido.
+- Si la persona pide ir en bici (o en BiciMAD) con origen y destino, solicita planificar_ruta igualmente:
+  la tool devuelve la ruta en transporte público y la alternativa en BiciMAD si procede o el motivo por el
+  que no se ofrece. Tu "final" debe copiar lo que devuelva la tool y no rechaces la petición por ser en bici.
 - Segunda capa (solo cuando el turno anterior ya dejó ese extremo sin resolver, ambiguo o no encontrado, y la
   nueva entrada de la persona tampoco lo resuelve): actúa una sola vez por extremo y nunca en el primer intento.
   - Si la tool mostró opciones, elige solo entre las opciones que la tool mostró, con opcion_origen u
@@ -54,6 +57,10 @@ Reglas:
   - Si hubo 0 candidatos, propone un único texto alternativo por extremo en texto_alternativo_origen o
     texto_alternativo_destino (el nombre del lugar sin prefijos como «metro»); no encadenes más intentos.
   - La respuesta de la tool indica qué dirección se usó y cómo corregirla: conserva esa frase.
+- En una pregunta de seguimiento sobre la misma ruta (por ejemplo «¿y cómo puedo ir en bici?»), pide
+  planificar_ruta con los mismos textos de origen y destino, las mismas opciones elegidas (opcion_origen u
+  opcion_destino, si la persona eligió con un número) y el mismo `titulo` del historial; no los sustituyas
+  por valores por defecto.
 - Conserva el JSON, las aclaraciones y los errores que devuelva la tool.
 - No consultes directamente el RAG ni otra tool.
 - Responde SOLO con un JSON por mensaje:
@@ -64,6 +71,9 @@ Reglas:
 PATRON_FORMULACION_RUTA = re.compile(
     r"\b(?:quiero\W+ir\W+de|necesito\W+ir\W+de|voy\W+de)\b(?P<resto>.*)"
 )
+
+
+SEPARADORES_DESTINO = {"a", "al", "hasta"}
 
 
 def _aclaracion_formulacion_incompleta(mensaje: Any) -> str | None:
@@ -84,9 +94,9 @@ def _aclaracion_formulacion_incompleta(mensaje: Any) -> str | None:
     if not extremos:
         return "Falta indicar el origen y el destino para planificar la ruta."
 
-    try:
-        separador = len(extremos) - 1 - extremos[::-1].index("a")
-    except ValueError:
+    # Separador del destino: la primera «a», «al» o «hasta» (spec 010); con la última, «de Sol a Moncloa a las 8» se parte mal.
+    separador = next((i for i, token in enumerate(extremos) if token in SEPARADORES_DESTINO), None)
+    if separador is None:
         return "Falta indicar el destino para planificar la ruta."
 
     tiene_origen = separador > 0

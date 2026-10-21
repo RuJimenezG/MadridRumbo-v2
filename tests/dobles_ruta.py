@@ -99,7 +99,7 @@ class Escenario:
         """Activa la alternativa real de `bicimad`; su red (EMT, Google de bici y Open-Meteo) sigue simulada."""
         self._monkeypatch.setattr(bicimad, "alternativa_bici", ALTERNATIVA_REAL)
 
-    def _get_json_bici(self, url, headers=None, timeout=10):
+    def _get_json_bici(self, url, headers=None, timeout=10, contexto_certifi=False):   # T12: parámetro nuevo, ignorado
         """GET de bicimad: Open-Meteo, login de la EMT o lista de estaciones."""
         if url.startswith(config.OPEN_METEO_URL):
             self.llamadas_meteo.append(url)
@@ -143,7 +143,7 @@ class Escenario:
         self.secuencia.append("rag")
         self.preguntas.append(pregunta)
         for clave, respuesta in self.rag.items():
-            if clave in pregunta:
+            if clave in pregunta or (clave == "precio" and "cuesta" in pregunta):   # T13: precio sin zona = «¿Cuánto cuesta…?»
                 if isinstance(respuesta, Exception):
                     raise respuesta
                 return respuesta

@@ -219,8 +219,10 @@ ZONA_LONGITUD_MAX = 200
 
 # Preguntas al RAG, construidas con datos de la ruta (paradas o municipios).
 PREGUNTA_ZONA = "¿Qué zona tarifaria corresponde a un trayecto entre {origen} y {destino}?"
-# El precio se pregunta con la zona que devolvió el RAG (los abonos se pagan por zona, no por trayecto).
-# Importante: no debe contener "zona tarifaria", fragmento con el que los dobles de test identifican la pregunta de zona.
-PREGUNTA_PRECIO = "¿Cuál es el precio del {titulo} en la zona indicada a continuación? {zona}"
+# Spec 010, T13 (medido con el RAG real): condicionar el precio a una zona hace que el RAG se abstenga, así que el primer
+# intento va sin zona; solo si se abstiene se prueba con la zona que devolvió el RAG.
+# Importante: ninguna debe contener "zona tarifaria", fragmento con el que los dobles de test identifican la pregunta de zona.
+PREGUNTA_PRECIO = "¿Cuánto cuesta el {titulo}?"
+PREGUNTA_PRECIO_CON_ZONA = "Tarifa y precio del {titulo} {zona}"
 # Frase con la que el RAG se abstiene (definida en rag/prompt.py; un test vigila que coincida).
 FRASE_ABSTENCION = "No lo sé, no está en los documentos."

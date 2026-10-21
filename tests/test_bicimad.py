@@ -108,7 +108,7 @@ class Red:
         self.respuestas = list(respuestas)
         self.llamadas = []
 
-    def __call__(self, url, headers=None, timeout=10):
+    def __call__(self, url, headers=None, timeout=10, contexto_certifi=False):   # T12: parámetro nuevo, ignorado
         self.llamadas.append((url, dict(headers or {}), timeout))
         respuesta = self.respuestas.pop(0)
         if isinstance(respuesta, Exception):
@@ -978,7 +978,7 @@ def test_enganche_unico_en_planificar_ruta():
 def test_el_rag_mantiene_sus_dos_llamadas(monkeypatch):
     esc = Escenario(monkeypatch)
     ruta_con_bici(esc)
-    assert esc.cuantas("rag") == 2 and "zona tarifaria" in esc.preguntas[0] and "precio" in esc.preguntas[1]
+    assert esc.cuantas("rag") == 2 and "zona tarifaria" in esc.preguntas[0] and "cuesta" in esc.preguntas[1]   # T13: precio sin zona
     assert not any("bici" in p.lower() or "bicimad" in p.lower() for p in esc.preguntas)
 
 

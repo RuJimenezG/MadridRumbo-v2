@@ -10,8 +10,11 @@
 | `src/tools/bicimad.py` | Modificar | R0 solo rechaza con clima **apto = falso**; `linea_motivo_bici` (pura); log de `URLError` con su `reason`; `causa` y `FRASES_NO_DISPONIBLE` (T5b). | RF-7, 9, 10, 11, 27 |
 | `config.py` | Modificar (compartido; junto a las constantes `CLIMA_*`) | `CLIMA_SIN_DATO_AVISO` (texto fijo de RF-10). | RF-10 |
 | `src/sintetizador.py` | Modificar (de Rubén y Guzmán) | `_avisos_obligatorios` pasa a devolver también los `bloques`; el nodo los añade sin duplicar (también contra bloques ya añadidos); log del resultado ilegible. | RF-13 a 16 |
-| `src/agents/rutas.py` | Modificar (de Rubén y Guzmán) | Solo el texto de `PROMPT_RUTAS` (RF-18; capa 2, RF-22 a 24). Sin cambios de código. | RF-17, 18, 22 a 24 |
-| `src/catalogo_roles.py` | Modificar (**de Rubén**; solo texto) | `limites` de la ficha del rol `rutas`: incluye zona y precio y las preguntas de precio de seguimiento van a `rutas`. La `responsabilidad` no cambia. | RF-28 |
+| `src/agents/rutas.py` | Modificar (de Rubén y Guzmán) | Texto de `PROMPT_RUTAS` (RF-18; capa 2, RF-22 a 24; «en bici», RF-32) y, en `_aclaracion_formulacion_incompleta`, separadores `a`/`al`/`hasta` y primera aparición (RF-31, T10). | RF-17, 18, 22 a 24, 31, 32 |
+| `src/catalogo_roles.py` | Modificar (**de Rubén**; solo texto) | `limites` de la ficha del rol `rutas`: incluye zona y precio (también para un título concreto) y las preguntas de precio de seguimiento van a `rutas`; la regla de exclusión se acota («…sin origen ni destino debe seleccionar rag; con origen y destino selecciona rutas…»). La `responsabilidad` no cambia. | RF-28, 29 |
+| `src/supervisor_reglas.py` | Modificar (**de Rubén y José Manuel**) | `completar_rutas_con_extremos(roles, mensaje)`: puramente aditiva, junto a las reglas del fallback; reutiliza `_normalizar` y `_texto_normalizado`. No toca el fallback existente. | RF-30 |
+| `src/supervisor.py` | Modificar (**de Rubén**; dos líneas) | Aplica la corrección tras `corregir_tarifas_textuales` (decisión del LLM) y en `_decision_fallback`. | RF-30 |
+| `tests/test_supervisor_ruta_con_extremos.py` | **Crear** | T9. | RF-30 |
 | `tests/test_normalizacion_lugares.py` | **Crear** | T1. | RF-1 a 3 |
 | `tests/test_bloques_ruta.py` | **Crear** | T2 y T3 (`Escenario`, sin red). | RF-4 a 12 |
 | `tests/test_sintetizador_bloques.py` | **Crear** | T4 (modelo falso). | RF-13 a 16 |
@@ -20,7 +23,12 @@
 | `tests/test_prompt_capa2.py` | **Crear** | T7. | RF-22 a 24 |
 | `tests/test_catalogo_roles.py` | Añadir un test (T5b c) | La ficha de `rutas` contiene lo pedido. | RF-28 |
 | `tests/test_bicimad.py` y otros | Modificar solo los que el cambio de RF-10 obligue | Los que fijan «sin dato de clima → sin bici» (ver «Tests obsoletos»). | RF-10 |
-| `src/modelos.py`, `src/supervisor_reglas.py`, `src/graph.py`, `rag/`, corpus, `output/chunks.json`, `src/tools/__init__.py` | **No se tocan** | — | — |
+| `src/tools/bicimad.py` | Modificar (T12) | `_get_json(..., contexto_certifi=False)` y `_contexto_ssl`; `clima_origen` lo pide con `True`. | RF-35 |
+| `requirements.txt` | Modificar (T12) | Añade `certifi`. | RF-35 |
+| `config.py` | Modificar (T13) | `PREGUNTA_PRECIO` = «¿Cuánto cuesta el {titulo}?» (sin zona) y `PREGUNTA_PRECIO_CON_ZONA` = «Tarifa y precio del {titulo} {zona}». | RF-36, 37 |
+| `src/tools/planificar_ruta.py` | Modificar (T13) | `consultar_tarifa`: precio sin zona primero; segundo intento con zona solo tras `sin_evidencia`; ≤ 3 llamadas. | RF-36 a 38 |
+| `tests/test_precio_dos_intentos.py` y tests de tarifa existentes | Nuevo y ajustes justificados (T13) | Ver «Tests ajustados en T13». | RF-36 a 38 |
+| `src/modelos.py`, `src/graph.py`, `rag/`, corpus, `output/chunks.json`, `src/tools/__init__.py` | **No se tocan** | — | — |
 
 ## Contrato
 
@@ -142,6 +150,9 @@ Todos sin red: `tests/dobles_ruta.py::Escenario` para Nominatim, Google, RAG, EM
 | RF-19 a 21 | `test_capa2_lugares.py`: alternativo que resuelve, en ambos extremos (4 llamadas), sin resolver (nunca más de 4), no verificado (sin Madrid, ambiguo, fuera de ámbito), fallo de Nominatim, vacío o no texto, normalización de prefijos, `probable_*` y «opción usada» en `bloques`. |
 | RF-22 a 24 | `test_prompt_capa2.py`: reglas del prompt, sin listas de títulos, y paso de argumentos del especialista a la tool con dobles. |
 | RF-25 a 28 | `test_bloques_ruta.py` (zona y precio, `ruta_no_calculada`, `causa`), `test_catalogo_roles.py` (ficha). |
+| RF-29 | `test_catalogo_roles.py::test_ficha_y_regla_incluyen_el_titulo_concreto`. |
+| RF-31, 32 | `test_especialista_rutas.py` (nuevos al final): «de X al Y» con y sin «cuánto cuesta», «hasta», «voy de Sol a»/«al» (siguen con aviso), «a las 8», origen que falta; el prompt contiene la regla de bici; con un LLM falso, «ir en bici desde Cibeles hasta Plaza de España» ejecuta la tool con origen y destino. `test_prompt_sin_lista_de_titulos` sin tocar. |
+| RF-30 | `test_supervisor_ruta_con_extremos.py`: «Quiero ir desde X hasta Y, ¿cuánto cuesta el abono joven?» con `[rag]` → `[rutas, rag]`; `[rutas, rag]` no cambia; solo precio, «¿Cómo voy a pagar el abono?», vacío y sin ruta no cambian; nunca quita roles; decisión del LLM, fallback y nodo. |
 
 ### Tests obsoletos (se anotan al implementar T3)
 
@@ -154,6 +165,78 @@ Solo dos tests existentes dejaron de cumplirse (los demás que simulan Open-Mete
 | `test_bicimad.py::test_emt_no_disponible_no_llama_a_google` | Fija credenciales de prueba y espera `causa == "emt"` y su frase (antes la frase única). | RF-27: la frase depende de la causa; sin credenciales de prueba dependería del entorno. |
 | `test_bicimad.py::test_fallo_de_la_emt_deja_la_ruta_intacta_con_aviso` | Fija credenciales de prueba; el dict `bici` completo ahora lleva `causa` y la frase de la EMT. | RF-27: campo aditivo `causa`; los tests comparaban el dict completo. |
 | `test_bicimad.py::test_fallo_de_google_en_la_bici_deja_la_ruta_intacta_con_aviso` | Espera `causa == "google"` y que el `mensaje` termine con su frase. | RF-27. |
+| `test_catalogo_roles.py::test_instrucciones_reutilizan_catalogo_y_exclusiones_de_tarifas` y `test_supervisor_grafo.py::test_prompt_del_supervisor_se_genera_desde_el_catalogo_de_roles` | Comparaban la línea completa «Una consulta textual de tarifa sin imagen debe seleccionar rag.»; ahora comparan la regla acotada (RF-29). Las otras dos reglas de exclusión no cambian. | RF-29: se cambia el texto de la línea, como se pidió. |
+
+## T11 y T12 (prueba real, 2026-10-21)
+
+| Archivo | Cambio | RF |
+|---|---|---|
+| `src/graph.py` (de Rubén) | `_envolver_especialista` marca cada resultado con `turno` (importa `turno_actual` del sintetizador). | RF-33 |
+| `src/sintetizador.py` (de Rubén y Guzmán) | `turno_actual(estado)` y filtro por turno en `_avisos_obligatorios`. | RF-33 |
+| `src/tools/planificar_ruta.py` | `clasificar_candidatos`: si hay candidatos de Madrid verificados, solo ellos (antes de quitar duplicados). | RF-34 |
+| `tests/test_sintetizador_turnos.py`, `tests/test_candidatos_madrid.py` | **Nuevos**; ningún test existente modificado. | RF-33, 34 |
+
+**Cómo se distingue un turno de otro en `resultados[]`:** no se distinguía. `historial` solo recibe los mensajes de la persona (`_registrar_mensaje`); `notas`, `traza` y `resultados` se acumulan siempre; `tools_turno` y `turno_contabilizado` se reinician pero no se guardan en cada entrada; `turnos_completados` sube en `registrar_turno`, antes de la pausa del HITL, así que cambia de valor al reanudar y no sirve como marca. El nº de mensajes de la persona en `historial` es estable en todo el turno, también tras el HITL.
+
+**T12 — aplicada (2026-10-21), Open-Meteo y los certificados:**
+
+- `src/tools/bicimad.py`: `_get_json(..., contexto_certifi=False)`; `clima_origen` lo pide con `True`. Con `True` y `certifi` importable: `ssl.create_default_context(cafile=certifi.where())` (verificación siempre activa); si `certifi` no está, contexto por defecto. EMT y Google no cambian (con el bundle de Mozilla podrían dejar de validar su cadena).
+- `requirements.txt`: `certifi` (ya instalado de forma transitiva; hay que actualizar antes spec y plan por la constitución, art. 12).
+- Tests (sin red): con `urlopen` doble, que `clima_origen` pasa un contexto con `verify_mode == CERT_REQUIRED` y `check_hostname`, construido con `cafile=certifi.where()`; sin `certifi` (simulado con `sys.modules["certifi"] = None`), sin contexto; que el EMT no cambia; que nunca aparece `CERT_NONE` ni `_create_unverified_context` en `src/` (test de código fuente).
+- Riesgo: si el bundle de `certifi` queda desfasado, el fallo sería el mismo en otra máquina; la cadena de Open-Meteo no depende del almacén de Windows.
+
+## T14 — contexto del sintetizador y seguimiento
+
+| Archivo | Cambio | RF |
+|---|---|---|
+| `src/sintetizador.py` (de Rubén y Guzmán) | `contexto_para_modelo(estado)`: contexto anclado con solo los resultados del turno actual, sin los textos de los `bloques` y con la clave `nota` cuando hay bloques; `nodo_sintetizador` se lo pasa al modelo. El respaldo y los avisos siguen usando `contexto_anclado` completo. | RF-39, RF-40 |
+| `src/agents/rutas.py` (de Rubén y Guzmán) | Solo el texto de `PROMPT_RUTAS`: regla de seguimiento. | RF-41 |
+| `tests/test_sintetizador_contexto.py`, `tests/test_prompt_seguimiento.py` | **Nuevos**. | RF-39 a 41 |
+| `src/graph.py` (de Rubén) | Solo el nodo `sintetizador_aprobacion`: pasa `tras_aprobacion=True` a `nodo_sintetizador` (T15). | RF-42, 43 |
+
+**T15 — confirmación tras aprobar (RF-42 y RF-43):** `nodo_sintetizador(estado, modelo, tras_aprobacion=False)`; con `True`, `contexto_para_modelo` pone la `nota` de aprobación en lugar de la de bloques y la respuesta del LLM se devuelve sin añadir bloques ni avisos. Se usa un parámetro del nodo y no `plan_aprobado` porque ese campo nunca se reinicia (queda puesto en los turnos siguientes). Auditoría: no choca con RF-20 (sigue sintetizando el LLM), RF-5, RF-21 ni RF-47 de la spec 005; tensión con RF-31 («devuelve su resultado») asumida (ver la spec). Los tests `test_grafo_hitl.py::test_aprobacion_reanuda_con_command_y_cierra_solo_el_plan_elegido` y `test_clientes_grafo_real.py::test_varios_planes_exigen_elegir_y_se_aprueba_solo_el_elegido` usan un sintetizador falso que lee las notas (`[rutas] Plan aprobado ruta-N`), que se conservan: siguen pasando sin cambios. El respaldo tras aprobar es el de siempre (vuelca los resultados; RF-56).
+
+**Auditoría de conflictos previa (T14):** RF-39 y RF-40 no contradicen ningún requisito: el LLM sigue recibiendo los resultados (RF-5) y sigue sintetizando (RF-20); el test `test_el_modelo_recibe_el_mismo_contexto` (spec 009) usa un caso sin bloques (sin `nota`, mismas tres claves) y `test_sintetizador.py` fija el contexto de estados sin resultados de ruta marcados, ambos intactos. RF-41 solo cambia el prompt y respeta `test_prompt_sin_lista_de_titulos`. El punto de la aprobación sí choca (ver la spec).
+
+**Lógica:**
+
+```text
+contexto_para_modelo(estado):
+    ctx = contexto_anclado(estado)
+    ctx.resultados = [r for r in ctx.resultados si r no tiene `turno` o r.turno == turno_actual]
+    bloques = los de planificar_ruta (turno actual)
+    si bloques:
+        en cada resultado de planificar_ruta: JSON sin la clave `bloques` y con cada bloque quitado de `mensaje`
+        en cada nota: cada bloque quitado
+        ctx.nota = NOTA_BLOQUES
+    return ctx
+```
+
+## T13 — lógica y tests ajustados
+
+```text
+consultar_tarifa(origen, destino, titulo):
+    sin municipios: zona y precio omitidos
+    zona = _dato_rag(PREGUNTA_ZONA)                                     # 1.ª llamada
+    título no interpretable: precio omitido
+    precio = _dato_rag(PREGUNTA_PRECIO.format(titulo))                  # 2.ª llamada, sin zona
+    si precio es sin_evidencia y zona ok y len(zona saneada) <= ZONA_LONGITUD_MAX:
+        precio = _dato_rag(PREGUNTA_PRECIO_CON_ZONA.format(titulo, zona))   # 3.ª llamada, solo tras abstención
+    # un error (excepción) en la 2.ª no provoca la 3.ª; ambos abstenidos → sin_evidencia
+```
+
+**Tests ajustados en T13** (todos por RF-36 a RF-38; ninguno pierde cobertura, cada uno comprueba ahora el criterio nuevo):
+
+| Test | Cambio y motivo |
+|---|---|
+| Dobles del RAG (`Escenario._rag_ask` en `dobles_ruta.py` y `RagFalso` en `test_planificar_ruta_tarifa.py`) | Identifican como precio las preguntas con «precio» **o** «cuesta»: la nueva pregunta «¿Cuánto cuesta el {titulo}?» no lleva «precio». |
+| `test_planificar_ruta_tarifa.py`: `test_rag_sin_evidencia_entrega_ruta`, `test_evidencia_parcial_declara_el_que_falta`, `test_no_inventa_zona_ni_precio`, `test_rag_con_error_entrega_ruta_sin_zona_ni_precio`, `test_rag_falla_la_ruta_se_conserva`, `test_zona_sin_evidencia_o_error_no_consulta_precio` | Fijaban «sin zona no se consulta el precio» (RF-52: precio `omitida`, 1 llamada, «Faltan la zona y el precio»). Ahora el precio se pregunta igualmente (2 llamadas): `sin_evidencia`, `error` u `ok` según el RAG. |
+| `test_primero_zona_despues_precio_del_titulo` | La pregunta de precio ya no lleva «precio» ni la zona: se comprueba «cuesta» y que no haya «zona». |
+| `test_zona_dentro_del_limite_se_pasa_entera`, `test_zona_por_encima_del_limite_no_consulta_el_precio`, `test_zona_demasiado_larga_se_informa_en_el_mensaje` | La zona entra solo en el segundo intento (tras abstención): 3 llamadas; con zona demasiado larga no hay segundo intento (2 llamadas) y el precio sin zona sí se entrega. El mensaje «no se pudo usar la zona» ya no aparece. |
+| `test_planificar_ruta_rnf.py`: `test_maximo_2_llamadas_al_rag` → `test_maximo_3_llamadas_al_rag` | RF-49 pasa de 2 a 3 llamadas; casos nuevos de abstención (3 y 2) y los de zona con error o demasiado larga pasan de 1 a 2. |
+| `test_bicimad.py::test_el_rag_mantiene_sus_dos_llamadas`, `test_planificar_ruta_municipio.py` (2 aserciones) | «precio» → «cuesta» en la segunda pregunta; siguen siendo 2 llamadas en el caso normal. |
+
+Código muerto tras T13: en `_mensaje_tarifa`, las ramas «no se pudo usar la zona devuelta» y «Faltan la zona y el precio» ya no se alcanzan desde `consultar_tarifa` (el precio solo se omite con título no interpretable o sin municipios). Se dejan (tienen tests propios) y quedan como limpieza futura.
 
 ## Riesgos
 
@@ -161,9 +244,11 @@ Solo dos tests existentes dejaron de cumplirse (los demás que simulan Open-Mete
 - **Doble aviso.** Mitigado con el dedupe secuencial (RF-14); la paráfrasis del LLM sigue pudiendo duplicar el contenido sin que el texto coincida (mejora futura: marca estable).
 - **Bici sin comprobar el tiempo.** Con Open-Meteo caído puede ofrecerse bici con lluvia. Es una decisión explícita (RF-10); el aviso lo deja claro.
 - **Archivos de Rubén.** `sintetizador.py` y `rutas.py` (solo el prompt) se tocan; hay que avisarle. `modelos.py`, `catalogo_roles.py` y `supervisor_reglas.py` no se tocan.
+- **Primera aparición del separador (T10).** Un origen que contenga como palabra suelta «a», «al» o «hasta» se partiría mal; antes, con la última «a», el fallo era peor (y «al» nunca contaba). Es solo el atajo previo al LLM: si pasa, el LLM decide los extremos.
+- **«En bici» (RF-32).** La persona puede esperar una ruta solo en bici y recibir transporte público; la alternativa en BiciMAD depende de las reglas de la spec 009.
 - **Normalización agresiva.** «Metro de Madrid» pierde «Metro»; asumido en «Casos límite».
 - **Fase B.** +1 llamada a Nominatim por extremo (≤ 4) y un caso en que se calcula con una elección del LLM (revierte RF-27 de la spec 004); por eso se declara siempre qué se usó (aviso en `mensaje` y en `bloques`).
-- **Supervisor.** La ficha de `rutas` no basta por sí sola (ver «Dudas» de `validacion.md`): la instrucción «tarifa sin imagen → rag» y el fallback por palabras siguen pudiendo enviar «¿y cuánto cuesta?» a `rag`.
+- **Supervisor.** RF-30 es una heurística (verbo + «de/desde X a/hasta Y»): puede añadir `rutas` de más, sin quitar nada. «¿y cuánto cuesta?» de seguimiento sin extremos sigue sin cubrirse. Los archivos de Rubén y José Manuel se tocan solo de forma aditiva.
 - **Credenciales en los tests.** Los tests de `causa` fijan credenciales de prueba con `monkeypatch`; sin ello el resultado dependería del `.env` local.
 
 ## Trazabilidad
@@ -178,6 +263,8 @@ Solo dos tests existentes dejaron de cumplirse (los demás que simulan Open-Mete
 | RF-19 a 21 | Capa 2 en `_planificar_ruta` | `test_capa2_lugares.py` |
 | RF-22 a 24 | Capa 2 en `PROMPT_RUTAS` | `test_prompt_capa2.py` |
 | RF-25 a 28 | Zona, precio, `causa`, ficha | `test_bloques_ruta.py`, `test_catalogo_roles.py` |
+| RF-29, 30 | Regla de exclusión y `completar_rutas_con_extremos` | `test_catalogo_roles.py`, `test_supervisor_ruta_con_extremos.py` |
+| RF-31, 32 | `SEPARADORES_DESTINO` y `PROMPT_RUTAS` | `test_especialista_rutas.py` |
 
 ## Fase C (solo documentada, no es parte de esta spec)
 

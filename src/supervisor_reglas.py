@@ -97,6 +97,26 @@ def _es_ruta(texto: str, palabras: set[str]) -> bool:
     return any(expresion in texto for expresion in ("como llegar", "como llego", "como voy", "como ir"))
 
 
+# Spec 010: ruta con origen y destino = verbo de desplazamiento + «de/desde X a/al/hasta Y». Es más estricto que `_es_ruta`
+# (que acepta «cómo voy» sin extremos y no conoce «desde») para no añadir `rutas` a «¿Cómo voy a pagar el abono?».
+_VERBOS_DESPLAZAMIENTO = {"ir", "voy", "vamos", "llegar", "llego", "llegamos", "viajar", "viajo", "desplazarme"}
+_EXTREMOS_RUTA = re.compile(r"\b(?:desde|de)\s+\S.*?\s+(?:hasta|al?)\s+\S")
+
+
+def completar_rutas_con_extremos(roles: list[str], mensaje: object) -> tuple[list[str], int]:
+    """Añade `rutas` al principio de la cola si el mensaje tiene forma de ruta con origen y destino.
+
+    Devuelve `(cola, añadidos)`. Nunca quita ni reordena otros roles; si `rutas` ya está o el mensaje no tiene
+    esa forma, la cola no cambia. Corrige al LLM cuando manda una consulta de ruta con precio solo a `rag`.
+    """
+    cola = list(roles)
+    if "rutas" in cola or not isinstance(mensaje, str) or not mensaje.strip():
+        return cola, 0
+    if _normalizar(mensaje) & _VERBOS_DESPLAZAMIENTO and _EXTREMOS_RUTA.search(_texto_normalizado(mensaje)):
+        return ["rutas", *cola], 1
+    return cola, 0
+
+
 def elegir_roles_por_reglas(mensaje: str) -> list[str]:
     """Devuelve los roles del fallback en orden seguro o una lista vacía si no clasifica.
 

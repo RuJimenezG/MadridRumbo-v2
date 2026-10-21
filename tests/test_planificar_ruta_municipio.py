@@ -33,7 +33,7 @@ def test_pregunta_de_zona_usa_municipio_de_origen_y_destino(esc):
 def test_zona_antes_que_precio_y_maximo_2_llamadas_con_municipios(esc):
     pr.planificar_ruta("Sol", "Bernabéu")
     assert esc.orden == ["nominatim", "nominatim", "google", "rag", "rag"]
-    assert "zona tarifaria" in esc.preguntas[0] and "precio" in esc.preguntas[1]
+    assert "zona tarifaria" in esc.preguntas[0] and "cuesta" in esc.preguntas[1]     # spec 010 (T13): precio sin zona
 
 
 def test_google_caido_usa_los_mismos_municipios(esc):

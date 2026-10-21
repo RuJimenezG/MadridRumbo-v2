@@ -81,6 +81,13 @@ Esta spec se divide en dos fases:
 - RF-27: SI la bici no está disponible, ENTONCES `bici` incluye el campo `causa` (`sin_credenciales`, `emt`, `google` o `interno`) y su `motivo` y su frase son los de esa causa (`FRASES_NO_DISPONIBLE`). `interno` (error inesperado) conserva la frase genérica anterior. En los demás estados de `bici` no existe `causa`.
 - RF-28: LA FICHA del rol `rutas` (`catalogo_roles.py`) indica que el rol incluye la zona y el precio del trayecto y que las preguntas de precio de seguimiento sobre una ruta ya planificada van a `rutas`. Solo texto (en `limites`; la `responsabilidad` no cambia).
 
+#### Supervisor: ruta con precio (T9, 2026-10-21)
+
+Diagnóstico con el LLM real (10 llamadas al supervisor, solo ese): con la ficha de RF-28 «cuánto cuesta» sin título pasa de `[rutas, rag]` a `[rutas]`, pero «…y cuánto cuesta el abono joven» sigue dando `[rutas, rag]` y «¿Cuánto cuesta el abono joven?» solo `[rag]` (correcto). `corregir_tarifas_textuales` no intervino (el modelo nunca eligió `tarifas`) y el fallback por palabras tampoco.
+
+- RF-29: LA FICHA de `rutas` y la regla de exclusión de `instrucciones_para_supervisor` dicen que la zona y el precio del trayecto valen «también para un título concreto (p. ej. abono joven)», y la regla pasa a: «Una consulta textual de tarifa sin imagen y sin origen ni destino debe seleccionar rag; con origen y destino selecciona rutas, que incluye la zona y el precio del trayecto, también para un título concreto (p. ej. abono joven).»
+- RF-30: SI el mensaje tiene forma de ruta con origen y destino (un verbo de desplazamiento —ir, voy, llegar, llego, viajar…— y la estructura «de/desde X a/al/hasta Y») y `rutas` no está en la cola del supervisor, ENTONCES EL SISTEMA añade `rutas` **al principio** de la cola. Nunca quita ni reordena otros roles (`rag` incluido). Se aplica tanto a la decisión del LLM como al fallback por palabras. Un mensaje vacío, sin esa forma (solo precio, «¿Cómo voy a pagar el abono?», solo destino) no cambia la cola.
+
 #### Segunda capa de ambigüedad en la herramienta (T6)
 
 - RF-19: DONDE se indique `texto_alternativo_origen` o `texto_alternativo_destino` (un único texto por extremo), EL SISTEMA lo geocodifica con Nominatim (con la normalización de RF-1) y le aplica la verificación de Madrid de RF-55 de la spec 004: +1 llamada a Nominatim por extremo, **como máximo 4 en total**.
@@ -93,20 +100,65 @@ Esta spec se divide en dos fases:
 - RF-23: SI hay candidatos mostrados, ENTONCES el LLM elige solo entre ellos (`opcion_*` con `probable_*` verdadero); con confianza baja vuelve a preguntar a la persona.
 - RF-24: SI hubo 0 candidatos, ENTONCES el LLM propone **un único** texto alternativo por extremo (`texto_alternativo_*`).
 
+#### «De X al Y» y «en bici» llegan a la herramienta (T10, 2026-10-21)
+
+Diagnóstico (sin llamadas reales): «¿Cómo voy de Puerta del Sol al Estadio Santiago Bernabéu?» devolvía «Falta indicar el destino» sin llamar a ninguna tool, porque el atajo `_aclaracion_formulacion_incompleta` (`rutas.py`) solo reconocía «a» como separador y buscaba la **última** aparición. «Como puedo ir en bici desde Cibeles hasta Plaza de España?» no pasa por ese atajo: el LLM de rutas lo rechazaba («solo transporte público») porque `PROMPT_RUTAS` no dice nada de bici (el rechazo no está en el código).
+
+- RF-31: EL ATAJO de aclaración de extremos de `rutas` acepta «a», «al» y «hasta» como separador del destino y parte por la **primera** aparición. Con separador y texto a ambos lados no devuelve aviso y la petición llega al LLM y a la herramienta; sin texto tras el separador («voy de Sol a», «voy de Sol al»), o sin él, sigue devolviendo el aviso de destino que falta. Si el separador es lo primero («voy de al Sol»), falta el origen.
+- RF-32: SI la persona pide ir en bici (o en BiciMAD) con origen y destino, ENTONCES `PROMPT_RUTAS` indica solicitar `planificar_ruta` igualmente y que el `final` copie lo que devuelva la herramienta (ruta de transporte, alternativa en BiciMAD si procede o el motivo por el que no se ofrece), sin rechazar la petición por ser en bici. No hay listas ni ejemplos de títulos (spec 004, RF-35 y RF-50).
+
+#### Correcciones de la prueba real (T11, 2026-10-21)
+
+- RF-33: EL SINTETIZADOR solo fuerza los `bloques` y avisos de los resultados de `planificar_ruta` del **turno actual**. `resultados` acumula toda la conversación (reducer `acumular_listas`, sin reinicio); no tenía marca de turno. Ahora cada resultado que añade un especialista lleva `turno` = nº de mensajes de la persona en `historial` (no cambia al reanudar tras el HITL) y el sintetizador ignora los de otros turnos. Los resultados sin marca (conversaciones guardadas antes, dobles de tests) se incluyen como hasta ahora. El LLM del sintetizador sigue viendo todos los resultados.
+- RF-34: SI entre los candidatos dentro de la caja de cobertura hay alguno de la Comunidad de Madrid verificado (`verificar_candidato`), ENTONCES solo ellos entran en la lista de «Opciones» y en la elección (`opcion_*`); uno solo se elige sin preguntar. Sin ningún candidato verificado no se filtra nada y el error lo da después la verificación (RF-55 de la spec 004). Causa: `AMBITO_COBERTURA` es una caja (39,88–41,17 N; −4,58–−3,05 E) que incluye partes de Guadalajara, Toledo, Segovia…, y la verificación de Madrid solo se aplicaba al candidato ya elegido: «Puerta del Sol, Galápagos, Guadalajara» salía como opción 2 y, al elegirla, `verificar_candidato` la rechazaba («no se pudo verificar que la dirección esté en la Comunidad de Madrid»).
+
+#### Certificados de Open-Meteo (T12, 2026-10-21)
+
+- RF-35: LA consulta del clima (Open-Meteo, y solo ella) verifica el certificado del servidor con el bundle de `certifi` cuando `certifi` es importable, y con el contexto por defecto de Python si no. La verificación del certificado y del nombre del servidor siempre está activa: nunca se usa `CERT_NONE`, `check_hostname = False` ni un contexto sin verificar. La EMT y Google no cambian. Motivo: en Windows, el contexto por defecto usa el almacén del sistema y Open-Meteo fallaba con `CERTIFICATE_VERIFY_FAILED: certificate has expired`; con el bundle de `certifi` responde HTTP 200 (2 llamadas reales de diagnóstico, 2026-10-21).
+- **Dependencias (art. 12):** se añade `certifi` a `requirements.txt`. Ya estaba instalado como dependencia transitiva de `httpx` y `requests`; ahora se declara. Ninguna otra.
+
+#### Precio en dos intentos (T13, 2026-10-21)
+
+Medición con el RAG real (10 llamadas en total, ver `validacion.md`): el precio de «abono joven» y el de «billete sencillo» **se abstienen siempre que la pregunta los condiciona a una zona** («en la zona A», «zona A precio», «en Madrid»), y se contestan sin zona: «¿Cuánto cuesta el abono joven?» da 20,00 € y 10,00 €; «¿Cuánto cuesta el billete sencillo?» da una tabla (ordinario 1,50 / 1,80 / 2,00 €, y por discapacidad y familia numerosa, «según las tablas vigentes para 2026 para Metro Zona A y ML1»). El RAG añade matices que el corpus no desambigua (tres importes por categoría), pero el texto es utilizable y se entrega tal cual.
+
+- RF-36: LA primera pregunta de precio al RAG es `¿Cuánto cuesta el {titulo}?`, **sin zona** (`PREGUNTA_PRECIO`). Se hace aunque la zona no se haya podido determinar; no se hace si el título no es interpretable (RF-48 de la spec 004).
+- RF-37: SI la primera pregunta de precio se abstiene (`sin_evidencia`) y se dispone de la zona (estado `ok`, saneada, de longitud ≤ `ZONA_LONGITUD_MAX`), ENTONCES EL SISTEMA hace un segundo intento con zona: `Tarifa y precio del {titulo} {zona}` (`PREGUNTA_PRECIO_CON_ZONA`, la formulación que mejor funcionó con zona). Un error del RAG en el primer intento (excepción) no provoca segundo intento. Si ambos se abstienen, el precio es `sin_evidencia`.
+- RF-38: EL SISTEMA realiza como máximo **3** llamadas al RAG por consulta de ruta: zona, precio y, solo tras una abstención, precio con zona. Sin reintentos.
+
+#### Contexto del sintetizador y seguimiento (T14, 2026-10-21)
+
+Problema: con resultados de `planificar_ruta` la respuesta era el resumen del LLM más los `bloques` literales; el LLM parafraseaba los bloques (el filtro «ya está en la respuesta» es textual) y se repetían; además veía resultados de turnos anteriores y los resumía como actuales. Se mantiene el LLM (RF-20 de la spec 005 intacto).
+
+- RF-39: EL CONTEXTO que recibe el LLM del sintetizador no contiene el texto de los `bloques` que luego se añaden literales: se quita la clave `bloques` de cada resultado de `planificar_ruta` y las apariciones de cada bloque en su `mensaje` y en las `notas`. CUANDO hay bloques, el contexto lleva además la clave `nota`: «Zona, precio, clima, bici y opciones se añaden después de forma automática; no los repitas ni los resumas.» Los bloques se siguen añadiendo al final (RF-13). Sin bloques, el contexto no cambia (sin `nota`). El respaldo determinista y los avisos usan el contexto completo, sin modificar. No se toca `modelos.py`: la nota viaja en el contexto anclado.
+- RF-40: EL CONTEXTO que recibe el LLM solo incluye los `resultados` del turno actual (marca `turno`, RF-33); los de turnos anteriores no se le pasan. Los resultados sin marca se incluyen como hasta ahora. Límite: `notas` y `traza` no llevan marca de turno y se pasan enteras.
+- RF-41: `PROMPT_RUTAS` indica que, en una pregunta de seguimiento sobre la misma ruta («¿y cómo puedo ir en bici?»), se pide `planificar_ruta` con los mismos textos de origen y destino, las mismas opciones elegidas (`opcion_origen`/`opcion_destino` si la persona eligió con un número) y el mismo `titulo` del historial. Sin listas ni ejemplos de títulos (spec 004, RF-35 y RF-50).
+
+**T14, punto 2 — la versión determinista no se aplicó por conflicto; se aplica la alternativa (T15, RF-42 y RF-43) que mantiene el LLM.** Versión descartada: que tras aprobar el plan el grafo solo confirme de forma breve y determinista, sin invocar al sintetizador. Tras la aprobación, `aceptar_plan` → `sintetizador_aprobacion` (el mismo nodo con el LLM) → `finalizar_turno`; por eso vuelve a imprimirse el resumen completo, con los mismos resultados del turno y los bloques otra vez. Choca con RF-31 de la spec 005 («devuelve su resultado»), con su plan («sintetizar el resultado aceptado y fijar done=verdadero») y con RF-20 («respuesta sintetizada»), y los tests `test_grafo_hitl.py::test_aprobacion_reanuda_con_command_y_cierra_solo_el_plan_elegido` y `test_clientes_grafo_real.py::test_varios_planes_exigen_elegir_y_se_aprueba_solo_el_elegido` fijan que la respuesta tras aprobar sale del sintetizador. Alternativa que respeta RF-20 (propuesta, no aplicada): mantener el LLM, pero cuando hay `plan_aprobado` pasarle una `nota` de «el plan ya se mostró; confirma brevemente la aprobación sin repetir la ruta» y no añadir los bloques (ya se mostraron).
+
+#### Confirmación tras aprobar el plan (T15, 2026-10-21)
+
+Causa del resumen repetido: tras `pausa_hitl`, `aceptar_plan` conserva el plan y `sintetizador_aprobacion` (el mismo `nodo_sintetizador` con el LLM) sintetiza otra vez con los mismos resultados del turno y vuelve a añadir los bloques y avisos.
+
+- RF-42: EN la rama de aprobación del plan (nodo `sintetizador_aprobacion`), EL SINTETIZADOR (mismo nodo, con el LLM) recibe en el contexto la `nota` «El plan ya se mostró; confirma brevemente la aprobación sin repetir la ruta.» (en lugar de la de RF-39), con los textos de los `bloques` quitados como en RF-39, y su respuesta se devuelve tal cual: **no se añaden bloques ni avisos**. Si el LLM falla, el respaldo es el de siempre (RF-56 de la spec 005).
+- RF-43: LA rama de aprobación se identifica por el nodo que sintetiza, no por `plan_aprobado`: ese campo no se borra después y seguiría puesto en los turnos siguientes de la conversación. Sin aprobación (turnos normales, aunque `plan_aprobado` siga en el estado) nada cambia: nota de RF-39 y bloques y avisos al final. Con varios planes pendientes sigue exigiéndose elegir uno (RF-47 de la spec 005): sin selector no se reanuda ni se sintetiza.
+
+Tensión con la spec 005, asumida: RF-31 pide que la aprobación «devuelva su resultado»; la respuesta confirma la aprobación sin repetir la ruta. El plan elegido sigue disponible en `plan_aprobado` y en las notas del contexto del LLM.
+
 ### Cambios explícitos sobre specs anteriores
 
 - **Spec 004, RF-27** («no asume ninguna ubicación por defecto para el origen ni el destino»): **se revierte conscientemente en la Fase B** (RF-21 a RF-24). Con la capa 2, el LLM puede elegir una opción o proponer un texto alternativo cuando la entrada no es válida por segunda vez. Siempre se declara qué se usó y cómo corregirlo. En Fase A no cambia.
 - **Spec 004, RF-8** (ambigua: no se calcula, se muestran candidatos): se mantiene en Fase A. En Fase B, la elección de la capa 2 es el único caso en que se calcula una ruta con un extremo que fue ambiguo sin elección explícita de la persona.
 - **Spec 009, RF-25** («sin dato de clima no se ofrece bici»): **cambia** (RF-10): con el clima no disponible, la bici se ofrece con un aviso. **Spec 009, RF-23** se mantiene para el mal tiempo (RF-9).
 - **Spec 009, RF-4, RF-13 y RF-16** (el `mensaje` solo habla de la bici en R3/R4/no disponible/ok): el `mensaje` no añade nada nuevo salvo que la frase de «no disponible» es ahora la de su causa (RF-27); los motivos de R0, R1 y R2 viajan solo en `bloques` (RF-7).
+- **Spec 004, RF-49** (como máximo 2 llamadas al RAG): pasa a 3 (RF-38). **RF-52** (sin zona no se consulta el precio): el precio se consulta igualmente, porque la pregunta ya no depende de la zona (RF-36); sin zona no hay segundo intento. **RF-53** (el texto de zona entra en la pregunta de precio y, si supera `ZONA_LONGITUD_MAX`, no se consulta el precio): ahora solo condiciona el segundo intento (RF-37). **RF-46** (el precio se pregunta con la zona): el primer intento es sin zona.
 - **Spec 009, contrato de `bici`**: gana el campo aditivo `causa` en `no_disponible` (RF-27); los tests que comparaban el dict completo se ajustaron.
 
 ## Requisitos no funcionales
 
-- **Coste.** Sin cambios en Fase A: Nominatim ≤ 2, Google ≤ 1 + 3 de bici, RAG ≤ 2, EMT ≤ 2, Open-Meteo ≤ 1. Fase B sube Nominatim a ≤ 4 (RF-19).
+- **Coste.** Nominatim ≤ 2, Google ≤ 1 + 3 de bici, RAG ≤ 3 (RF-38; antes 2), EMT ≤ 2, Open-Meteo ≤ 1. Fase B sube Nominatim a ≤ 4 (RF-19).
 - **Secretos.** Ni claves ni tokens en el resultado, en `bloques`, en la traza ni en el log (RF-11, RF-15).
 - **Tests.** Ninguno llama a Nominatim, Google, EMT, Open-Meteo, RAG ni LLM: dobles (`tests/dobles_ruta.py::Escenario`, modelo falso del sintetizador).
-- **Dependencias.** Ninguna nueva. Configuración (textos fijos) en `config.py`.
+- **Dependencias.** Solo `certifi` (RF-35), que ya estaba instalado. Configuración (textos fijos) en `config.py`.
 - **Idioma.** Español.
 
 ## Casos límite
@@ -124,12 +176,13 @@ Esta spec se divide en dos fases:
 
 - **Fase C**: consultar las paradas del corpus (nombre, tipo, zona y dirección) y geocodificar su dirección; ver `plan.md`.
 - Tool de geocodificación propia, salida estructurada del sintetizador y marca estable contra duplicados por paráfrasis (T8, mejoras futuras).
+- Un **modo de viaje solo bici** (ruta en bici de punta a punta, sin transporte público): ver «Mejoras futuras» en `validacion.md`.
 - Cambiar `modelos.py`, `catalogo_roles.py`, `supervisor_reglas.py`, el grafo, el RAG, el corpus o `output/chunks.json`.
 - Forzar por código el `mensaje` de `sin_ruta` («no hay ruta disponible…»).
 
 ## Criterios de finalización
 
-- Fase A (RF-1 a RF-18 y RF-25 a RF-28) y Fase B (RF-19 a RF-24) con test en verde (`python -m pytest`, sin API).
+- Fase A (RF-1 a RF-18 y RF-25 a RF-28), Fase B (RF-19 a RF-24) y las correcciones posteriores (RF-29 a RF-35) con test en verde (`python -m pytest`, sin API).
 - No hay demos reales en esta spec: la comprobación real queda para una validación posterior autorizada.
 
 ## Dudas abiertas
@@ -142,8 +195,12 @@ Esta spec se divide en dos fases:
 
 ### Pendientes
 
-- [NECESITA ACLARACIÓN — la ficha de `rutas` no basta para el supervisor] Ver `validacion.md` («Dudas»). Resumen: `instrucciones_para_supervisor` sigue diciendo «Una consulta textual de tarifa sin imagen debe seleccionar rag», que contradice la nueva línea de la ficha; el fallback por palabras (`supervisor_reglas.py`, no tocado) no reconoce «¿y cuánto cuesta?» y añade `rag` con «tarifa/billete/abono»; y el especialista RAG no ve el historial.
+- [PARCIAL, T9 — la ficha de `rutas` no bastaba para el supervisor; RF-29 y RF-30 cubren la ruta con precio, falta el seguimiento «¿y cuánto cuesta?»] Ver `validacion.md` («Dudas»). Resumen: `instrucciones_para_supervisor` sigue diciendo «Una consulta textual de tarifa sin imagen debe seleccionar rag», que contradice la nueva línea de la ficha; el fallback por palabras (`supervisor_reglas.py`, no tocado) no reconoce «¿y cuánto cuesta?» y añade `rag` con «tarifa/billete/abono»; y el especialista RAG no ve el historial.
 - [DECISIÓN — `causa` = `interno`] RF-27 pedía tres valores; se añade `interno` para el error inesperado (frase genérica de siempre).
+- [CERRADA, T12 — Open-Meteo fallaba en Windows con `CERTIFICATE_VERIFY_FAILED: certificate has expired`] Aplicado el RF-35 (contexto con `certifi.where()` solo para Open-Meteo, siempre verificando; `certifi` en `requirements.txt`). Falta una comprobación real con el cliente nuevo (pendiente de autorización).
+- [CERRADA, T13 — RF-36 a RF-38; el precio de «abono joven» salía «no disponible» con la zona sí disponible] Diagnóstico en `validacion.md`: la pregunta de precio de la herramienta incluye la zona («…en la zona indicada a continuación? La zona tarifaria es la zona A.») y el RAG **se abstiene** aunque el contexto recuperado menciona «joven»; «¿Cuánto cuesta el abono joven?» (sin zona) sí devuelve 20,00 € / 10,00 €, y «tarifa abono joven zona A» también. El precio del abono joven no depende de la zona en el corpus. La herramienta lo marca «no disponible» porque `_dato_rag` trata la frase de abstención como `sin_evidencia`. Propuesta sin aplicar: cambiar la formulación (ver `validacion.md`).
+- [DECISIÓN — RF-32 no da una ruta solo en bici] Quien pide «en bici» recibe la ruta en transporte público y, solo si se cumplen las reglas de la spec 009 (sin hora pedida, 1 a 6 km, buen tiempo o clima no comprobado, estaciones con bicis y huecos), la alternativa en BiciMAD; si no, el motivo en `bloques`.
+- [DECISIÓN — RF-30 es heurística] El patrón «verbo + de/desde X a/hasta Y» puede dar falsos positivos (p. ej. «voy a comprar un abono de 30 días a mi hijo» añadiría `rutas`); es inofensivo (el especialista pide origen y destino) pero no es exacto. No hay campo de diagnóstico de la corrección en `DecisionSupervisor` (a diferencia de `correcciones_tarifas`).
 - [DECISIÓN — alternativo para extremos no resueltos] Si el extremo es ambiguo y no se eligió opción, el alternativo también se intenta; si no se verifica, el error es el original.
 
 ### Anteriores (con su estado)

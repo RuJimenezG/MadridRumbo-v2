@@ -17,7 +17,11 @@ from src.catalogo_roles import (
     instrucciones_para_supervisor,
 )
 from src.modelos import ErrorProveedorModelo, crear_modelo_supervisor
-from src.supervisor_reglas import MENSAJE_REFORMULACION, elegir_roles_por_reglas
+from src.supervisor_reglas import (
+    MENSAJE_REFORMULACION,
+    completar_rutas_con_extremos,
+    elegir_roles_por_reglas,
+)
 
 
 # La allowlist del Supervisor nace del mismo catálogo que recibe el modelo.
@@ -142,7 +146,7 @@ def _decision_fallback(
     mensaje = estado.get("mensaje", "")
     texto = mensaje if isinstance(mensaje, str) else ""
     return DecisionSupervisor(
-        roles=elegir_roles_por_reglas(texto),
+        roles=completar_rutas_con_extremos(elegir_roles_por_reglas(texto), texto)[0],
         uso_fallback=True,
         categoria=categoria,
         resumen=RESUMENES_DIAGNOSTICO[categoria],
@@ -165,6 +169,8 @@ def decidir_decision_supervisor(
             estado.get("mensaje", ""),
             tiene_imagen_valida=tiene_imagen_valida is True,
         )
+        # Spec 010: una consulta de ruta con origen y destino no puede quedarse sin `rutas` (p. ej. ruta + precio solo a rag).
+        roles, _ = completar_rutas_con_extremos(roles, estado.get("mensaje", ""))
         return DecisionSupervisor(
             roles=roles,
             uso_fallback=False,

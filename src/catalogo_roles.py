@@ -35,7 +35,7 @@ CATALOGO_ROLES: Mapping[str, FichaRol] = MappingProxyType(
         "rutas": FichaRol(
             "planificación de desplazamientos entre un origen y un destino",
             (
-                "Incluye la zona y el precio del trayecto.",
+                "Incluye la zona y el precio del trayecto, también para un título concreto (p. ej. abono joven).",
                 "Las preguntas de precio de seguimiento sobre una ruta ya planificada "
                 "(«¿y cuánto cuesta?») van a rutas, no a rag.",
             ),
@@ -106,7 +106,8 @@ def instrucciones_para_supervisor() -> str:
         (
             "",
             "Reglas de exclusión:",
-            "Una consulta textual de tarifa sin imagen debe seleccionar rag.",
+            "Una consulta textual de tarifa sin imagen y sin origen ni destino debe seleccionar rag; con origen y destino "
+            "selecciona rutas, que incluye la zona y el precio del trayecto, también para un título concreto (p. ej. abono joven).",
             "No selecciones tarifas salvo que exista una imagen aportada válida.",
             "Referirse solo a una imagen, foto o cartel no constituye una imagen aportada.",
         )

@@ -253,6 +253,12 @@ def clasificar_candidatos(candidatos: list[dict]) -> dict:
     dentro = [c for c in candidatos if dentro_de_ambito(c["lat"], c["lon"])]
     if not dentro:
         return {"estado": "fuera_cobertura", "elegido": None, "candidatos": []}
+    # La caja de cobertura abarca partes de Guadalajara, Toledo, Segovia… (spec 010): si hay candidatos de la Comunidad
+    # de Madrid verificados, solo ellos entran en la lista y en la elección. Sin ninguno verificado no se filtra nada y
+    # el error lo da después la verificación (RF-55 de la spec 004).
+    verificados = [c for c in dentro if verificar_candidato(c)]
+    if verificados:
+        dentro = verificados
     # Resultados casi en el mismo punto (edificio y calle) son un solo lugar: se queda el primero,
     # que es el mejor clasificado por Nominatim.
     distintos = []
@@ -406,27 +412,28 @@ def _dato_rag(pregunta: str) -> dict:
 
 
 def consultar_tarifa(origen: str | None, destino: str | None, titulo=None) -> dict:
-    """Consulta al RAG primero la zona y después el precio del título en esa zona; devuelve `{"zona", "precio"}`.
+    """Consulta al RAG la zona y el precio del título; devuelve `{"zona", "precio"}`.
 
     `origen` y `destino` son los municipios de origen y destino de Nominatim (RF-54, RF-20). Cada dato es `{"estado", "texto", "fuente": "RAG"}` con estado
     ok, sin_evidencia, error u omitida (sin consulta). Si falta origen o destino no se consulta nada.
-    Como mucho 2 llamadas, sin reintentos (RF-49). El precio se omite sin consultar si:
-    - el título no se puede interpretar, por demasiado largo (RF-48);
-    - la zona no está (sin evidencia o error del RAG, RF-52);
-    - el texto de zona, sin saltos de línea, supera ZONA_LONGITUD_MAX: se pasa entero o no se pasa (RF-53).
+    Como mucho 3 llamadas, sin reintentos (spec 010, RF-38): la zona, el precio sin zona y, solo si este se abstiene
+    (sin_evidencia) y hay zona de longitud ≤ ZONA_LONGITUD_MAX (sin saltos de línea, entera), el precio con zona.
+    Un error del RAG en el precio no provoca el segundo intento. El precio se omite sin consultar si el título no se
+    puede interpretar, por demasiado largo (RF-48).
     """
     omitida = {"estado": "omitida", "texto": None, "fuente": "RAG"}
     if not (origen and origen.strip() and destino and destino.strip()):
         return {"zona": dict(omitida), "precio": dict(omitida)}
     titulo_considerado, interpretable = resolver_titulo(titulo)
     zona = _dato_rag(config.PREGUNTA_ZONA.format(origen=origen, destino=destino))
-    if not interpretable or zona["estado"] != "ok":
+    if not interpretable:
         return {"zona": zona, "precio": dict(omitida)}
-    # La zona del RAG es texto libre que entra en otra pregunta: sin saltos de línea y nunca cortada (RF-53).
-    zona_saneada = _SALTOS_DE_LINEA.sub(" ", zona["texto"]).strip()
-    if len(zona_saneada) > config.ZONA_LONGITUD_MAX:
-        return {"zona": zona, "precio": dict(omitida)}
-    precio = _dato_rag(config.PREGUNTA_PRECIO.format(titulo=titulo_considerado, zona=zona_saneada))
+    precio = _dato_rag(config.PREGUNTA_PRECIO.format(titulo=titulo_considerado))
+    if precio["estado"] == "sin_evidencia" and zona["estado"] == "ok":
+        # La zona del RAG es texto libre que entra en otra pregunta: sin saltos de línea y nunca cortada (RF-53).
+        zona_saneada = _SALTOS_DE_LINEA.sub(" ", zona["texto"]).strip()
+        if len(zona_saneada) <= config.ZONA_LONGITUD_MAX:
+            precio = _dato_rag(config.PREGUNTA_PRECIO_CON_ZONA.format(titulo=titulo_considerado, zona=zona_saneada))
     return {"zona": zona, "precio": precio}
 
 
