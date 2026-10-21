@@ -517,17 +517,25 @@ def _encabezado(validacion: dict, hora_salida, hora_llegada, titulo_considerado:
 
 def planificar_ruta(origen: str, destino: str, hora_salida: str | None = None,
                     hora_llegada: str | None = None, titulo: str | None = None,
-                    opcion_origen: int | None = None, opcion_destino: int | None = None) -> dict:
+                    opcion_origen: int | None = None, opcion_destino: int | None = None,
+                    texto_alternativo_origen: str | None = None, texto_alternativo_destino: str | None = None,
+                    probable_origen: bool | None = None, probable_destino: bool | None = None) -> dict:
     """Ruta en transporte público CRTM con zona y precio del RAG. Devuelve siempre un dict con `estado` primero.
 
     `opcion_origen` / `opcion_destino` (T24): posición, desde 1, del candidato de un extremo ambiguo; se geocodifica
     el mismo texto y se toma esa posición (si no existe, la 1). Sin opción, un extremo ambiguo no calcula (RF-8).
 
+    Capa 2 (spec 010, T6): `texto_alternativo_origen` / `texto_alternativo_destino` son un único texto por extremo que se
+    geocodifica (+1 llamada a Nominatim por extremo, ≤ 4 en total) y se verifica en Madrid si el extremo no se resolvió;
+    si tampoco se verifica, se devuelve el error original sin más intentos. `probable_origen` / `probable_destino` (True)
+    marcan que la `opcion_*` fue una elección automática del LLM: el aviso lo indica y dice cómo corregirla.
+
     Nunca lanza excepciones: un fallo inesperado (RF-42) se registra en el log interno y se devuelve como
     `error_interno` con un mensaje genérico en español, sin el texto de la excepción ni datos internos.
     """
     try:
-        return _planificar_ruta(origen, destino, hora_salida, hora_llegada, titulo, opcion_origen, opcion_destino)
+        return _planificar_ruta(origen, destino, hora_salida, hora_llegada, titulo, opcion_origen, opcion_destino,
+                                texto_alternativo_origen, texto_alternativo_destino, probable_origen, probable_destino)
     except Exception:
         logger.exception("Error inesperado en planificar_ruta")
     # La cabecera se rehace aparte: si el fallo vino de la propia hora o del título, no debe repetirse aquí.
@@ -544,10 +552,12 @@ def planificar_ruta(origen: str, destino: str, hora_salida: str | None = None,
                       titulo_considerado, **({"hora_llegada": hora_txt} if llegada else {}))
 
 
-def _planificar_ruta(origen, destino, hora_salida, hora_llegada, titulo, opcion_origen=None, opcion_destino=None) -> dict:
+def _planificar_ruta(origen, destino, hora_salida, hora_llegada, titulo, opcion_origen=None, opcion_destino=None,
+                     texto_alternativo_origen=None, texto_alternativo_destino=None,
+                     probable_origen=None, probable_destino=None) -> dict:
     """Cuerpo de `planificar_ruta`: validar hora y datos (sin red) → geocodificar → Google Routes → RAG.
 
-    Si un paso falla, los siguientes no se ejecutan. Como mucho 2 llamadas a Nominatim, 1 a Google y 2 al RAG.
+    Si un paso falla, los siguientes no se ejecutan. Como mucho 2 llamadas a Nominatim (4 con la capa 2 de la spec 010), 1 a Google y 2 al RAG.
     """
     validacion = validar_hora(hora_salida, hora_llegada)
     titulo_considerado, interpretable = resolver_titulo(titulo)
@@ -561,6 +571,8 @@ def _planificar_ruta(origen, destino, hora_salida, hora_llegada, titulo, opcion_
 
     def salir(estado: str, texto: str, **extra) -> dict:
         texto = " ".join([texto, *avisos])
+        if avisos:   # spec 010, RF-21: la «opción usada» y la elección automática también van en `bloques`
+            extra["bloques"] = [*extra.get("bloques", []), *avisos]
         # Con hora de llegada, `hora_salida` solo lleva la salida que devuelva Google (RF-44); la pedida va en `hora_llegada`.
         if llegada:
             extra.setdefault("salida_resultante", None)
@@ -596,8 +608,23 @@ def _planificar_ruta(origen, destino, hora_salida, hora_llegada, titulo, opcion_
             # bool es int en Python: True no es una posición. Opción inexistente → la 1.
             n = opcion if isinstance(opcion, int) and not isinstance(opcion, bool) and 1 <= opcion <= len(lista) else 1
             clasificadas[rol] = {"estado": "ok", "elegido": lista[n - 1], "candidatos": lista}
-            avisos.append(f"Para el {rol} («{texto}») se usó la opción {n}: {lista[n - 1]['direccion']}. "
+            automatica = {"origen": probable_origen, "destino": probable_destino}[rol] is True
+            avisos.append(f"{'Elección automática: para' if automatica else 'Para'} el {rol} («{texto}») se usó la opción {n}: "
+                          f"{lista[n - 1]['direccion']}. "
                           f"Si no es la que querías, indica otra opción (1 a {len(lista)}) o una dirección más precisa.")
+        # Capa 2 (spec 010, RF-19 y RF-20): un único texto alternativo por extremo no resuelto; si no se verifica, el
+        # error original se mantiene y no hay más intentos.
+        alternativo = {"origen": texto_alternativo_origen, "destino": texto_alternativo_destino}[rol]
+        if clasificadas[rol]["estado"] != "ok" and isinstance(alternativo, str) and alternativo.strip():
+            geo_alt = geocodificar(alternativo)
+            if geo_alt["estado"] != "ok":
+                return salir("geocodificacion_fallida",
+                             "No he podido localizar las direcciones ahora mismo. Inténtalo de nuevo más tarde.")
+            alt = clasificar_candidatos(geo_alt["candidatos"])
+            if alt["estado"] == "ok" and verificar_candidato(alt["elegido"]):
+                clasificadas[rol] = alt
+                avisos.append(f"Para el {rol} («{texto}») no se encontró una dirección válida; se usó «{alternativo}»: "
+                              f"{alt['elegido']['direccion']}. Si no es la que querías, indica una dirección más precisa.")
 
     problemas = {rol: c for rol, c in clasificadas.items() if c["estado"] != "ok"}
     if problemas:
@@ -643,7 +670,8 @@ def _planificar_ruta(origen, destino, hora_salida, hora_llegada, titulo, opcion_
         tarifa = consultar_tarifa(lugar_o["municipio"], lugar_d["municipio"], titulo)
         texto = (f"{trayecto}: no se pudo calcular la ruta con Google Routes. Inténtalo de nuevo más tarde. "
                  + _mensaje_tarifa(tarifa, interpretable))
-        return salir("ruta_no_calculada", texto, **identificados, **tarifa)
+        # Spec 010, T5b (a): el mensaje del fallo (con su zona y precio, si los hay) también va en `bloques`.
+        return salir("ruta_no_calculada", texto, bloques=[texto], **identificados, **tarifa)
     interpretada = interpretar_respuesta_google(google["respuesta"])
     if interpretada["estado"] != "ok":
         return salir("sin_ruta", f"{trayecto}: no hay ruta disponible en transporte público de la red del CRTM. "
@@ -667,6 +695,8 @@ def _planificar_ruta(origen, destino, hora_salida, hora_llegada, titulo, opcion_
             texto += "No se pudo determinar la hora de salida con Google Routes. "
     texto += _mensaje_tarifa(tarifa, interpretable)
     bloques = []   # spec 010, RF-6 a RF-8: textos literales que el sintetizador no puede omitir
+    if "ok" in (tarifa["zona"]["estado"], tarifa["precio"]["estado"]):   # T5b (a): zona y precio, solo si existen
+        bloques.append(_mensaje_tarifa(tarifa, interpretable))
     if clima is not None:   # RF-24 y RF-26: línea del tiempo (si hay dato) y campo `clima`, solo sin hora pedida
         from src.tools.bicimad import texto_clima
         texto = f"{texto} {texto_clima(clima)}".rstrip()

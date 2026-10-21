@@ -2,7 +2,7 @@
 
 > Una tarea cada vez: `/sdd-implementar Tn`. Tests primero. Marca `[x]` al terminar.
 > Cada tarea termina con `python -m pytest` en verde (sin API). Ninguna tarea hace llamadas reales.
-> **Fase A (T1–T5): se implementa. Fase B (T6–T8): solo documentada, no se implementa en esta iteración.**
+> **Fase A (T1–T5 y T5b) y Fase B (T6–T8) hechas el 2026-10-21, con dobles.**
 > Orden: T1 → T2 → T3 → T4 → T5. T4 depende de T2 (campo `bloques`).
 
 ## Fase A
@@ -18,13 +18,16 @@
 - [x] T5. *(hecha 2026-10-21: sin ejemplos de títulos en el prompt por la spec 004, RF-35 y RF-50)* Precio por título pedido. Tests primero y: (a) prueba de que el título pasado en `titulo` («abono joven») entra en la pregunta de precio al RAG, con como mucho 2 llamadas (zona y precio), y de que sin título nada cambia; (b) `PROMPT_RUTAS` (`src/agents/rutas.py`, solo el texto) con las reglas de RF-18: extraer `titulo`, copiar las opciones de una ambigua, no reescribir `ruta_no_calculada` y repetir la llamada con origen y destino del historial ante «¿y cuánto cuesta?». No se crea `tarifa_solicitada` (ver «Dudas abiertas» de la spec). (RF-17, RF-18)
       Hecho cuando: pasan `test_titulo_pedido_entra_en_la_consulta_de_precio`, `test_sin_titulo_comportamiento_actual`, `test_prompt_rutas_explica_el_titulo`, `test_prompt_rutas_copia_las_opciones`, `test_prompt_rutas_no_reescribe_ruta_no_calculada` y `test_prompt_rutas_repite_la_llamada_ante_y_cuanto_cuesta`; `python -m pytest` en verde. **Parar y presentar informe.**
 
-## Fase B (no implementar)
+- [x] T5b. *(hecha 2026-10-21)* Ajustes de la Fase A. Tests primero y: (a) `bloques` lleva además la zona y el precio (si existen, RF-25) y el mensaje de `ruta_no_calculada` (RF-26); (b) `bici` gana `causa` (`sin_credenciales`, `emt`, `google` y `interno` para el error inesperado) con una frase por causa (RF-27), ajustando los tests que comparaban el dict completo; (c) ficha del rol `rutas` en `src/catalogo_roles.py` (archivo de Rubén; solo texto en `limites`, RF-28). No se toca `supervisor_reglas.py`.
+      Hecho cuando: pasan `test_ok_lleva_zona_y_precio_en_bloques`, `test_sin_zona_ni_precio_no_hay_bloque_de_tarifa`, `test_ruta_no_calculada_lleva_su_mensaje_en_bloques`, `test_bici_no_disponible_lleva_su_causa_y_su_frase`, `test_las_frases_de_no_disponible_se_distinguen`, `test_causa_solo_cuando_no_esta_disponible` y `test_ficha_de_rutas_incluye_zona_y_precio_y_las_preguntas_de_seguimiento`; la tabla de tests ajustados del plan está rellena; `python -m pytest` en verde.
 
-- [ ] T6. Capa 2 en la herramienta. Parámetros opcionales `texto_alternativo_origen` y `texto_alternativo_destino` (un único texto por extremo) que `planificar_ruta` geocodifica con Nominatim (con la normalización de T1) y la verificación de Madrid de T22 de la spec 004 (+1 llamada a Nominatim por extremo, total ≤ 4), y `probable_origen` / `probable_destino` (bool) que marcan que la opción `opcion_*` fue una elección automática: el `mensaje` y `bloques` indican qué se usó y cómo corregirlo. Si el alternativo no se verifica, se devuelve el error sin más intentos. (RF-19, RF-20, RF-21)
+## Fase B
+
+- [x] T6. *(hecha 2026-10-21; `tests/test_capa2_lugares.py`)* Capa 2 en la herramienta. Parámetros opcionales `texto_alternativo_origen` y `texto_alternativo_destino` (un único texto por extremo) que `planificar_ruta` geocodifica con Nominatim (con la normalización de T1) y la verificación de Madrid de T22 de la spec 004 (+1 llamada a Nominatim por extremo, total ≤ 4), y `probable_origen` / `probable_destino` (bool) que marcan que la opción `opcion_*` fue una elección automática: el `mensaje` y `bloques` indican qué se usó y cómo corregirlo. Si el alternativo no se verifica, se devuelve el error sin más intentos. (RF-19, RF-20, RF-21)
       Hecho cuando: tests con dobles de los límites (≤ 4 Nominatim), del error sin reintento y de la frase de «qué se usó y cómo corregirlo»; `python -m pytest` en verde. Se escriben al implementar.
-- [ ] T7. Prompt de rutas para la capa 2. Solo actúa cuando el turno anterior ya fue no válido para ese extremo y la nueva entrada tampoco lo resuelve; una sola vez por extremo; con candidatos mostrados elige solo entre ellos (`probable_* = true`), con confianza baja vuelve a preguntar; con 0 candidatos propone un único `texto_alternativo_*`. (RF-22, RF-23, RF-24)
+- [x] T7. *(hecha 2026-10-21; `tests/test_prompt_capa2.py`)* Prompt de rutas para la capa 2. Solo actúa cuando el turno anterior ya fue no válido para ese extremo y la nueva entrada tampoco lo resuelve; una sola vez por extremo; con candidatos mostrados elige solo entre ellos (`probable_* = true`), con confianza baja vuelve a preguntar; con 0 candidatos propone un único `texto_alternativo_*`. (RF-22, RF-23, RF-24)
       Hecho cuando: tests del prompt y del especialista con LLM doble; `python -m pytest` en verde.
-- [ ] T8. `validacion.md` de la spec 010 y mejoras futuras (sin implementar):
+- [x] T8. *(hecha 2026-10-21; ver `validacion.md`)* `validacion.md` de la spec 010 y mejoras futuras (sin implementar):
       - **Fase C**: consultar las paradas del corpus (nombre, tipo, zona y dirección) y geocodificar la dirección.
       - Tool de geocodificación propia.
       - Salida estructurada del sintetizador.

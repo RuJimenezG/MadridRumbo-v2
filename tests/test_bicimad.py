@@ -620,11 +620,14 @@ def test_si_falla_un_tramo_no_hay_alternativa_parcial(orq, falla_en):
     assert len(o.google) == falla_en + 1                    # se corta al primer fallo
 
 
-def test_emt_no_disponible_no_llama_a_google(orq):
+def test_emt_no_disponible_no_llama_a_google(orq, monkeypatch):
+    # Spec 010, T5b (b): la frase depende de la causa (aquí la EMT con credenciales); antes era una sola frase.
+    monkeypatch.setattr(config, "EMT_CLIENT_ID", "ID-DE-TEST")
+    monkeypatch.setattr(config, "EMT_PASS_KEY", "CLAVE-DE-TEST")
     o = orq(estaciones={"estado": "no_disponible", "estaciones": []})
     bici, texto = o.bici.alternativa_bici(ORIGEN, DESTINO, hora_pedida=False, clima=CLIMA_APTO)
     assert bici["estado"] == "no_disponible" and o.google == [] and o.emt_llamadas == 1
-    assert texto == "La alternativa en bici (BiciMAD) no está disponible ahora."
+    assert bici["causa"] == "emt" and texto == bici["motivo"] == o.bici.FRASES_NO_DISPONIBLE["emt"]
 
 
 @pytest.mark.parametrize("donde", ["emt", "google"])
@@ -994,13 +997,16 @@ def test_limites_de_llamadas_emt_2_google_4_nominatim_2(monkeypatch):
 
 
 def test_fallo_de_la_emt_deja_la_ruta_intacta_con_aviso(monkeypatch):
+    monkeypatch.setattr(config, "EMT_CLIENT_ID", "ID-DE-TEST")        # T5b (b): sin esto la causa dependería del entorno
+    monkeypatch.setattr(config, "EMT_PASS_KEY", "CLAVE-DE-TEST")
     _, base = sin_bici(monkeypatch)
     for fallo in ((403, {"code": "84", "description": "", "data": []}), TimeoutError("t")):
         esc = Escenario(monkeypatch)
         esc.emt_login = fallo
         r = ruta_con_bici(esc)
-        assert r["estado"] == "ok" and r["bici"] == {"estado": "no_disponible", "motivo": bicimad.FRASE_NO_DISPONIBLE}
-        assert r["mensaje"].endswith(bicimad.FRASE_NO_DISPONIBLE) and r["mensaje"].startswith(base["mensaje"])
+        frase = bicimad.FRASES_NO_DISPONIBLE["emt"]
+        assert r["estado"] == "ok" and r["bici"] == {"estado": "no_disponible", "motivo": frase, "causa": "emt"}
+        assert r["mensaje"].endswith(frase) and r["mensaje"].startswith(base["mensaje"])
         assert r["ruta"] == base["ruta"] and r["zona"] == base["zona"] and r["precio"] == base["precio"]
         assert [u for u, _ in esc.llamadas_bici if u == config.GOOGLE_ROUTES_URL] == []   # sin Google de bici
 
@@ -1012,7 +1018,8 @@ def test_fallo_de_google_en_la_bici_deja_la_ruta_intacta_con_aviso(monkeypatch, 
     esc.tramos_bici[falla_en] = TimeoutError("t")
     r = ruta_con_bici(esc)
     assert r["estado"] == "ok" and r["bici"]["estado"] == "no_disponible" and "tramos" not in r["bici"]
-    assert r["mensaje"].endswith(bicimad.FRASE_NO_DISPONIBLE) and r["ruta"] == base["ruta"]
+    assert r["bici"]["causa"] == "google"                                  # T5b (b)
+    assert r["mensaje"].endswith(bicimad.FRASES_NO_DISPONIBLE["google"]) and r["ruta"] == base["ruta"]
     assert len([u for u, _ in esc.llamadas_bici if u == config.GOOGLE_ROUTES_URL]) == llamadas
 
 

@@ -66,7 +66,8 @@ def test_bici_ok_lleva_su_parrafo_y_el_clima(esc):
     esc.bici_real()
     r = ruta()
     assert r["bici"]["estado"] == "ok"
-    clima, bici = r["bloques"]
+    tarifa, clima, bici = r["bloques"]                                    # T5b (a): la zona y el precio abren los bloques
+    assert tarifa.startswith("Zona (RAG):")
     assert clima.startswith("Tiempo en el origen ahora:") and clima.endswith(f"{config.CLIMA_ATRIBUCION}.")
     assert bici.startswith("Alternativa en bici (BiciMAD):") and r["bici"]["aviso"] in bici
     assert clima in r["mensaje"] and r["mensaje"].endswith(bici)          # son los mismos textos del mensaje
@@ -108,14 +109,22 @@ def _caso_misma_estacion(esc, monkeypatch):
     return ruta(), bicimad.FRASES_NO_OFRECIDA["misma_estacion"]
 
 
+def _con_credenciales(monkeypatch):
+    # Las claves reales no deben condicionar el test: se fijan valores de prueba.
+    monkeypatch.setattr(config, "EMT_CLIENT_ID", "ID-DE-TEST")
+    monkeypatch.setattr(config, "EMT_PASS_KEY", "CLAVE-DE-TEST")
+
+
 def _caso_emt_caida(esc, monkeypatch):
+    _con_credenciales(monkeypatch)
     esc.emt_login = TimeoutError("t")
-    return ruta(), bicimad.FRASE_NO_DISPONIBLE
+    return ruta(), bicimad.FRASES_NO_DISPONIBLE["emt"]
 
 
 def _caso_google_bici_caido(esc, monkeypatch):
+    _con_credenciales(monkeypatch)
     esc.tramos_bici = [TimeoutError("t")]
-    return ruta(), bicimad.FRASE_NO_DISPONIBLE
+    return ruta(), bicimad.FRASES_NO_DISPONIBLE["google"]
 
 
 CASOS_MOTIVO = [_caso_r1, _caso_r2, _caso_mal_tiempo, _caso_sin_bicis, _caso_sin_huecos, _caso_misma_estacion,
@@ -157,10 +166,10 @@ def test_sin_bloques_no_hay_clave(esc, kw):
     assert r["estado"] != "ok" and "bloques" not in r
 
 
-def test_sin_bloques_en_otros_estados_de_ruta(esc):
+def test_otros_estados_de_ruta_sin_bloques_salvo_ruta_no_calculada(esc):
     esc.google = TimeoutError("t")
     r = ruta()
-    assert r["estado"] == "ruta_no_calculada" and "bloques" not in r
+    assert r["estado"] == "ruta_no_calculada" and "bloques" in r          # T5b (a): ahora lleva su mensaje
     esc.nominatim = [[SOL], [SOL]]
     r = pr.planificar_ruta("Sol", "Sol")
     assert r["estado"] == "misma_ubicacion" and "bloques" not in r
@@ -177,7 +186,7 @@ def test_clima_caido_ofrece_bici_con_aviso(esc):
     r = ruta()
     assert config.CLIMA_SIN_DATO_AVISO == AVISO_SIN_CLIMA
     assert r["clima"] == {"estado": "no_disponible"} and r["bici"]["estado"] == "ok"
-    aviso, bici = r["bloques"]
+    _, aviso, bici = r["bloques"]                                        # el primero es la zona y el precio (T5b)
     assert aviso == AVISO_SIN_CLIMA and bici.startswith("Alternativa en bici (BiciMAD):")
     assert aviso not in r["mensaje"] and bici in r["mensaje"]            # el `mensaje` sigue sin línea de clima
 
@@ -189,10 +198,11 @@ def test_clima_caido_sin_less_walking(esc):
     assert "routingPreference" not in esc.cuerpos_google[0]["transitPreferences"]
 
 
-def test_clima_caido_y_bici_no_disponible_conviven_en_bloques(esc):
+def test_clima_caido_y_bici_no_disponible_conviven_en_bloques(esc, monkeypatch):
     esc.bici_real()
     esc.meteo, esc.emt_login = TimeoutError("t"), TimeoutError("t")
-    assert ruta()["bloques"] == [AVISO_SIN_CLIMA, bicimad.FRASE_NO_DISPONIBLE]
+    _con_credenciales(monkeypatch)
+    assert ruta()["bloques"][1:] == [AVISO_SIN_CLIMA, bicimad.FRASES_NO_DISPONIBLE["emt"]]
 
 
 def test_mal_tiempo_sigue_sin_bici(esc):
@@ -208,7 +218,7 @@ def test_hora_pedida_sin_clima_y_con_motivo(esc):
     esc.bici_real()
     r = ruta(hora_salida=HORA_PEDIDA)
     assert esc.llamadas_meteo == [] and "clima" not in r and esc.llamadas_bici == []
-    assert r["bloques"] == [FRASE_R1]                                    # sin línea de clima ni aviso de clima caído
+    assert r["bloques"][1:] == [FRASE_R1]                                # sin línea de clima ni aviso de clima caído
 
 
 def test_log_de_clima_solo_tipo_y_reason(esc, caplog):
@@ -226,3 +236,96 @@ def test_log_de_clima_solo_tipo_y_reason(esc, caplog):
     assert "RuntimeError" in caplog.text and "secreto-xyz" not in caplog.text    # otras excepciones: solo el tipo
 
 
+
+
+# --- T5b (a): zona, precio y mensaje de `ruta_no_calculada` en `bloques` ---
+
+ZONA_PRECIO = "Zona (RAG): Zona A según la tabla tarifaria. Precio (RAG): El billete sencillo cuesta 1,50 €."
+
+
+def test_ok_lleva_zona_y_precio_en_bloques(esc):
+    r = ruta()
+    assert r["bloques"][0] == ZONA_PRECIO and ZONA_PRECIO in r["mensaje"]
+    assert r["bloques"][1].startswith("Tiempo en el origen")            # después, clima (y bici o motivo)
+
+
+def test_sin_zona_ni_precio_no_hay_bloque_de_tarifa(esc):
+    esc.rag = {"zona tarifaria": config.FRASE_ABSTENCION, "precio": config.FRASE_ABSTENCION}
+    r = ruta()
+    assert not any("(RAG)" in b for b in r["bloques"])                  # solo se fuerza lo que existe
+    esc.nominatim = [[SOL], [BERNABEU]]
+    esc.rag = {"zona tarifaria": ZONA_SOLO, "precio": config.FRASE_ABSTENCION}
+    r = ruta()
+    assert r["bloques"][0].startswith("Zona (RAG): Zona A") and "Precio (RAG)" in r["bloques"][0]
+
+
+ZONA_SOLO = "Zona A según la tabla tarifaria."
+
+
+def test_ruta_no_calculada_lleva_su_mensaje_en_bloques(esc):
+    esc.google = TimeoutError("t")
+    r = ruta()
+    assert r["estado"] == "ruta_no_calculada"
+    assert len(r["bloques"]) == 1
+    bloque = r["bloques"][0]
+    assert "no se pudo calcular la ruta con Google Routes" in bloque and ZONA_PRECIO in bloque
+    assert r["mensaje"].endswith(bloque) and "Salida" not in bloque      # sin la cabecera
+
+
+# --- T5b (b): `causa` en `bici` cuando no está disponible ---
+
+def _sin_credenciales(esc, monkeypatch):
+    monkeypatch.setattr(config, "EMT_CLIENT_ID", "")
+    return "sin_credenciales"
+
+
+def _emt_login(esc, monkeypatch):
+    _con_credenciales(monkeypatch)
+    esc.emt_login = TimeoutError("t")
+    return "emt"
+
+
+def _emt_estaciones(esc, monkeypatch):
+    _con_credenciales(monkeypatch)
+    esc.emt_estaciones = (500, None)
+    return "emt"
+
+
+def _google(esc, monkeypatch):
+    _con_credenciales(monkeypatch)
+    esc.tramos_bici = [TimeoutError("t")]
+    return "google"
+
+
+def _interno(esc, monkeypatch):
+    _con_credenciales(monkeypatch)
+    monkeypatch.setattr(bicimad, "elegir_estaciones", lambda *a: 1 / 0)
+    return "interno"
+
+
+@pytest.mark.parametrize("preparar", [_sin_credenciales, _emt_login, _emt_estaciones, _google, _interno],
+                         ids=lambda f: f.__name__)
+def test_bici_no_disponible_lleva_su_causa_y_su_frase(esc, monkeypatch, preparar):
+    esc.bici_real()
+    causa = preparar(esc, monkeypatch)
+    r = ruta()
+    frase = bicimad.FRASES_NO_DISPONIBLE[causa]
+    assert r["bici"] == {"estado": "no_disponible", "motivo": frase, "causa": causa}
+    assert r["mensaje"].endswith(frase) and r["bloques"][-1] == frase
+    if causa == "sin_credenciales":
+        assert esc.llamadas_bici == []                                  # sin claves no se llama a la EMT
+
+
+def test_las_frases_de_no_disponible_se_distinguen():
+    frases = bicimad.FRASES_NO_DISPONIBLE
+    assert set(frases) == {"sin_credenciales", "emt", "google", "interno"}
+    assert len(set(frases.values())) == 4 and frases["interno"] == bicimad.FRASE_NO_DISPONIBLE
+
+
+def test_causa_solo_cuando_no_esta_disponible(esc):
+    esc.bici_real()
+    assert "causa" not in ruta()["bici"]                                 # ok
+    esc2 = Escenario(esc._monkeypatch)
+    esc2.bici_real()
+    esc2.meteo = (200, METEO_LLUVIA)
+    assert "causa" not in ruta()["bici"]                                 # no_ofrecida

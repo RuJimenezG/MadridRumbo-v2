@@ -120,3 +120,12 @@ def test_no_corrige_si_la_consulta_no_contiene_termino_tarifario_explicito():
 
     assert roles == ["tarifas", "horarios"]
     assert correcciones == 0
+
+
+def test_ficha_de_rutas_incluye_zona_y_precio_y_las_preguntas_de_seguimiento():
+    """Spec 010, T5b (c): la ficha de `rutas` dice que incluye zona y precio y que el precio de seguimiento va a rutas."""
+    ficha = CATALOGO_ROLES["rutas"]
+    limites = " ".join(ficha.limites)
+    assert "zona y el precio del trayecto" in limites
+    assert "seguimiento" in limites and "van a rutas" in limites
+    assert "Límite: " + ficha.limites[0] in instrucciones_para_supervisor()      # llega al prompt del supervisor

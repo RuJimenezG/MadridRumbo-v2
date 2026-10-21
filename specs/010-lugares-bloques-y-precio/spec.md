@@ -1,7 +1,7 @@
 # Spec 010 — Lugares, bloques literales y precio en `planificar_ruta`
 
-> Estado: **Borrador** (Fase A implementada 2026-10-21, pendiente de aprobar; Fase B solo especificada) · Fecha: 2026-10-21
-> Cambia comportamiento de las specs 004 (RF-27, en Fase B) y 009 (RF-23 y RF-25, en Fase A). Ver «Cambios explícitos sobre specs anteriores». No se edita ninguna spec anterior.
+> Estado: **Borrador** (Fases A y B implementadas 2026-10-21, con dobles; pendientes de aprobar; ver `validacion.md`) · Fecha: 2026-10-21
+> Cambia comportamiento de las specs 004 (RF-27, en Fase B) y 009 (RF-4, RF-13, RF-16, RF-23 y RF-25, en Fase A). Ver «Cambios explícitos sobre specs anteriores». No se edita ninguna spec anterior.
 
 ## Contexto y objetivo
 
@@ -16,7 +16,7 @@ Los diagnósticos del 2026-10-21 (sin coste, más una ruta real) detectaron cinc
 Esta spec se divide en dos fases:
 
 - **Fase A (T1–T5)**, a implementar ya: normalización del texto de los lugares, campo `bloques` y su volcado determinista por el sintetizador, política del clima caído y precio por título pedido.
-- **Fase B (T6–T8)**, solo especificada: segunda capa de resolución de ambigüedad con el LLM, acotada y siempre declarada.
+- **Fase B (T6–T8)**: segunda capa de resolución de ambigüedad con el LLM, acotada y siempre declarada (T6 y T7 implementadas; T8, validación y mejoras futuras).
 
 ## Usuarios / actores
 
@@ -46,8 +46,8 @@ Esta spec se divide en dos fases:
 - RF-4: EL SISTEMA añade al resultado de `planificar_ruta` un campo **aditivo** `bloques`: lista de textos literales que deben llegar a la persona usuaria. Solo existe cuando tiene al menos un elemento. El campo `mensaje` y el resto de campos no cambian.
 - RF-5: CUANDO el estado es `ambigua`, `direccion_no_encontrada` o `fuera_cobertura`, EL SISTEMA añade a `bloques` una frase por cada extremo con problema, la misma que va en el `mensaje` (sin la cabecera de hora y título). En `ambigua` esa frase contiene las opciones numeradas.
 - RF-6: CUANDO el estado es `ok` y `bici.estado == "ok"`, EL SISTEMA añade a `bloques` el párrafo «Alternativa en bici (BiciMAD): …» tal como va en el `mensaje`.
-- RF-7: CUANDO el estado es `ok` y la bici no se ofrece o no está disponible, EL SISTEMA añade a `bloques` **una línea corta con el motivo**: hora pedida (R1), distancia fuera del rango de 1 a 6 km (R2), mal tiempo (R0, con sus motivos), sin bicis en el origen, sin huecos en el destino, misma estación (R3 y R4) o alternativa no disponible (EMT sin credenciales o caída, o Google caído; una sola frase para todos esos fallos).
-- RF-8: CUANDO el estado es `ok` y hubo consulta de clima, EL SISTEMA añade a `bloques` la línea del clima (la de RF-24 de la spec 009) o, si el clima no estaba disponible, la línea de RF-10. Orden de `bloques` en `ok`: clima, después bici o motivo (el mismo que en el `mensaje`).
+- RF-7: CUANDO el estado es `ok` y la bici no se ofrece o no está disponible, EL SISTEMA añade a `bloques` **una línea corta con el motivo**: hora pedida (R1), distancia fuera del rango de 1 a 6 km (R2), mal tiempo (R0, con sus motivos), sin bicis en el origen, sin huecos en el destino, misma estación (R3 y R4) o alternativa no disponible (con una frase por causa: RF-27).
+- RF-8: CUANDO el estado es `ok` y hubo consulta de clima, EL SISTEMA añade a `bloques` la línea del clima (la de RF-24 de la spec 009) o, si el clima no estaba disponible, la línea de RF-10. Orden de `bloques` en `ok`: zona y precio (RF-25), clima, bici o motivo y, al final, los avisos de opción usada (RF-21).
 
 #### Política del clima (T3) — revisa RF-23 y RF-25 de la spec 009
 
@@ -72,13 +72,20 @@ Esta spec se divide en dos fases:
   - ante `ruta_no_calculada`, no reescriba el resultado: copie el `mensaje` de la herramienta;
   - si la persona pregunta después «¿y cuánto cuesta?», vuelva a llamar a la herramienta con los mismos origen y destino del historial más el `titulo` pedido.
 
-### Fase B (solo especificada; sin implementar)
+### Fase B (implementada 2026-10-21)
+
+#### Ajustes de la Fase A (T5b, 2026-10-21)
+
+- RF-25: CUANDO el estado es `ok` y el RAG devolvió la zona o el precio (estado `ok`), EL SISTEMA añade a `bloques` el texto de zona y precio tal como va en el `mensaje` («Zona (RAG): … Precio (RAG): …»). Si no hay ninguno, no se añade nada.
+- RF-26: CUANDO el estado es `ruta_no_calculada`, EL SISTEMA añade a `bloques` el texto del fallo (sin la cabecera), que incluye la zona y el precio si los hay.
+- RF-27: SI la bici no está disponible, ENTONCES `bici` incluye el campo `causa` (`sin_credenciales`, `emt`, `google` o `interno`) y su `motivo` y su frase son los de esa causa (`FRASES_NO_DISPONIBLE`). `interno` (error inesperado) conserva la frase genérica anterior. En los demás estados de `bici` no existe `causa`.
+- RF-28: LA FICHA del rol `rutas` (`catalogo_roles.py`) indica que el rol incluye la zona y el precio del trayecto y que las preguntas de precio de seguimiento sobre una ruta ya planificada van a `rutas`. Solo texto (en `limites`; la `responsabilidad` no cambia).
 
 #### Segunda capa de ambigüedad en la herramienta (T6)
 
 - RF-19: DONDE se indique `texto_alternativo_origen` o `texto_alternativo_destino` (un único texto por extremo), EL SISTEMA lo geocodifica con Nominatim (con la normalización de RF-1) y le aplica la verificación de Madrid de RF-55 de la spec 004: +1 llamada a Nominatim por extremo, **como máximo 4 en total**.
-- RF-20: SI el texto alternativo no se verifica (0 candidatos, ambiguo, fuera de ámbito o sin Madrid verificado), ENTONCES EL SISTEMA devuelve el error correspondiente sin más intentos.
-- RF-21: DONDE se indique `probable_origen` o `probable_destino` (bool) junto a `opcion_origen`/`opcion_destino`, EL SISTEMA marca que la opción fue una **elección automática** del LLM: el `mensaje` indica qué se usó y cómo corregirlo (indicar otra opción o una dirección más precisa), y añade esa frase a `bloques`.
+- RF-20: SI el texto alternativo no se verifica (0 candidatos, ambiguo, fuera de ámbito o sin Madrid verificado), ENTONCES EL SISTEMA descarta el alternativo, devuelve el error original de ese extremo y no hace más intentos. Si Nominatim falla al geocodificarlo, el estado es `geocodificacion_fallida`. El alternativo solo se usa si el extremo no se resolvió; un texto vacío o que no es texto se ignora.
+- RF-21: DONDE se indique `probable_origen` o `probable_destino` (verdadero) junto a `opcion_origen`/`opcion_destino`, EL SISTEMA marca que la opción fue una **elección automática** del LLM: el `mensaje` indica qué se usó y cómo corregirlo (indicar otra opción o una dirección más precisa). Todas las notas de «qué se usó» (opción elegida con o sin `probable_*`, y texto alternativo) van también al final de `bloques`. `probable_*` sin opción, o distinto de `true`, se ignora.
 
 #### Prompt de rutas para la capa 2 (T7)
 
@@ -91,7 +98,8 @@ Esta spec se divide en dos fases:
 - **Spec 004, RF-27** («no asume ninguna ubicación por defecto para el origen ni el destino»): **se revierte conscientemente en la Fase B** (RF-21 a RF-24). Con la capa 2, el LLM puede elegir una opción o proponer un texto alternativo cuando la entrada no es válida por segunda vez. Siempre se declara qué se usó y cómo corregirlo. En Fase A no cambia.
 - **Spec 004, RF-8** (ambigua: no se calcula, se muestran candidatos): se mantiene en Fase A. En Fase B, la elección de la capa 2 es el único caso en que se calcula una ruta con un extremo que fue ambiguo sin elección explícita de la persona.
 - **Spec 009, RF-25** («sin dato de clima no se ofrece bici»): **cambia** (RF-10): con el clima no disponible, la bici se ofrece con un aviso. **Spec 009, RF-23** se mantiene para el mal tiempo (RF-9).
-- **Spec 009, RF-4 y RF-16** (el `mensaje` solo habla de la bici en R3/R4/no disponible/ok): el `mensaje` no cambia; los motivos de R0, R1 y R2 viajan solo en `bloques` (RF-7).
+- **Spec 009, RF-4, RF-13 y RF-16** (el `mensaje` solo habla de la bici en R3/R4/no disponible/ok): el `mensaje` no añade nada nuevo salvo que la frase de «no disponible» es ahora la de su causa (RF-27); los motivos de R0, R1 y R2 viajan solo en `bloques` (RF-7).
+- **Spec 009, contrato de `bici`**: gana el campo aditivo `causa` en `no_disponible` (RF-27); los tests que comparaban el dict completo se ajustaron.
 
 ## Requisitos no funcionales
 
@@ -117,19 +125,32 @@ Esta spec se divide en dos fases:
 - **Fase C**: consultar las paradas del corpus (nombre, tipo, zona y dirección) y geocodificar su dirección; ver `plan.md`.
 - Tool de geocodificación propia, salida estructurada del sintetizador y marca estable contra duplicados por paráfrasis (T8, mejoras futuras).
 - Cambiar `modelos.py`, `catalogo_roles.py`, `supervisor_reglas.py`, el grafo, el RAG, el corpus o `output/chunks.json`.
-- Forzar por código el `mensaje` de `ruta_no_calculada` y `sin_ruta`, la zona y el precio (ver «Dudas abiertas»).
+- Forzar por código el `mensaje` de `sin_ruta` («no hay ruta disponible…»).
 
 ## Criterios de finalización
 
-- Fase A: RF-1 a RF-18 con test en verde (`python -m pytest`, sin API).
-- Fase B: solo documentada en spec, plan y tareas; sin código.
+- Fase A (RF-1 a RF-18 y RF-25 a RF-28) y Fase B (RF-19 a RF-24) con test en verde (`python -m pytest`, sin API).
 - No hay demos reales en esta spec: la comprobación real queda para una validación posterior autorizada.
 
 ## Dudas abiertas
 
+### Cerradas el 2026-10-21 (T5b)
+
+- [CERRADA] Fallos de EMT y Google en una sola frase → `causa` y frase por causa (RF-27).
+- [CERRADA] La «opción usada» no estaba en `bloques` → ahora sí (RF-21).
+- [CERRADA, salvo `sin_ruta`] Zona, precio y mensaje de `ruta_no_calculada` → RF-25 y RF-26. `sin_ruta` sigue sin forzarse.
+
+### Pendientes
+
+- [NECESITA ACLARACIÓN — la ficha de `rutas` no basta para el supervisor] Ver `validacion.md` («Dudas»). Resumen: `instrucciones_para_supervisor` sigue diciendo «Una consulta textual de tarifa sin imagen debe seleccionar rag», que contradice la nueva línea de la ficha; el fallback por palabras (`supervisor_reglas.py`, no tocado) no reconoce «¿y cuánto cuesta?» y añade `rag` con «tarifa/billete/abono»; y el especialista RAG no ve el historial.
+- [DECISIÓN — `causa` = `interno`] RF-27 pedía tres valores; se añade `interno` para el error inesperado (frase genérica de siempre).
+- [DECISIÓN — alternativo para extremos no resueltos] Si el extremo es ambiguo y no se eligió opción, el alternativo también se intenta; si no se verifica, el error es el original.
+
+### Anteriores (con su estado)
+
 - [NECESITA ACLARACIÓN — `tarifa_solicitada` duplicaría `titulo`] La herramienta ya tiene el parámetro opcional `titulo` (texto libre, saneado, con «billete sencillo» por defecto) que se incorpora a la pregunta de precio al RAG y a la cabecera. Un parámetro nuevo duplicaría su función. La hipótesis detrás del encargo era que faltaba; lo que falta es que **`PROMPT_RUTAS` lista `titulo?` sin explicarlo**. Decisión provisional: no crear `tarifa_solicitada` y arreglar el prompt (RF-17, RF-18). Si se prefiere el nombre nuevo, es un cambio mecánico (alias de `titulo`) que se haría antes de aprobar.
-- [NECESITA ACLARACIÓN — «¿y cuánto cuesta?» puede no llegar a `rutas`] El supervisor puede encolar `rag` (por «cuesta», término tarifario) en vez de `rutas`; entonces la regla de RF-18 nunca se ejecuta y el RAG recibe la frase sin contexto. Se arregla con la ficha del rol `rutas` (`catalogo_roles.py`, de Rubén), que queda como mejora futura (T8).
-- [NECESITA ACLARACIÓN — fallos de la bici en una sola frase] RF-7 pide distinguir «EMT no disponible o sin credenciales» de «Google no disponible». Distinguirlos exige un campo nuevo en `bici` (p. ej. `causa`) y modificar tres tests con igualdad exacta del dict `bici`. En Fase A se usa la frase existente («La alternativa en bici (BiciMAD) no está disponible ahora.») para todos.
-- [NECESITA ACLARACIÓN — la «opción usada» no está en `bloques`] La nota de la spec 004 (T24) «Para el origen se usó la opción N…» va en el `mensaje` pero no en `bloques`. En Fase B (RF-21) sí; si se quiere ya en Fase A, es una línea.
-- [NECESITA ACLARACIÓN — zona, precio y errores de ruta no se fuerzan] `bloques` no incluye la zona ni el precio del RAG, ni el `mensaje` de `ruta_no_calculada` o `sin_ruta`. El sintetizador puede seguir resumiéndolos. Se deja fuera para no mezclar texto del RAG con bloques fijos.
+- [PARCIAL, T5b (c) — «¿y cuánto cuesta?» puede no llegar a `rutas`] El supervisor puede encolar `rag` (por «cuesta», término tarifario) en vez de `rutas`; entonces la regla de RF-18 nunca se ejecuta y el RAG recibe la frase sin contexto. Se arregla con la ficha del rol `rutas` (`catalogo_roles.py`, de Rubén), que queda como mejora futura (T8).
+- [CERRADA, T5b — fallos de la bici en una sola frase] RF-7 pide distinguir «EMT no disponible o sin credenciales» de «Google no disponible». Distinguirlos exige un campo nuevo en `bici` (p. ej. `causa`) y modificar tres tests con igualdad exacta del dict `bici`. En Fase A se usa la frase existente («La alternativa en bici (BiciMAD) no está disponible ahora.») para todos.
+- [CERRADA, T5b — la «opción usada» no está en `bloques`] La nota de la spec 004 (T24) «Para el origen se usó la opción N…» va en el `mensaje` pero no en `bloques`. En Fase B (RF-21) sí; si se quiere ya en Fase A, es una línea.
+- [CERRADA, T5b salvo `sin_ruta` — zona, precio y errores de ruta no se fuerzan] `bloques` no incluye la zona ni el precio del RAG, ni el `mensaje` de `ruta_no_calculada` o `sin_ruta`. El sintetizador puede seguir resumiéndolos. Se deja fuera para no mezclar texto del RAG con bloques fijos.
 - [DECISIÓN — `fuera_cobertura`] RF-5 incluye `fuera_cobertura` junto a `ambigua` y `direccion_no_encontrada`: sigue la misma ruta de código y la frase se pierde igual.

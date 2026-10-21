@@ -33,7 +33,12 @@ CATALOGO_ROLES: Mapping[str, FichaRol] = MappingProxyType(
         ),
         "horarios": FichaRol("horarios y frecuencias de transporte"),
         "rutas": FichaRol(
-            "planificación de desplazamientos entre un origen y un destino"
+            "planificación de desplazamientos entre un origen y un destino",
+            (
+                "Incluye la zona y el precio del trayecto.",
+                "Las preguntas de precio de seguimiento sobre una ruta ya planificada "
+                "(«¿y cuánto cuesta?») van a rutas, no a rag.",
+            ),
         ),
         "auxiliar": FichaRol("hora actual y cálculos"),
     }

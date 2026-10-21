@@ -206,10 +206,18 @@ FRASES_NO_OFRECIDA = {   # RF-4: solo en R3 y R4
     "misma_estacion": "No hay una alternativa en bici con estaciones de origen y destino distintas.",
 }
 FRASE_NO_DISPONIBLE = "La alternativa en bici (BiciMAD) no está disponible ahora."   # RF-13, RF-14, RF-15
+# Spec 010, T5b (b): la causa del fallo se distingue en `bici["causa"]` y en su frase. `interno` es un error inesperado.
+FRASES_NO_DISPONIBLE = {
+    "sin_credenciales": "La alternativa en bici (BiciMAD) no está disponible ahora: falta configurar el acceso a la EMT.",
+    "emt": "La alternativa en bici (BiciMAD) no está disponible ahora: el servicio de BiciMAD (EMT) no responde.",
+    "google": "La alternativa en bici (BiciMAD) no está disponible ahora: no se pudo calcular el trayecto en bici con Google.",
+    "interno": FRASE_NO_DISPONIBLE,
+}
 
 
-def _no_disponible() -> tuple[dict, str]:
-    return {"estado": "no_disponible", "motivo": FRASE_NO_DISPONIBLE}, FRASE_NO_DISPONIBLE
+def _no_disponible(causa: str) -> tuple[dict, str]:
+    frase = FRASES_NO_DISPONIBLE[causa]
+    return {"estado": "no_disponible", "motivo": frase, "causa": causa}, frase
 
 
 def linea_motivo_bici(bici: dict, origen: dict, destino: dict, hora_pedida: bool, clima: dict | None) -> str:
@@ -259,7 +267,8 @@ def alternativa_bici(origen: dict, destino: dict, hora_pedida: bool, clima: dict
             return {"estado": "no_ofrecida", "motivo": None}, ""
         estaciones = emt_estaciones()
         if estaciones["estado"] != "ok":
-            return _no_disponible()
+            con_claves = _credencial(config.EMT_CLIENT_ID) and _credencial(config.EMT_PASS_KEY)
+            return _no_disponible("emt" if con_claves else "sin_credenciales")
         elegidas = elegir_estaciones(estaciones["estaciones"], origen, destino)
         if elegidas["estado"] != "ok":
             frase = FRASES_NO_OFRECIDA[elegidas["motivo"]]
@@ -269,7 +278,7 @@ def alternativa_bici(origen: dict, destino: dict, hora_pedida: bool, clima: dict
         pie_1 = tramo_google("WALK", origen, e_o) if bici["estado"] == "ok" else None
         pie_2 = tramo_google("WALK", e_d, destino) if pie_1 and pie_1["estado"] == "ok" else None
         if not (pie_2 and pie_2["estado"] == "ok"):
-            return _no_disponible()
+            return _no_disponible("google")
         tramos = [
             {"modo": "A pie", "desde": "Origen", "hasta": e_o["nombre"], "duracion_min": pie_1["duracion_min"]},
             {"modo": "Bici", "desde": e_o["nombre"], "hasta": e_d["nombre"], "duracion_min": bici["duracion_min"]},
@@ -296,7 +305,7 @@ def alternativa_bici(origen: dict, destino: dict, hora_pedida: bool, clima: dict
         return resultado, texto
     except Exception as e:  # noqa: BLE001 - nunca rompe la ruta; solo el tipo, la excepción puede llevar datos sensibles
         logger.error("Error inesperado en la alternativa en bici: %s", type(e).__name__)
-        return _no_disponible()
+        return _no_disponible("interno")
 
 
 # --- Clima (Open-Meteo): funciones internas, no una tool (spec 009, RF-20 a RF-26) ---
