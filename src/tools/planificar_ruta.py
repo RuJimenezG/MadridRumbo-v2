@@ -255,13 +255,15 @@ def clasificar_candidatos(candidatos: list[dict]) -> dict:
 
 
 def consultar_google(origen: dict, destino: dict, salida_rfc3339: str | None = None,
-                     llegada_rfc3339: str | None = None) -> dict:
+                     llegada_rfc3339: str | None = None, preferencia_transito: str | None = None) -> dict:
     """Pide a Google Routes una ruta en transporte público y devuelve `{"estado", "respuesta"}`.
 
     `estado` es "ok" (con el JSON de Google en `respuesta`, que puede venir sin rutas) o
     "ruta_no_calculada" si falta la clave, hay error, falta de conexión o la respuesta no es
     válida (RF-16). Hace como mucho una llamada, sin reintentos ni rutas alternativas.
     El texto de los errores no se propaga: podría contener datos sensibles.
+    `preferencia_transito` (spec 009, RF-22), p. ej. "LESS_WALKING", va en `transitPreferences.routingPreference`;
+    sin ella la petición es la de siempre.
     """
     clave = config.GOOGLE_ROUTES_API_KEY
     if not clave or not clave.strip():
@@ -278,6 +280,8 @@ def consultar_google(origen: dict, destino: dict, salida_rfc3339: str | None = N
         "computeAlternativeRoutes": False,
         "languageCode": "es",
     }
+    if preferencia_transito:
+        cuerpo["transitPreferences"]["routingPreference"] = preferencia_transito
     # Sin hora pedida no se envía ninguna: Google calcula con salida inmediata. departureTime y
     # arrivalTime son incompatibles: se envía como mucho uno (la salida la resuelve Google, RF-39).
     if llegada_rfc3339:
@@ -613,7 +617,15 @@ def _planificar_ruta(origen, destino, hora_salida, hora_llegada, titulo, opcion_
 
     # 3) Ruta con Google (máx. 1 llamada).
     trayecto = f"De «{lugar_o['direccion']}» a «{lugar_d['direccion']}»"
-    google = consultar_google(lugar_o, lugar_d, validacion["salida_rfc3339"], validacion["llegada_rfc3339"])
+    # Spec 009, RF-20/22/27: sin hora pedida se consulta el tiempo actual del origen (importación perezosa) y, si no es
+    # apto, la ruta se pide con menos tramos a pie. Con hora pedida o sin dato de clima la petición es la de siempre.
+    clima = None
+    if validacion["salida_rfc3339"] is None and validacion["llegada_rfc3339"] is None:
+        from src.tools.bicimad import clima_origen
+        clima = clima_origen(lugar_o)
+    menos_a_pie = "LESS_WALKING" if clima and clima["estado"] == "ok" and not clima["apto"] else None
+    google = consultar_google(lugar_o, lugar_d, validacion["salida_rfc3339"], validacion["llegada_rfc3339"],
+                              preferencia_transito=menos_a_pie)
     if google["estado"] != "ok":
         # RF-16 y RF-20: sin ruta, pero ambos puntos están en el ámbito: se consulta el RAG con los municipios.
         tarifa = consultar_tarifa(lugar_o["municipio"], lugar_d["municipio"], titulo)
@@ -641,8 +653,18 @@ def _planificar_ruta(origen, destino, hora_salida, hora_llegada, titulo, opcion_
             extra["salida_resultante"] = hora.isoformat(timespec="minutes")
         else:
             texto += "No se pudo determinar la hora de salida con Google Routes. "
-    return salir("ok", texto + _mensaje_tarifa(tarifa, interpretable),
-                 **identificados, ruta=ruta, **tarifa, **extra)
+    texto += _mensaje_tarifa(tarifa, interpretable)
+    if clima is not None:   # RF-24 y RF-26: línea del tiempo (si hay dato) y campo `clima`, solo sin hora pedida
+        from src.tools.bicimad import texto_clima
+        texto = f"{texto} {texto_clima(clima)}".rstrip()
+        extra["clima"] = clima
+    # Spec 009, RF-1/16/17: único punto de enganche de la alternativa en bici. No lanza y nunca cambia la ruta ni su estado.
+    from src.tools.bicimad import alternativa_bici
+    bici, texto_bici = alternativa_bici(lugar_o, lugar_d, clima is None, clima)
+    extra["bici"] = bici
+    if texto_bici:
+        texto = f"{texto} {texto_bici}"
+    return salir("ok", texto, **identificados, ruta=ruta, **tarifa, **extra)
 
 
 def planificar_ruta_texto(**args) -> str:

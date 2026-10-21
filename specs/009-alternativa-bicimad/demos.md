@@ -1,0 +1,96 @@
+# Demos reales de la spec 009 (T10) — PARCIAL
+
+> 2026-10-20, ~13:57 (hora de Madrid). Trayecto de las cuatro demos: «Puerta del Sol, Madrid» → «Estadio Santiago Bernabéu, Madrid» (≈ 4,2 km en línea recta, dentro de R2). Sin reintentos. Sin credenciales, tokens ni cabeceras en este archivo; de la EMT solo se guardó el `code` del login, nunca su `description`.
+
+## Llamadas reales gastadas
+
+| Demo | Nominatim | Open-Meteo | EMT | Google transporte | Google bici | RAG |
+|---|---|---|---|---|---|---|
+| 1 Caso feliz | 2 | 1 | 1 (login) | 1 | 0 | 2 |
+| 2 Hora pedida | 2 | 0 | 0 | 1 | 0 | 2 |
+| 3 EMT sin credenciales | 2 | 1 | 0 | 1 | 0 | 2 |
+| 4 Mal tiempo (simulado) | 2 | 0 | 0 | 1 | 0 | 2 |
+| **Total** | **8** | **2** | **1** | **4** | **0** | **8** |
+
+Previstas como máximo: Nominatim 8, Open-Meteo 2, EMT 2, Google 7, RAG 8. La demo 1 no pasó del login de la EMT, así que **no se gastaron** la lista de estaciones ni las 3 llamadas de Google de bici.
+
+## Resultados
+
+| Demo | Estado | `bici` | Mensaje y observaciones |
+|---|---|---|---|
+| 1 Caso feliz | `ok` | `no_disponible` | **El login de la EMT devolvió HTTP 200 con `code` "01" (no "00"): sin token.** El sistema hizo lo previsto (RF-13): ruta intacta (20 min, Cercanías C4b), línea de clima con atribución y la frase «La alternativa en bici (BiciMAD) no está disponible ahora.». No se pudo ver la alternativa real. |
+| 2 Hora pedida (21/10 09:00) | `ok` | `no_ofrecida`, sin motivo | Sin clima, sin `LESS_WALKING`, sin línea de tiempo ni párrafo de bici; 0 llamadas a Open-Meteo, EMT y Google de bici. Ruta 20 min (C3). |
+| 3 EMT sin credenciales | `ok` | `no_disponible` | 0 llamadas a la EMT (no hay credenciales). Ruta intacta (20 min, C4b), línea de clima apta con atribución y la frase de no disponible. |
+| 4 Mal tiempo (clima simulado: lluvia 1,4 mm, código 61) | `ok` | `no_ofrecida`, sin motivo | La petición a Google llevó `transitPreferences.routingPreference = "LESS_WALKING"`; sin párrafo de bici. |
+
+Línea de clima real (demos 1 y 3, Open-Meteo: 16,5 °C, 0 mm, código 3, 12,6 km/h): «Tiempo en el origen ahora: 16 °C, sin precipitación, viento 13 km/h (apto para exterior). Datos meteorológicos de Open-Meteo.com (CC BY 4.0).»
+
+Línea con mal tiempo (demo 4): «Tiempo en el origen ahora: 16 °C, precipitación 1.4 mm, viento 10 km/h (no apto para exterior: lluvia; la ruta se pidió con menos tramos a pie). Datos meteorológicos de Open-Meteo.com (CC BY 4.0).»
+
+## ¿`LESS_WALKING` cambia la ruta de transporte?
+
+Sí, en esta muestra (una sola, mismo origen y destino, misma hora):
+
+| | Sin `LESS_WALKING` (demos 1 y 3) | Con `LESS_WALKING` (demo 4) |
+|---|---|---|
+| Duración total | 20 min | 36 min |
+| Transporte | Cercanías C4b, Sol → Nuevos Ministerios, 5 min | Autobús 150, 25 min |
+| Andando (suma de tramos) | 15 min | 11 min |
+
+Menos andando, pero 16 min más de viaje. Es una preferencia, no una garantía, y el mensaje solo dice «menos tramos a pie».
+
+## Tiempos de respuesta (s, una muestra)
+
+Nominatim 0,04–0,35; Open-Meteo 0,13–0,46; EMT (login) 0,14; Google transporte 0,18–0,41; RAG 1,9–4,7 por llamada (4,3–4,7 la primera). Total por consulta 7,8–8,8 s, dominado por el RAG. Los tiempos de Google bici y de la lista de estaciones no se pudieron medir.
+
+## Sin contrastar (hay que repetir la demo 1)
+
+1. **Qué significa «estación activa»:** no se obtuvo la lista de estaciones.
+2. **`routes.warnings` de Google para bici y a pie:** no se hicieron las llamadas de bici.
+3. **Cobertura de `BICYCLE` en Madrid** y coherencia del total de la alternativa (suma de los tres tramos).
+4. **Significado del `code` "01" del login de la EMT:** no se guardó su `description` (puede contener el usuario y el token). Esta mañana el mismo login devolvió "00".
+
+## Repetición de la demo 1 (2026-10-20, ~14:10) — tampoco llegó a la lista de estaciones
+
+> Tras corregir el cliente para aceptar el `code` "01" del login. Mismo trayecto, sin hora pedida. Sin reintentos.
+
+**Llamadas reales gastadas:** Nominatim 2, Open-Meteo 1, EMT 1 (login), Google transporte 1, Google bici 0, RAG 2. Autorizadas como máximo: EMT 2 y Google 4. No se gastaron la lista de estaciones ni las 3 llamadas de Google de bici.
+
+**Qué pasó:** el login de la EMT no respondió en 10 s (`EMT_TIMEOUT_S`): `TimeoutError` a los 10,05 s. Es la primera vez que falla así; en las pruebas anteriores respondió en 0,14 s. El sistema se comportó como la spec (RF-13): `bici = no_disponible`, ruta de transporte intacta (20 min, Cercanías C4a; antes C4b/C3, solo cambia la línea concreta) y la frase «La alternativa en bici (BiciMAD) no está disponible ahora.». El tiempo de la consulta subió a 18,0 s por esa espera.
+
+Tiempo real de esta pasada: 16 °C, sin precipitación, 13 km/h (apto), con atribución en el mensaje.
+
+**Qué sigue sin contrastar con datos reales:** si el login "01" trae `data[0].accessToken`; cuántas estaciones tienen `activate` distinto de 1, `no_available` distinto de 0 o `virtualDelete` verdadero, y si la elegida cumple la regla; si Google devuelve `routes.warnings` en bici y a pie; el mensaje final con la bici y la suma de los tres tramos.
+
+## Prueba aislada de Google Routes para la bici y a pie (2026-10-20, ~14:40)
+
+> **3 llamadas reales** a Google (`bicimad.tramo_google`: 1 `BICYCLE` y 2 `WALK`), ninguna a otro servicio, sin reintentos. Coordenadas fijas de prueba (no son estaciones reales): bici (40.4169, -3.7035) → (40.4530, -3.6883); a pie 1 (40.4169, -3.7035) → (40.4155, -3.7074); a pie 2 (40.4515, -3.6890) → (40.4530, -3.6883). Máscara enviada: `routes.duration,routes.distanceMeters,routes.warnings`.
+
+| Tramo | HTTP | Duración devuelta | Distancia | Tiempo de respuesta | Duración que da el cliente |
+|---|---|---|---|---|---|
+| `BICYCLE` | 200 | 1219 s | 5 323 m | 0,26 s | 20 min |
+| `WALK` 1 | 200 | 370 s | 445 m | 0,17 s | 6 min |
+| `WALK` 2 | 200 | 408 s | 487 m | 0,19 s | 7 min |
+
+- **Cobertura de `BICYCLE` en Madrid:** hay ruta ciclable (≈ 16 km/h de media en ese trayecto). El cuerpo trae solo `routes` con una ruta y, en ella, `distanceMeters` y `duration`.
+- **`routes.warnings`: no llega** en ninguna de las tres respuestas (la clave no existe en la ruta, aunque se pidió en la máscara). Por tanto Google **no** devuelve aquí el aviso beta como campo de la respuesta.
+- **Qué hace nuestro cliente:** al no haber aviso de Google, devuelve en `aviso` el **texto fijo** `BICI_AVISO_GOOGLE` («Las rutas a pie y en bici están en fase beta y pueden carecer de aceras, caminos peatonales o carriles bici claros.») en los tres tramos. Así se cumple RF-12 (sin aviso no se muestra la alternativa) con el texto de respaldo.
+- No se probó con una combinación que pudiera devolver `warnings`; con tres tramos sin ellos, el aviso de Google parece no enviarse nunca en rutas urbanas de Madrid.
+
+## Demo 1 completa: evidencia aportada por la persona usuaria en Streamlit (2026-10-20)
+
+> **Procedencia:** observación de la persona usuaria en Streamlit con servicios reales y la EMT respondiendo, no una ejecución de este agente. Consulta sin hora pedida, «Puerta del Sol» → «Estadio Santiago Bernabéu». **No se contó el número de llamadas ni se anotaron los recuentos de estaciones inactivas**, así que esos datos no constan.
+
+**Resultado:** estado `ok`. Ruta de transporte de 20 min (Cercanías C4a), línea de clima con atribución a Open-Meteo (16,4 °C, sin precipitación, 12,6 km/h, apto) y alternativa BiciMAD de **29 min**:
+
+| Tramo | Duración | Detalle |
+|---|---|---|
+| A pie | 1 min | hasta «33 - Puerta del Sol» (19 bicis) |
+| Bici | 22 min | hasta «253 - Doctor Fleming - Estadio S. Bernabéu» (2 huecos libres) |
+| A pie | 6 min | hasta el destino |
+
+Aviso beta (texto fijo) y atribución al final del mensaje. Los totales cuadran (1 + 22 + 6 = 29).
+
+**Qué cierra:** con la EMT operativa el login («01» o «00»), la lista de estaciones y la elección por disponibilidad funcionan de extremo a extremo; BICYCLE y WALK dan una alternativa coherente; RF-1, RF-7, RF-10 y RF-12 se ven en la respuesta final de Streamlit (el aviso y la atribución también sobreviven a la síntesis, aunque T9 sigue pendiente de Rubén).
+
+**Qué sigue como supuesto:** «estación activa» (`activate == 1`, `no_available == 0`, `virtualDelete` falso). La regla funcionó con estas dos estaciones (ambas con disponibilidad real), pero **no se contrastaron los recuentos** de `activate` ≠ 1, `no_available` ≠ 0 ni `virtualDelete` verdadero, ni el significado de `no_available`. Tampoco se confirmó con datos propios que el login «01» trae `accessToken` por sí solo, salvo en cuanto que la demo llegó a las estaciones.

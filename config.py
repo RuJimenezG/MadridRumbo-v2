@@ -162,6 +162,46 @@ TIPOS_VEHICULO_ACEPTADOS = {
     "SUBWAY", "METRO_RAIL", "TRAM", "BUS", "TROLLEYBUS", "COMMUTER_TRAIN", "HEAVY_RAIL", "RAIL",
 }
 
+# --- Alternativa en bici con BiciMAD (spec 009) ---
+# Regla de oferta (RF-2): distancia en línea recta entre origen y destino, radio máximo a una estación y mínimos.
+BICI_DISTANCIA_MIN_M = 1000
+BICI_DISTANCIA_MAX_M = 6000
+BICI_ESTACION_RADIO_MAX_M = 500
+BICI_MIN_BICIS = 1
+BICI_MIN_HUECOS = 1
+
+# API de la EMT (rutas y campos verificados en T1, 2026-10-20). Las credenciales solo se leen del entorno.
+EMT_LOGIN_URL = "https://openapi.emtmadrid.es/v1/mobilitylabs/user/login/"
+EMT_ESTACIONES_URL = "https://openapi.emtmadrid.es/v1/transport/bicimad/stations/"
+EMT_TIMEOUT_S = 10   # login
+EMT_TIMEOUT_ESTACIONES_S = 20   # lista de ~678 estaciones: más pesada y lenta (T10: >10 s con la EMT lenta)
+# Caducidad (s) que se supone al token de la EMT si el login no la trae (el real dura 86 400 s): prudente, 1 h.
+EMT_TOKEN_CADUCIDAD_DEFECTO_S = 3600
+EMT_CLIENT_ID = os.getenv("EMT_CLIENT_ID")
+EMT_PASS_KEY = os.getenv("EMT_PASS_KEY")
+
+# Google Routes para los tramos en bici y a pie: duración, distancia y avisos (el aviso de beta, RF-12) (la facturación depende de los campos).
+GOOGLE_FIELD_MASK_BICI = "routes.duration,routes.distanceMeters,routes.warnings"
+# Texto de respaldo del aviso de beta que exige Google para rutas a pie y en bici (RF-12).
+BICI_AVISO_GOOGLE = ("Las rutas a pie y en bici están en fase beta y pueden carecer de aceras, caminos peatonales "
+                     "o carriles bici claros.")
+
+# Clima con Open-Meteo (sin clave; verificado en T12, 2026-10-20). "No apto para exterior" si llueve, nieva o hay
+# tormenta (precipitación o código WMO), la temperatura sale de [MIN, MAX] o el viento supera el máximo. Ajustables.
+OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast"
+OPEN_METEO_TIMEOUT_S = 10
+CLIMA_TEMP_MIN_C = 5
+CLIMA_TEMP_MAX_C = 32
+CLIMA_VIENTO_MAX_KMH = 30
+CLIMA_PRECIPITACION_MAX_MM = 0
+# Códigos WMO no aptos y su motivo: llovizna y lluvia (51-57, 61-67, 80-82), nieve (71-77, 85-86), tormenta (95-99).
+CLIMA_CODIGOS_NO_APTOS = {
+    **dict.fromkeys([*range(51, 58), *range(61, 68), *range(80, 83)], "lluvia"),
+    **dict.fromkeys([*range(71, 78), 85, 86], "nieve"),
+    **dict.fromkeys(range(95, 100), "tormenta"),
+}
+CLIMA_ATRIBUCION = "Datos meteorológicos de Open-Meteo.com (CC BY 4.0)"
+
 # Hora de salida pedida: antelación máxima en días (valor provisional).
 ANTELACION_MAX_DIAS = 7
 
