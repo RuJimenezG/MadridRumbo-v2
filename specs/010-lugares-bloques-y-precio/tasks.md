@@ -1,0 +1,34 @@
+# Tareas — Spec 010
+
+> Una tarea cada vez: `/sdd-implementar Tn`. Tests primero. Marca `[x]` al terminar.
+> Cada tarea termina con `python -m pytest` en verde (sin API). Ninguna tarea hace llamadas reales.
+> **Fase A (T1–T5): se implementa. Fase B (T6–T8): solo documentada, no se implementa en esta iteración.**
+> Orden: T1 → T2 → T3 → T4 → T5. T4 depende de T2 (campo `bloques`).
+
+## Fase A
+
+- [x] T1. Normalización del texto de los lugares. Tests primero y función pura `normalizar_lugar` en `src/tools/planificar_ruta.py`, usada en `geocodificar` antes de enviar `q` a Nominatim: quita al inicio «metro», «estación de metro», «estación de» y «parada de» (sin distinguir mayúsculas ni tildes) y los separadores siguientes; una sola pasada; si no queda nada, el texto no cambia. Sin llamadas extra ni «Madrid» añadido. (RF-1, RF-2, RF-3)
+      Hecho cuando: pasan `test_prefijos_se_quitan_sin_mayusculas_ni_tildes`, `test_si_no_queda_nada_no_cambia`, `test_texto_sin_prefijo_llega_identico_a_nominatim` (no regresión), `test_no_se_anade_madrid_ni_llamadas_extra` y `test_mensajes_conservan_el_texto_original`; `python -m pytest` en verde.
+- [x] T2. Campo `bloques`. Tests primero y campo aditivo `bloques` en el resultado de `planificar_ruta` (solo si no está vacío; `mensaje` intacto): frases de dirección problemática (`ambigua`, `direccion_no_encontrada`, `fuera_cobertura`) y, en `ok`, línea del clima, párrafo de bici si `bici.estado == "ok"` y, si no, línea de motivo (`bicimad.linea_motivo_bici`: hora pedida, distancia, mal tiempo, sin bicis, sin huecos, misma estación, no disponible). (RF-4, RF-5, RF-6, RF-7, RF-8)
+      Hecho cuando: pasan `test_ambigua_lleva_las_opciones_en_bloques`, `test_direccion_no_encontrada_y_fuera_cobertura_en_bloques`, `test_bici_ok_lleva_su_parrafo_y_el_clima`, `test_motivo_de_cada_causa_en_bloques`, `test_mensaje_y_campos_existentes_no_cambian` y `test_sin_bloques_no_hay_clave`; `python -m pytest` en verde.
+- [x] T3. *(hecha 2026-10-21; un test de la spec 009 ajustado, ver tabla del plan)* Política del clima. Tests primero y: R0 solo rechaza con clima **apto = falso**; con `clima.estado == "no_disponible"` la bici sigue el flujo normal, la petición de tránsito no lleva `LESS_WALKING` y `bloques` lleva `CLIMA_SIN_DATO_AVISO` (nueva constante en `config.py`); log del tipo de la excepción y del `reason` de `URLError` (nunca claves). Ajustar solo los tests obsoletos que fije el plan, justificándolos en su tabla. (RF-9, RF-10, RF-11, RF-12)
+      Hecho cuando: pasan `test_clima_caido_ofrece_bici_con_aviso`, `test_clima_caido_sin_less_walking`, `test_mal_tiempo_sigue_sin_bici`, `test_hora_pedida_sin_clima_y_con_motivo` y `test_log_de_clima_solo_tipo_y_reason`; la tabla de tests obsoletos del plan está rellena; `python -m pytest` en verde.
+- [x] T4. Volcado de bloques en el sintetizador. Tests primero y `src/sintetizador.py`: `_avisos_obligatorios` generalizado para devolver los `bloques` de cada resultado de `planificar_ruta` (leyendo `resultados[].resultado`, no las notas) y después los avisos; el nodo añade al final lo que no esté ya en la respuesta ni en un bloque ya añadido; un resultado ilegible se ignora y se registra solo el tipo del error. Avisar a Rubén (archivo suyo). (RF-13, RF-14, RF-15, RF-16)
+      Hecho cuando: pasan `test_ambigua_opciones_visibles_aunque_el_modelo_las_omita`, `test_bici_ok_bloque_visible`, `test_motivo_visible`, `test_linea_de_clima_visible`, `test_no_duplica_si_el_modelo_ya_lo_incluye`, `test_aviso_dentro_del_bloque_no_se_repite`, `test_resultado_ilegible_no_rompe_y_se_registra` y `test_respaldo_intacto`; `tests/test_sintetizador.py` y `tests/test_sintetizador_avisos.py` siguen en verde; `python -m pytest` en verde.
+- [x] T5. *(hecha 2026-10-21: sin ejemplos de títulos en el prompt por la spec 004, RF-35 y RF-50)* Precio por título pedido. Tests primero y: (a) prueba de que el título pasado en `titulo` («abono joven») entra en la pregunta de precio al RAG, con como mucho 2 llamadas (zona y precio), y de que sin título nada cambia; (b) `PROMPT_RUTAS` (`src/agents/rutas.py`, solo el texto) con las reglas de RF-18: extraer `titulo`, copiar las opciones de una ambigua, no reescribir `ruta_no_calculada` y repetir la llamada con origen y destino del historial ante «¿y cuánto cuesta?». No se crea `tarifa_solicitada` (ver «Dudas abiertas» de la spec). (RF-17, RF-18)
+      Hecho cuando: pasan `test_titulo_pedido_entra_en_la_consulta_de_precio`, `test_sin_titulo_comportamiento_actual`, `test_prompt_rutas_explica_el_titulo`, `test_prompt_rutas_copia_las_opciones`, `test_prompt_rutas_no_reescribe_ruta_no_calculada` y `test_prompt_rutas_repite_la_llamada_ante_y_cuanto_cuesta`; `python -m pytest` en verde. **Parar y presentar informe.**
+
+## Fase B (no implementar)
+
+- [ ] T6. Capa 2 en la herramienta. Parámetros opcionales `texto_alternativo_origen` y `texto_alternativo_destino` (un único texto por extremo) que `planificar_ruta` geocodifica con Nominatim (con la normalización de T1) y la verificación de Madrid de T22 de la spec 004 (+1 llamada a Nominatim por extremo, total ≤ 4), y `probable_origen` / `probable_destino` (bool) que marcan que la opción `opcion_*` fue una elección automática: el `mensaje` y `bloques` indican qué se usó y cómo corregirlo. Si el alternativo no se verifica, se devuelve el error sin más intentos. (RF-19, RF-20, RF-21)
+      Hecho cuando: tests con dobles de los límites (≤ 4 Nominatim), del error sin reintento y de la frase de «qué se usó y cómo corregirlo»; `python -m pytest` en verde. Se escriben al implementar.
+- [ ] T7. Prompt de rutas para la capa 2. Solo actúa cuando el turno anterior ya fue no válido para ese extremo y la nueva entrada tampoco lo resuelve; una sola vez por extremo; con candidatos mostrados elige solo entre ellos (`probable_* = true`), con confianza baja vuelve a preguntar; con 0 candidatos propone un único `texto_alternativo_*`. (RF-22, RF-23, RF-24)
+      Hecho cuando: tests del prompt y del especialista con LLM doble; `python -m pytest` en verde.
+- [ ] T8. `validacion.md` de la spec 010 y mejoras futuras (sin implementar):
+      - **Fase C**: consultar las paradas del corpus (nombre, tipo, zona y dirección) y geocodificar la dirección.
+      - Tool de geocodificación propia.
+      - Salida estructurada del sintetizador.
+      - Marca estable para evitar duplicados por paráfrasis (hoy el dedupe es textual).
+      - Cambio en la ficha del rol `rutas` (`catalogo_roles.py`, de Rubén) para que el supervisor no encole un `rag` duplicado en una consulta de ruta con «cuánto cuesta».
+      - Distinguir EMT y Google caídos (`causa` en `bici`), la «opción usada» en `bloques` y forzar `ruta_no_calculada`, zona y precio.
+      Hecho cuando: `validacion.md` con veredicto RF por RF (Fase A «Sí»; Fase B «No aplica» o implementada) y `python -m pytest` en verde.

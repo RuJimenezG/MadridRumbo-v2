@@ -8,11 +8,13 @@ from __future__ import annotations
 
 from copy import deepcopy
 import json
+import logging
 from typing import Any, Callable, Mapping
 
 import config
 from src.modelos import crear_modelo_sintetizador
 
+logger = logging.getLogger(__name__)
 
 ModeloSintetizador = Callable[[Mapping[str, Any]], str]
 
@@ -30,24 +32,31 @@ def contexto_anclado(estado: Mapping[str, Any]) -> dict[str, list[Any]]:
 
 
 def _avisos_obligatorios(contexto: Mapping[str, Any]) -> list[str]:
-    """Avisos que el LLM no puede omitir (spec 009): el de Google de la bici (RF-12) y la atribución a Open-Meteo."""
+    """Textos que el LLM no puede omitir: los `bloques` de planificar_ruta (spec 010) y luego sus avisos (spec 009).
+
+    Los avisos son el de Google de la bici (RF-12) y la atribución a Open-Meteo. Se leen de `resultados[].resultado`
+    (el JSON completo de la tool), no de las notas, que el especialista puede haber reescrito.
+    """
+    bloques: list[str] = []
     avisos: list[str] = []
-    try:
-        for resultado in contexto.get("resultados", []):
-            if not isinstance(resultado, Mapping) or resultado.get("tool") != "planificar_ruta":
-                continue
+    for resultado in contexto.get("resultados", []):
+        if not isinstance(resultado, Mapping) or resultado.get("tool") != "planificar_ruta":
+            continue
+        try:  # un resultado ilegible solo se omite: no debe activar el respaldo ni tapar los demás
             bruto = resultado.get("resultado")
             datos = json.loads(bruto) if isinstance(bruto, str) else bruto
             if not isinstance(datos, Mapping):
-                continue
+                raise TypeError("el resultado no es un objeto")
+            if isinstance(datos.get("bloques"), list):
+                bloques += [b.strip() for b in datos["bloques"] if isinstance(b, str) and b.strip()]
             bici, clima = datos.get("bici"), datos.get("clima")
             if isinstance(bici, Mapping) and bici.get("estado") == "ok" and isinstance(bici.get("aviso"), str):
                 avisos.append(bici["aviso"].strip())
             if isinstance(clima, Mapping) and clima.get("estado") == "ok":
                 avisos.append(f"{config.CLIMA_ATRIBUCION}.")
-    except Exception:  # un resultado ilegible no debe activar el respaldo: solo se omite el aviso
-        pass
-    return [a for a in dict.fromkeys(avisos) if a]
+        except Exception as e:  # noqa: BLE001 - solo el tipo del error: el contenido puede ser sensible
+            logger.warning("Resultado de planificar_ruta ilegible: %s", type(e).__name__)
+    return [a for a in dict.fromkeys([*bloques, *avisos]) if a]
 
 
 def _lineas_respaldo(contexto: Mapping[str, Any]) -> tuple[list[str], bool]:
@@ -103,8 +112,12 @@ def nodo_sintetizador(
         respuesta = modelo_efectivo(contexto)
         if not isinstance(respuesta, str) or not respuesta.strip():
             raise ValueError("Respuesta del sintetizador no interpretable.")
-        faltan = [a for a in _avisos_obligatorios(contexto) if a not in respuesta]
-        return {"respuesta": "\n\n".join([respuesta, *faltan])}
+        # Se compara con el texto ya acumulado: el bloque de bici lleva dentro el aviso de Google y el de clima la atribución.
+        texto = respuesta
+        for obligatorio in _avisos_obligatorios(contexto):
+            if obligatorio not in texto:
+                texto = f"{texto}\n\n{obligatorio}"
+        return {"respuesta": texto}
     except Exception:
         return {
             "respuesta": renderizar_respaldo(contexto),

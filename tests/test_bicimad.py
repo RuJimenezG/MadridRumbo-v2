@@ -790,12 +790,21 @@ def test_error_inesperado_en_clima_no_rompe_la_ruta(meteo, monkeypatch, caplog):
 
 # --- T14: integración del clima (R0, LESS_WALKING, línea y campo `clima`) ---
 
-@pytest.mark.parametrize("clima", [CLIMA_LLUVIA, CLIMA_SIN_DATO])
-def test_no_apto_o_sin_dato_no_ofrece_bici_ni_llama_a_la_emt(orq, clima):
+# Spec 010, RF-9 y RF-10 (T3): solo el mal tiempo comprobado impide la bici. Antes este test también fijaba que
+# la falta de dato de clima (`CLIMA_SIN_DATO`) la impedía (spec 009, RF-25); esa parte cambia y pasa al test siguiente.
+@pytest.mark.parametrize("clima", [CLIMA_LLUVIA, None])
+def test_no_apto_o_sin_consulta_no_ofrece_bici_ni_llama_a_la_emt(orq, clima):
     o = orq()
     assert o.bici.alternativa_bici(ORIGEN, DESTINO, hora_pedida=False, clima=clima) == (
         {"estado": "no_ofrecida", "motivo": None}, "")                         # el clima ya lo explica su línea
     assert o.emt_llamadas == 0 and o.google == []
+
+
+def test_sin_dato_de_clima_sigue_el_flujo_normal(orq):
+    o = orq()
+    bici, texto = o.bici.alternativa_bici(ORIGEN, DESTINO, hora_pedida=False, clima=CLIMA_SIN_DATO)
+    assert bici["estado"] == "ok" and texto.startswith("Alternativa en bici (BiciMAD)")
+    assert o.emt_llamadas == 1 and len(o.google) == 3
 
 
 def test_apto_aplica_la_regla_de_oferta(orq):
@@ -939,7 +948,7 @@ def test_alternativa_junto_a_la_ruta_sin_cambiar_su_estado(monkeypatch):
 def test_campo_bici_solo_en_ok_y_campos_existentes_intactos(monkeypatch):
     esc = Escenario(monkeypatch)
     r = ruta_con_bici(esc)
-    assert set(r) == CLAVES_BASE | {"clima", "bici"}                       # solo se añaden clima y bici
+    assert set(r) == CLAVES_BASE | {"clima", "bici", "bloques"}            # solo se añaden clima, bici y bloques (spec 010, RF-4)
     # Estados que no son ok: sin campo bici (y sin llamadas de bici).
     for cambio in ({"google": TimeoutError("t")}, {"google": {}}, {"nominatim": [[SOL, ATOCHA], [BERNABEU]]},
                    {"nominatim": [[BARCELONA], [BERNABEU]]}):

@@ -212,6 +212,31 @@ def _no_disponible() -> tuple[dict, str]:
     return {"estado": "no_disponible", "motivo": FRASE_NO_DISPONIBLE}, FRASE_NO_DISPONIBLE
 
 
+def linea_motivo_bici(bici: dict, origen: dict, destino: dict, hora_pedida: bool, clima: dict | None) -> str:
+    """Línea corta con el motivo por el que la bici no se ofrece o no está disponible (spec 010, RF-7).
+
+    "" si la bici es `ok` o no se conoce la causa. R3, R4 y el fallo ya traen su frase en `bici["motivo"]`; R1, R2 y R0
+    se deducen de los mismos datos que usó `alternativa_bici`. Nunca lanza: un fallo aquí no debe romper la ruta.
+    """
+    try:
+        if bici.get("estado") == "ok":
+            return ""
+        if bici.get("motivo"):
+            return bici["motivo"]
+        rechazo = rechazo_oferta(origen, destino, hora_pedida)
+        if rechazo == "R1":
+            return ("La alternativa en bici no se ofrece con hora de salida o de llegada pedida: "
+                    "la disponibilidad de bicis es la de ahora.")
+        if rechazo == "R2":
+            return ("La alternativa en bici no se ofrece: la distancia entre origen y destino queda fuera del rango de "
+                    f"{config.BICI_DISTANCIA_MIN_M / 1000:g} a {config.BICI_DISTANCIA_MAX_M / 1000:g} km.")
+        if isinstance(clima, dict) and clima.get("estado") == "ok" and clima.get("apto") is not True:
+            return f"La alternativa en bici no se ofrece con mal tiempo ({', '.join(clima['motivos'])})."
+    except Exception:  # noqa: BLE001 - sin detalles: la línea de motivo es opcional
+        pass
+    return ""
+
+
 def _cuantos(n: int, singular: str, plural: str) -> str:
     return f"{n} {singular if n == 1 else plural}"
 
@@ -227,8 +252,11 @@ def alternativa_bici(origen: dict, destino: dict, hora_pedida: bool, clima: dict
     try:
         if rechazo_oferta(origen, destino, hora_pedida) is not None:
             return {"estado": "no_ofrecida", "motivo": None}, ""
-        if not (isinstance(clima, dict) and clima.get("estado") == "ok" and clima.get("apto") is True):
-            return {"estado": "no_ofrecida", "motivo": None}, ""    # R0: sin buen tiempo o sin dato no hay bici (RF-23, RF-25)
+        # R0 (spec 010, RF-9 y RF-10): solo un mal tiempo comprobado impide la bici; con el clima no disponible se ofrece.
+        clima_caido = isinstance(clima, dict) and clima.get("estado") == "no_disponible"
+        buen_tiempo = isinstance(clima, dict) and clima.get("estado") == "ok" and clima.get("apto") is True
+        if not (clima_caido or buen_tiempo):
+            return {"estado": "no_ofrecida", "motivo": None}, ""
         estaciones = emt_estaciones()
         if estaciones["estado"] != "ok":
             return _no_disponible()
@@ -318,8 +346,9 @@ def clima_origen(origen: dict) -> dict:
         apto, motivos = apto_exterior(temp, lluvia, codigo, viento)
         return {"estado": "ok", "temperatura_c": temp, "precipitacion_mm": lluvia, "codigo": codigo,
                 "viento_kmh": viento, "apto": apto, "motivos": motivos, "fuente": "Open-Meteo", "licencia": "CC BY 4.0"}
-    except Exception as e:  # noqa: BLE001 - sin detalles: solo el tipo de la excepción
-        logger.warning("Open-Meteo no disponible: %s", type(e).__name__)
+    except Exception as e:  # noqa: BLE001 - sin detalles: solo el tipo de la excepción y, en un URLError, su `reason`
+        motivo = f" ({e.reason})" if isinstance(e, urllib.error.URLError) else ""
+        logger.warning("Open-Meteo no disponible: %s%s", type(e).__name__, motivo)
         return fallo
 
 

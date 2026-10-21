@@ -201,6 +201,8 @@ CLIMA_CODIGOS_NO_APTOS = {
     **dict.fromkeys(range(95, 100), "tormenta"),
 }
 CLIMA_ATRIBUCION = "Datos meteorológicos de Open-Meteo.com (CC BY 4.0)"
+# Línea que sustituye a la del tiempo cuando Open-Meteo no responde y la bici se ofrece igualmente (spec 010, RF-10).
+CLIMA_SIN_DATO_AVISO = "No se pudo comprobar el tiempo; la alternativa en bici se ofrece sin esa comprobación."
 
 # Hora de salida pedida: antelación máxima en días (valor provisional).
 ANTELACION_MAX_DIAS = 7

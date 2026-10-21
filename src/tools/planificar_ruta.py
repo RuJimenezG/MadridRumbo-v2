@@ -148,6 +148,16 @@ def _http_json(url: str, *, headers: dict | None = None, body: dict | None = Non
         return json.loads(respuesta.read().decode("utf-8"))
 
 
+# Prefijos de estación al inicio del texto: Nominatim devuelve 0 resultados con «Metro X» pero sí con «X» (spec 010, RF-1).
+_PREFIJO_ESTACION = re.compile(r"^\s*(?:estaci[oó]n\s+de\s+metro|estaci[oó]n\s+de|parada\s+de|metro)\b[\s,:\-]*", re.IGNORECASE)
+
+
+def normalizar_lugar(texto: str) -> str:
+    """Quita un prefijo de estación del inicio (una sola pasada); si no quedaría nada, devuelve el texto tal cual."""
+    resto = _PREFIJO_ESTACION.sub("", texto, count=1)
+    return resto if resto.strip() else texto
+
+
 def geocodificar(direccion: str) -> dict:
     """Busca una dirección en Nominatim y devuelve `{"estado", "candidatos"}`.
 
@@ -163,7 +173,7 @@ def geocodificar(direccion: str) -> dict:
             time.sleep(falta)
 
     parametros = {
-        "q": direccion,
+        "q": normalizar_lugar(direccion),
         "format": "jsonv2",
         "countrycodes": config.NOMINATIM_PAIS,
         # El viewbox solo es una preferencia (sin bounded=1): así una dirección fuera del ámbito llega y se
@@ -598,8 +608,10 @@ def _planificar_ruta(origen, destino, hora_salida, hora_llegada, titulo, opcion_
         candidatos = {rol: [{"direccion": c["direccion"]} for c in clasificadas[rol]["candidatos"]]
                       if clasificadas[rol]["estado"] == "ambigua" else [] for rol in textos}
         extra = {"candidatos": candidatos} if estado == "ambigua" else {}
-        mensaje = " ".join(_problema_direccion(rol, textos[rol], c) for rol, c in problemas.items())
-        return salir("direccion_no_encontrada" if estado == "no_encontrada" else estado, mensaje, **extra)
+        frases = [_problema_direccion(rol, textos[rol], c) for rol, c in problemas.items()]
+        # Spec 010, RF-5: las mismas frases (con las opciones de una ambigua) también en `bloques`, para que lleguen enteras.
+        return salir("direccion_no_encontrada" if estado == "no_encontrada" else estado, " ".join(frases),
+                     bloques=frases, **extra)
 
     lugar_o, lugar_d = clasificadas["origen"]["elegido"], clasificadas["destino"]["elegido"]
     identificados = {"origen": {"direccion": lugar_o["direccion"]}, "destino": {"direccion": lugar_d["direccion"]}}
@@ -611,9 +623,9 @@ def _planificar_ruta(origen, destino, hora_salida, hora_llegada, titulo, opcion_
     sin_verificar = [rol for rol, lugar in (("origen", lugar_o), ("destino", lugar_d)) if not verificar_candidato(lugar)]
     if sin_verificar:
         textos = {"origen": origen, "destino": destino}
-        return salir("direccion_no_encontrada", " ".join(
-            f"No se pudo verificar que la dirección de {rol} «{textos[rol]}» esté en la {CCAA_NOMBRE}. Indica una más precisa."
-            for rol in sin_verificar))
+        frases = [f"No se pudo verificar que la dirección de {rol} «{textos[rol]}» esté en la {CCAA_NOMBRE}. Indica una más precisa."
+                  for rol in sin_verificar]
+        return salir("direccion_no_encontrada", " ".join(frases), bloques=frases)
 
     # 3) Ruta con Google (máx. 1 llamada).
     trayecto = f"De «{lugar_o['direccion']}» a «{lugar_d['direccion']}»"
@@ -654,16 +666,22 @@ def _planificar_ruta(origen, destino, hora_salida, hora_llegada, titulo, opcion_
         else:
             texto += "No se pudo determinar la hora de salida con Google Routes. "
     texto += _mensaje_tarifa(tarifa, interpretable)
+    bloques = []   # spec 010, RF-6 a RF-8: textos literales que el sintetizador no puede omitir
     if clima is not None:   # RF-24 y RF-26: línea del tiempo (si hay dato) y campo `clima`, solo sin hora pedida
         from src.tools.bicimad import texto_clima
         texto = f"{texto} {texto_clima(clima)}".rstrip()
         extra["clima"] = clima
+        bloques.append(texto_clima(clima) or config.CLIMA_SIN_DATO_AVISO)   # RF-10: sin dato, el aviso de clima caído
     # Spec 009, RF-1/16/17: único punto de enganche de la alternativa en bici. No lanza y nunca cambia la ruta ni su estado.
-    from src.tools.bicimad import alternativa_bici
+    from src.tools.bicimad import alternativa_bici, linea_motivo_bici
     bici, texto_bici = alternativa_bici(lugar_o, lugar_d, clima is None, clima)
     extra["bici"] = bici
     if texto_bici:
         texto = f"{texto} {texto_bici}"
+    bloques.append(texto_bici or linea_motivo_bici(bici, lugar_o, lugar_d, clima is None, clima))
+    bloques = [b for b in bloques if b]
+    if bloques:
+        extra["bloques"] = bloques
     return salir("ok", texto, **identificados, ruta=ruta, **tarifa, **extra)
 
 
