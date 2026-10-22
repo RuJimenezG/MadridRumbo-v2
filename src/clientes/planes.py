@@ -110,5 +110,12 @@ def ids_de_planes(planes: Any) -> list[str]:
 
 
 def es_entrada_tecnica_supervisor(linea: Any) -> bool:
-    """True si la línea del log es un diagnóstico técnico del supervisor (RF-35)."""
-    return isinstance(linea, str) and linea.startswith(tuple(config.PREFIJOS_DIAGNOSTICO_SUPERVISOR))
+    """True si la entrada es un diagnóstico técnico del Supervisor, antiguo o estructurado."""
+    if isinstance(linea, str):
+        return linea.startswith(tuple(config.PREFIJOS_DIAGNOSTICO_SUPERVISOR))
+    if not isinstance(linea, Mapping) or linea.get("nodo") != "supervisor":
+        return False
+    detalle = linea.get("detalle")
+    return isinstance(detalle, Mapping) and isinstance(detalle.get("categoria"), str) and isinstance(
+        detalle.get("resumen"), str
+    )

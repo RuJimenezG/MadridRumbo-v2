@@ -6,19 +6,90 @@ la misma vía de auditoría; los límites globales se aplicarán sobre esa vía.
 """
 from __future__ import annotations
 
-from typing import Any, Callable
+from contextlib import contextmanager
+from contextvars import ContextVar
+from typing import Any, Callable, Iterator
 
 import config
+from src.depuracion import SesionDepuracion
 
 
 EjecutorTool = Callable[[str, dict[str, Any], list[dict[str, Any]]], str]
+
+
+# La sesión pertenece a una sola llamada pública; ContextVar evita incluirla en
+# EstadoGrafo o en el checkpoint y también aísla ejecuciones anidadas.
+_SESION_DEPURACION: ContextVar[SesionDepuracion | None] = ContextVar(
+    "sesion_depuracion",
+    default=None,
+)
+
+
+@contextmanager
+def sesion_depuracion_activa(sesion: SesionDepuracion) -> Iterator[None]:
+    """Activa una sesión efímera mientras se ejecuta un recorrido del grafo."""
+    token = _SESION_DEPURACION.set(sesion)
+    try:
+        yield
+    finally:
+        _SESION_DEPURACION.reset(token)
+
+
+def _registrar_tool(
+    nombre: str,
+    argumentos: dict[str, Any],
+    salida: Any,
+    *,
+    fallida: bool,
+) -> None:
+    """Registra una tool solo si la llamada pública activó la sesión temporal."""
+    sesion = _SESION_DEPURACION.get()
+    if sesion is None:
+        return
+    if fallida:
+        sesion.registrar(
+            "tool",
+            nombre,
+            argumentos,
+            None,
+            resultado="fallido",
+            detalle={
+                "categoria": "tool",
+                "resumen": "La herramienta no pudo completarse.",
+            },
+        )
+        return
+    sesion.registrar("tool", nombre, argumentos, salida)
+
+
+def _resultado_fallido(resultado: Any, traza: list[dict[str, Any]], desde: int) -> bool:
+    """Detecta el convenio existente de error sin transformar la traza original."""
+    if isinstance(resultado, str) and resultado.startswith("ERROR"):
+        return True
+    return any(
+        isinstance(entrada, dict) and entrada.get("status") in {"error", "bloqueada"}
+        for entrada in traza[desde:]
+    )
 
 
 def crear_ejecutor_transversal(ejecutar: EjecutorTool) -> EjecutorTool:
     """Envuelve un ejecutor inyectado sin alterar la traza ni el límite local."""
     def ejecutar_compartido(nombre: str, args: dict[str, Any], traza: list[dict[str, Any]]) -> str:
         argumentos = dict(args) if isinstance(args, dict) else {}
-        return ejecutar(nombre, argumentos, traza)
+        inicio_traza = len(traza)
+        try:
+            resultado = ejecutar(nombre, argumentos, traza)
+        except Exception:
+            _registrar_tool(nombre, argumentos, None, fallida=True)
+            raise
+
+        _registrar_tool(
+            nombre,
+            argumentos,
+            resultado,
+            fallida=_resultado_fallido(resultado, traza, inicio_traza),
+        )
+        return resultado
 
     return ejecutar_compartido
 

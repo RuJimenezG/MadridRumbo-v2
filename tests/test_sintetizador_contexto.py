@@ -88,7 +88,7 @@ def test_el_respaldo_usa_el_contexto_completo():
     entrada = estado(con_bloques())
     salida = nodo_sintetizador(entrada, roto)
     assert salida["respuesta"] == renderizar_respaldo(entrada) and OPCIONES in salida["respuesta"]
-    assert salida["log"] == ["Sintetizador: se ha usado el respaldo determinista."]
+    assert "log" not in salida
 
 
 # --- RF-40: solo el turno actual ---

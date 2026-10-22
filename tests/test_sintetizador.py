@@ -82,4 +82,4 @@ def test_fallo_del_modelo_devuelve_aviso_y_el_respaldo_disponible():
 
     assert "No se ha podido sintetizar" in salida["respuesta"]
     assert "Son las 17:58." in salida["respuesta"]
-    assert salida["log"] == ["Sintetizador: se ha usado el respaldo determinista."]
+    assert "log" not in salida

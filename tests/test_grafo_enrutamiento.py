@@ -119,7 +119,7 @@ def test_grafo_transporta_diagnostico_por_contexto_sin_persistirlo(modelo, categ
 
     assert contexto["diagnostico_supervisor"]["categoria"] == categoria
     assert "diagnostico_supervisor" not in salida
-    assert salida["log"] == []
+    assert "log" not in salida
     assert "diagnostico_supervisor" not in recuperar_estado(grafo, f"contexto-{categoria}")
 
 
@@ -288,10 +288,7 @@ def test_combinado_metro_corregido_llama_rag_ask_y_conserva_traza():
             "preview": evidencia_crtm,
         }
     ]
-    assert resultado["log"] == [
-        "Supervisor: categoria=sin_fallback; resumen=Decisión estructurada validada.",
-        "Supervisor: correccion_semantica=aplicada; resumen=Se redirigieron 1 derivaciones incompatibles de tarifas a rag.",
-    ]
+    assert resultado["log"] == []
     assert all(entrada["tool"] != "describir_imagen" for entrada in resultado["traza"])
     assert set(resultado) == {"respuesta", "plan", "log", "traza", "hitl_pendiente", "done"}
 

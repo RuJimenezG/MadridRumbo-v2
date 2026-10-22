@@ -280,7 +280,15 @@ class AgenteConPasos:
         return {
             **estado_vacio(),
             "respuesta": f"Respuesta a {mensaje}",
-            "log": [f"[horarios] nota de {mensaje}"],
+            "log": [{
+                "paso": 1,
+                "tipo": "nodo",
+                "nodo": "horarios",
+                "entrada": {"mensaje": mensaje},
+                "salida": {"nota": f"nota de {mensaje}"},
+                "resultado": "completado",
+                "detalle": None,
+            }],
             "traza": [{"tool": "hora_actual", "args": {}, "status": "ok", "preview": mensaje}],
         }
 
@@ -291,9 +299,9 @@ def test_cada_respuesta_guarda_el_registro_y_la_traza_de_su_turno():
     sesion.enviar("uno")
     sesion.enviar("dos")
     primera, segunda = [e for e in sesion.historial if e["rol"] == "asistente"]
-    assert primera["log"] == ["[horarios] nota de uno"]
+    assert primera["log"][0]["entrada"] == {"mensaje": "uno"}
     assert primera["traza"][0]["preview"] == "uno"
-    assert segunda["log"] == ["[horarios] nota de dos"]
+    assert segunda["log"][0]["entrada"] == {"mensaje": "dos"}
     assert segunda["traza"][0]["preview"] == "dos"
 
 
@@ -301,8 +309,36 @@ def test_los_pasos_guardados_son_una_copia_del_estado():
     # RF-40: cambiar el estado de la sesión después no altera lo guardado en el historial.
     sesion = SesionChat(AgenteConPasos())
     sesion.enviar("uno")
-    sesion.estado["log"].append("otra cosa")
+    sesion.estado["log"][0]["entrada"]["mensaje"] = "modificado"
     sesion.estado["traza"].clear()
     respuesta = sesion.historial[-1]
-    assert respuesta["log"] == ["[horarios] nota de uno"]
+    assert respuesta["log"][0]["entrada"] == {"mensaje": "uno"}
     assert len(respuesta["traza"]) == 1
+
+
+def test_el_log_estructurado_guardado_es_una_copia_profunda():
+    """RF-25: cambiar una instantánea anidada no altera la respuesta ya mostrada."""
+    class AgenteConLogEstructurado:
+        def procesar_turno(self, estado, mensaje, thread_id):
+            return {
+                **estado_vacio(),
+                "respuesta": "Respuesta",
+                "log": [{
+                    "paso": 1,
+                    "tipo": "nodo",
+                    "nodo": "supervisor",
+                    "entrada": {"mensaje": mensaje},
+                    "salida": {"roles": ["horarios"]},
+                    "resultado": "completado",
+                    "detalle": None,
+                }],
+            }
+
+    sesion = SesionChat(AgenteConLogEstructurado())
+    sesion.enviar("uno")
+    sesion.estado["log"][0]["entrada"]["mensaje"] = "modificado"
+    sesion.estado["log"][0]["salida"]["roles"].append("rag")
+
+    registro_guardado = sesion.historial[-1]["log"]
+    assert registro_guardado[0]["entrada"] == {"mensaje": "uno"}
+    assert registro_guardado[0]["salida"] == {"roles": ["horarios"]}

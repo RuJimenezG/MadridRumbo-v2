@@ -17,7 +17,12 @@ from langgraph.types import Command, interrupt
 
 import config
 from src.agents.auxiliar import nodo_auxiliar
-from src.agents.base import EjecutorTool, crear_ejecutor_acotado, crear_ejecutor_transversal
+from src.agents.base import (
+    EjecutorTool,
+    crear_ejecutor_acotado,
+    crear_ejecutor_transversal,
+    sesion_depuracion_activa,
+)
 from src.agents.horarios import nodo_horarios
 from src.agents.rag import nodo_rag
 from src.agents.rutas import nodo_rutas
@@ -26,6 +31,7 @@ from src.agents.tarifas import (
     nodo_tarifas,
     redireccionar_tarifas_sin_imagen,
 )
+from src.depuracion import SesionDepuracion
 from src.estado import EstadoGrafo, crear_plan
 from src.modelos import crear_modelo_especialista
 from src.sintetizador import nodo_sintetizador, renderizar_respaldo, turno_actual
@@ -59,20 +65,183 @@ def invocar_grafo(
     thread_id: str,
     *,
     contexto: ContextoEjecucion | None = None,
+    sesion: SesionDepuracion | None = None,
 ) -> dict[str, Any]:
     """Invoca un grafo siempre con el identificador de conversación requerido."""
+    configuracion = configuracion_hilo(thread_id)
+    if sesion is not None:
+        with sesion_depuracion_activa(sesion):
+            return _consumir_eventos_grafo(
+                grafo.stream(
+                    dict(estado),
+                    config=configuracion,
+                    context=contexto,
+                    stream_mode=["values", "updates", "tasks"],
+                ),
+                sesion,
+                estado_inicial=estado,
+                contexto=contexto,
+            )
     return dict(
         grafo.invoke(
             dict(estado),
-            config=configuracion_hilo(thread_id),
+            config=configuracion,
             context=contexto,
         )
     )
 
 
-def reanudar_grafo(grafo: Any, decision: Mapping[str, Any], thread_id: str) -> dict[str, Any]:
+def reanudar_grafo(
+    grafo: Any,
+    decision: Mapping[str, Any],
+    thread_id: str,
+    *,
+    sesion: SesionDepuracion | None = None,
+) -> dict[str, Any]:
     """Reanuda una interrupciÃ³n del hilo sin crear una conversaciÃ³n nueva."""
-    return dict(grafo.invoke(Command(resume=dict(decision)), config=configuracion_hilo(thread_id)))
+    configuracion = configuracion_hilo(thread_id)
+    comando = Command(resume=dict(decision))
+    if sesion is not None:
+        with sesion_depuracion_activa(sesion):
+            return _consumir_eventos_grafo(
+                grafo.stream(
+                    comando,
+                    config=configuracion,
+                    stream_mode=["values", "updates", "tasks"],
+                ),
+                sesion,
+            )
+    return dict(grafo.invoke(comando, config=configuracion))
+
+
+def _registrar_nodo_fallido(sesion: SesionDepuracion, nombre: object, entrada: object) -> None:
+    """Añade un fallo de nodo sin exponer la excepción ni datos de proveedor."""
+    sesion.registrar(
+        "nodo",
+        nombre if isinstance(nombre, str) and nombre else "desconocido",
+        entrada,
+        None,
+        resultado="fallido",
+        detalle={
+            "categoria": "nodo",
+            "resumen": "El nodo no pudo completarse.",
+        },
+    )
+
+
+def _registrar_fallback_supervisor(
+    sesion: SesionDepuracion,
+    contexto: Mapping[str, Any] | None,
+) -> bool:
+    """Proyecta el diagnóstico efímero tras un fallback, sin añadirlo al estado.
+
+    El nodo del Supervisor termina correctamente porque aplica una alternativa
+    segura. La entrada ``control`` separa el rechazo de su decisión primaria
+    de ese nodo completado, que por contrato debe conservar ``detalle`` nulo.
+    """
+    if not isinstance(contexto, Mapping):
+        return False
+    diagnostico = contexto.get("diagnostico_supervisor")
+    if not isinstance(diagnostico, Mapping):
+        return False
+    categoria = diagnostico.get("categoria")
+    if not isinstance(categoria, str) or not categoria or categoria == "sin_fallback":
+        return False
+    resumen = diagnostico.get("resumen")
+    sesion.registrar(
+        "control",
+        "supervisor",
+        None,
+        None,
+        resultado="rechazado",
+        detalle={
+            "categoria": categoria,
+            "resumen": resumen if isinstance(resumen, str) else "El Supervisor aplicó un fallback seguro.",
+        },
+    )
+    return True
+
+
+def _consumir_eventos_grafo(
+    eventos: Any,
+    sesion: SesionDepuracion,
+    *,
+    estado_inicial: Mapping[str, Any] | None = None,
+    contexto: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Convierte eventos locales de LangGraph en snapshots completos por nodo.
+
+    ``tasks`` entrega el estado de entrada y el fin de cada nodo; ``values``
+    entrega el estado ya combinado por los reducers. Las entradas completadas
+    se dejan pendientes hasta recibir ese valor combinado. Si un nodo no
+    cambia el estado, la entrada del siguiente nodo aporta el mismo snapshot.
+    """
+    ultimo_estado = dict(estado_inicial or {})
+    tareas_en_curso: dict[object, dict[str, Any]] = {}
+    nodos_pendientes: list[dict[str, Any]] = []
+    actualizaciones: dict[str, Any] = {}
+    diagnostico_supervisor_registrado = False
+
+    def completar_pendientes(salida: object) -> None:
+        nonlocal diagnostico_supervisor_registrado
+        while nodos_pendientes:
+            nodo = nodos_pendientes.pop(0)
+            # La actualización asocia los tres modos del stream; el snapshot
+            # final siempre procede de values, tras aplicar los reducers.
+            actualizaciones.pop(nodo["nodo"], None)
+            sesion.registrar("nodo", nodo["nodo"], nodo["entrada"], salida)
+            if nodo["nodo"] == "supervisor" and not diagnostico_supervisor_registrado:
+                diagnostico_supervisor_registrado = _registrar_fallback_supervisor(sesion, contexto)
+
+    try:
+        for evento in eventos:
+            if not isinstance(evento, tuple) or len(evento) != 2:
+                continue
+            modo, carga = evento
+            if modo == "values" and isinstance(carga, Mapping):
+                ultimo_estado = dict(carga)
+                completar_pendientes(ultimo_estado)
+                continue
+            if modo == "updates" and isinstance(carga, Mapping):
+                for nombre, actualizacion in carga.items():
+                    if isinstance(nombre, str):
+                        actualizaciones[nombre] = actualizacion
+                continue
+            if modo != "tasks" or not isinstance(carga, Mapping):
+                continue
+
+            identificador = carga.get("id")
+            if "input" in carga:
+                # Sin un nuevo values, el input del nodo siguiente es el estado
+                # combinado que necesitaba el nodo previo sin actualización.
+                completar_pendientes(carga["input"])
+                tareas_en_curso[identificador] = {
+                    "nodo": carga.get("name"),
+                    "entrada": carga["input"],
+                }
+                continue
+
+            if "error" not in carga and "result" not in carga:
+                continue
+            tarea = tareas_en_curso.pop(identificador, None)
+            if tarea is None:
+                tarea = {"nodo": carga.get("name"), "entrada": None}
+            if carga.get("error") is not None:
+                _registrar_nodo_fallido(sesion, tarea["nodo"], tarea["entrada"])
+            else:
+                nombre = tarea["nodo"]
+                if isinstance(nombre, str) and nombre:
+                    nodos_pendientes.append(tarea)
+                else:
+                    _registrar_nodo_fallido(sesion, nombre, tarea["entrada"])
+    except Exception:
+        completar_pendientes(ultimo_estado)
+        for tarea in tareas_en_curso.values():
+            _registrar_nodo_fallido(sesion, tarea["nodo"], tarea["entrada"])
+        raise
+
+    completar_pendientes(ultimo_estado)
+    return ultimo_estado
 
 
 def recuperar_estado(grafo: Any, thread_id: str) -> dict[str, Any]:

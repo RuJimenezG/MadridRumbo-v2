@@ -11,7 +11,7 @@ from src.clientes.cargar import cargar_agente
 from src.clientes.cli import ejecutar_cli
 from src.clientes.contrato import estado_vacio
 from src.clientes.planes import ids_de_planes
-from src.clientes.presentacion import formatear_turno
+from src.clientes.presentacion import datos_depuracion, formatear_turno, pasos_del_turno
 from src.clientes.sesion import SesionChat
 from src.graph import crear_grafo
 from tests.test_cli import Entrada
@@ -24,7 +24,6 @@ RUTA_OK = {
 }
 ALTERNATIVA = {**RUTA_OK, "ruta": {"duracion_min": 20, "tramos": [{"modo": "BUS", "linea": "27"}]}}
 PEDIDO_RUTA = "Dame una ruta de Atocha a Sol."
-TECNICA = "Supervisor: categoria=json_invalido;"
 
 
 def _resultado_rutas(*rutas):
@@ -143,7 +142,6 @@ def test_ruta_con_un_plan_se_resume_se_aprueba_y_termina(grafo_de_ruta):
     texto = formatear_turno(sesion.estado, sesion.thread_id)
     assert "ruta-1" in texto and "Origen: Atocha" in texto and "Destino: Sol" in texto
     assert "12 min" in texto and "SUBWAY línea 1" in texto
-    assert "{'id'" not in texto
 
     sesion.decidir(True)  # un único plan: no hace falta indicar cuál
     assert sesion.estado["done"] is True
@@ -245,16 +243,48 @@ def test_cli_con_el_grafo_real_y_varios_planes_pide_elegir(grafo_de_varias_rutas
     assert "Terminada: sí" in texto
 
 
-# --- Entradas técnicas del supervisor (RF-35) ---
+# --- Registro efímero de depuración (spec 011) ---
 
-def test_el_cli_muestra_y_la_web_oculta_el_diagnostico_del_supervisor(grafo_con_fallback):
+def test_los_clientes_reciben_el_log_estructurado_de_la_llamada_actual(grafo_con_fallback):
+    """RF-1 y RF-15: el cliente recibe el registro efímero, no uno persistido."""
     sesion = SesionChat(agent)
     sesion.enviar("¿Qué hora es?")
-    assert any(entrada.startswith(TECNICA) for entrada in sesion.estado["log"])
+    assert sesion.estado["log"]
+    assert all(
+        set(entrada) == {"paso", "tipo", "nodo", "entrada", "salida", "resultado", "detalle"}
+        for entrada in sesion.estado["log"]
+    )
 
-    # El CLI (cliente técnico) lo muestra...
-    assert TECNICA in formatear_turno(sesion.estado, sesion.thread_id)
+    assert "Paso 1" in formatear_turno(sesion.estado, sesion.thread_id)
     _, texto = _ejecutar_cli(["¿Qué hora es?", "salir"])
-    assert TECNICA in texto
-    # ...y la web lo oculta.
-    assert TECNICA not in formatear_turno(sesion.estado, sesion.thread_id, ocultar_tecnicas=True)
+    assert "Paso 1" in texto
+    assert "Paso 1" in formatear_turno(sesion.estado, sesion.thread_id, ocultar_tecnicas=True)
+
+
+def test_fallback_real_del_supervisor_llega_a_cli_y_panel_pero_no_al_chat(grafo_con_fallback):
+    """RF-23 a RF-25: el diagnóstico procede del contexto del grafo real, no de un doble."""
+    resultado = agent.procesar_turno({}, "¿Qué hora es?", "hilo-fallback-estructurado")
+    diagnosticos = [
+        entrada
+        for entrada in resultado["log"]
+        if entrada["tipo"] == "control" and entrada["nodo"] == "supervisor"
+    ]
+
+    assert len(diagnosticos) == 1
+    diagnostico = diagnosticos[0]
+    assert diagnostico["resultado"] == "rechazado"
+    assert diagnostico["entrada"] is None and diagnostico["salida"] is None
+    assert diagnostico["detalle"] == {
+        "categoria": "json_invalido",
+        "resumen": "La decisión no contiene JSON válido; se aplicó el fallback.",
+    }
+    posicion = resultado["log"].index(diagnostico)
+    assert resultado["log"][posicion - 1]["nodo"] == "supervisor"
+    assert resultado["log"][posicion - 1]["resultado"] == "completado"
+    assert datos_depuracion(resultado, "hilo-fallback-estructurado")["log"] == resultado["log"]
+    assert "json_invalido" not in "\n".join(pasos_del_turno(resultado["log"], resultado["traza"]))
+
+    codigo, texto_cli = _ejecutar_cli(["¿Qué hora es?", "salir"])
+    assert codigo == 0
+    assert "control · supervisor [rechazado]" in texto_cli
+    assert '"categoria": "json_invalido"' in texto_cli

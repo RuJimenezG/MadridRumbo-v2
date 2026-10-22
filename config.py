@@ -70,6 +70,10 @@ MAX_STEPS_ESPECIALISTA = 3
 MAX_TURNOS_CONVERSACION = 10
 MAX_CICLOS_TOOLS = 8
 
+# Máximo de caracteres de la representación JSON segura de cada valor del
+# registro público de depuración (spec 011, RF-20).
+LOG_DEPURACION_MAX_CARACTERES = 10_000
+
 # Allowlist de tools que puede pedir cada especialista.
 TOOLS_POR_ESPECIALISTA = {
     "rag": ["rag_ask"],

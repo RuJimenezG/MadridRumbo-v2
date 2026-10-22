@@ -81,9 +81,66 @@ def _resultado(respuesta, plan=(), log=(), traza=(), hitl_pendiente=False, done=
     }
 
 
-def _aviso(mensaje: str) -> dict[str, Any]:
+def _entrada_log(
+    paso: int,
+    tipo: str,
+    nodo: str,
+    entrada: Any,
+    salida: Any,
+    *,
+    resultado: str = "completado",
+    detalle: dict[str, str] | None = None,
+) -> dict[str, Any]:
+    """Construye una entrada del mismo contrato público que el grafo instrumentado."""
+    return {
+        "paso": paso,
+        "tipo": tipo,
+        "nodo": nodo,
+        "entrada": entrada,
+        "salida": salida,
+        "resultado": resultado,
+        "detalle": detalle,
+    }
+
+
+def _registro_turno(mensaje: str, rol: str, traza: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Simula el recorrido de nodos y tools sin recurrir al antiguo `list[str]`."""
+    registro = [_entrada_log(1, "nodo", "supervisor", {"mensaje": mensaje}, {"roles": [rol]})]
+    for paso, tool in enumerate(traza, start=2):
+        registro.append(
+            _entrada_log(
+                paso,
+                "tool",
+                tool["tool"],
+                tool["args"],
+                {"status": tool["status"], "preview": tool["preview"]},
+            )
+        )
+    registro.extend(
+        [
+            _entrada_log(len(registro) + 1, "nodo", rol, {"mensaje": mensaje}, {"nota": "lista"}),
+            _entrada_log(len(registro) + 2, "nodo", "sintetizador", {"rol": rol}, {"respuesta": "lista"}),
+        ]
+    )
+    return registro
+
+
+def _aviso(mensaje: str, categoria: str) -> dict[str, Any]:
     """Aviso controlado: como el real, deja `hitl_pendiente` en falso aunque quede un plan."""
-    return _resultado(mensaje, log=[mensaje])
+    return _resultado(
+        mensaje,
+        log=[
+            _entrada_log(
+                1,
+                "control",
+                "fachada",
+                None,
+                None,
+                resultado="rechazado",
+                detalle={"categoria": categoria, "resumen": mensaje},
+            )
+        ],
+    )
 
 
 class GrafoFalso:
@@ -104,7 +161,7 @@ class GrafoFalso:
             {"tool": tool, "args": {}, "status": "ok", "preview": "(simulado)"}
             for tool in TOOLS_POR_ROL[rol]
         ]
-        log = [f"[supervisor] -> {rol}", f"[{rol}] nota lista", "[sintetizador] respuesta lista"]
+        log = _registro_turno(mensaje, rol, traza)
         respuesta = f"[Simulado] Respuesta a: {mensaje}"
 
         if rol != "rutas":
@@ -121,24 +178,24 @@ class GrafoFalso:
         planes = estado.get("plan") if isinstance(estado.get("plan"), list) else []
         ids = ids_de_planes(planes)
         if not ids:
-            return _aviso(AVISO_SIN_PLAN)
+            return _aviso(AVISO_SIN_PLAN, "plan_ausente")
 
         elegido = estado.get("plan_id_seleccionado")
         if elegido is None and len(ids) == 1:
             elegido = ids[0]
         if elegido not in ids:
-            return _aviso(AVISO_PLAN_A_ELEGIR)
+            return _aviso(AVISO_PLAN_A_ELEGIR, "seleccion_plan")
 
         if aprobado:
             return _resultado(
                 f"[Simulado] Plan aprobado y aplicado ({elegido}).",
-                log=[f"Plan {elegido} aprobado"],
+                log=[_entrada_log(1, "nodo", "aplicar_plan", {"plan_id": elegido}, {"aprobado": True})],
                 done=True,
             )
         restantes = [plan for plan in planes if plan.get("id") != elegido]
         return _resultado(
             f"[Simulado] Plan rechazado ({elegido}). Escribe otro mensaje para continuar.",
             plan=restantes,
-            log=[f"Plan {elegido} rechazado"],
+            log=[_entrada_log(1, "nodo", "aplicar_plan", {"plan_id": elegido}, {"aprobado": False})],
             hitl_pendiente=bool(restantes),
         )

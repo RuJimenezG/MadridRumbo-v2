@@ -121,23 +121,26 @@ def test_ids_de_lo_que_no_es_una_lista():
 
 def test_entradas_tecnicas():
     assert es_entrada_tecnica_supervisor(
-        "Supervisor: categoria=json_invalido; resumen=La decisión no contiene JSON válido; se aplicó el fallback."
-    )
-    assert es_entrada_tecnica_supervisor(
-        "Supervisor: correccion_semantica=aplicada; resumen=Se redirigieron 1 derivaciones incompatibles de tarifas a rag."
+        {"nodo": "supervisor", "detalle": {"categoria": "json_invalido", "resumen": "Fallback aplicado."}}
     )
 
 
-def test_cada_prefijo_configurado_se_reconoce():
-    for prefijo in config.PREFIJOS_DIAGNOSTICO_SUPERVISOR:
-        assert es_entrada_tecnica_supervisor(prefijo + "algo")
+def test_cada_diagnostico_estructurado_del_supervisor_se_reconoce():
+    for categoria in ("json_invalido", "correccion_semantica"):
+        assert es_entrada_tecnica_supervisor(
+            {"nodo": "supervisor", "detalle": {"categoria": categoria, "resumen": "Resumen seguro."}}
+        )
 
 
 def test_otras_entradas_del_log_no_son_tecnicas():
-    for linea in ["[supervisor] -> rutas", "[rutas] nota lista", "Supervisor decide rutas", "", "Hay un plan pendiente"]:
+    for linea in [
+        {"nodo": "supervisor", "detalle": None},
+        {"nodo": "rutas", "detalle": {"categoria": "ok", "resumen": "Correcto."}},
+        {"nodo": "fachada", "detalle": {"categoria": "plan_pendiente", "resumen": "Pendiente."}},
+    ]:
         assert es_entrada_tecnica_supervisor(linea) is False
 
 
 def test_entrada_tecnica_con_valores_que_no_son_texto():
-    for valor in (None, 5, ["Supervisor: categoria=x"]):
+    for valor in (None, 5, [{"nodo": "supervisor"}]):
         assert es_entrada_tecnica_supervisor(valor) is False

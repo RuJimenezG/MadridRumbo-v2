@@ -81,7 +81,7 @@ def test_el_respaldo_tras_aprobar_es_el_de_siempre():
 
     salida = nodo_sintetizador(estado_aprobado(), roto, tras_aprobacion=True)
     assert salida["respuesta"].startswith("No se ha podido sintetizar la respuesta automáticamente.")
-    assert salida["log"] == ["Sintetizador: se ha usado el respaldo determinista."]
+    assert "log" not in salida
 
 
 # --- grafo completo con HITL ---

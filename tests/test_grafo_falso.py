@@ -32,10 +32,12 @@ def test_procesar_turno_deja_un_plan_pendiente():
     assert RUTA in estado["respuesta"]
 
 
-def test_el_log_y_la_traza_tienen_formato_de_tools():
+def test_el_log_estructurado_y_la_traza_conservan_sus_contratos():
     estado = GrafoFalso().procesar_turno(estado_vacio(), "hola", "hilo-1")
     assert estado["log"]
     assert estado["traza"]
+    for entrada in estado["log"]:
+        assert set(entrada) == {"paso", "tipo", "nodo", "entrada", "salida", "resultado", "detalle"}
     for paso in estado["traza"]:
         assert {"tool", "args", "status", "preview"} <= set(paso)
 
@@ -128,13 +130,13 @@ def test_horarios_cierra_sin_plan():
     assert estado["plan"] == []
     assert estado["hitl_pendiente"] is False
     assert estado["done"] is True
-    assert any("horarios" in entrada for entrada in estado["log"])
+    assert any(entrada["nodo"] == "horarios" for entrada in estado["log"])
 
 
 def test_fuera_de_corpus_cierra_sin_plan():
     estado = con_ruta(FUERA_DE_CORPUS)
     assert estado["plan"] == [] and estado["hitl_pendiente"] is False and estado["done"] is True
-    assert any("rag" in entrada for entrada in estado["log"])
+    assert any(entrada["nodo"] == "rag" for entrada in estado["log"])
 
 
 def test_devuelve_solo_las_seis_claves_publicas():

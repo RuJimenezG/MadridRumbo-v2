@@ -36,7 +36,27 @@ def _comprobar_contrato(resultado):
     assert isinstance(resultado["traza"], list)
     assert isinstance(resultado["hitl_pendiente"], bool)
     assert isinstance(resultado["done"], bool)
+    assert all(
+        set(entrada) == {"paso", "tipo", "nodo", "entrada", "salida", "resultado", "detalle"}
+        for entrada in resultado["log"]
+    )
     assert all(set(entrada) == {"tool", "args", "status", "preview"} for entrada in resultado["traza"])
+
+
+def _comprobar_control(resultado, categoria):
+    """RF-12: los rechazos previos al grafo tienen una única forma pública."""
+    _comprobar_contrato(resultado)
+    assert resultado["log"] == [
+        {
+            "paso": 1,
+            "tipo": "control",
+            "nodo": "fachada",
+            "entrada": None,
+            "salida": None,
+            "resultado": "rechazado",
+            "detalle": {"categoria": categoria, "resumen": resultado["respuesta"]},
+        }
+    ]
 
 
 def _capturar_contextos_de_fachada(monkeypatch):
@@ -47,7 +67,7 @@ def _capturar_contextos_de_fachada(monkeypatch):
     monkeypatch.setattr(agent, "_obtener_grafo", lambda: grafo)
     monkeypatch.setattr(agent, "recuperar_estado", lambda recibido, hilo: {})
 
-    def invocar(recibido, estado, hilo, *, contexto):
+    def invocar(recibido, estado, hilo, *, contexto, sesion):
         assert recibido is grafo
         contextos.append(dict(contexto))
         return {
@@ -84,7 +104,7 @@ def test_procesar_turno_inicializa_el_contexto_sin_imagen_valida(monkeypatch):
     monkeypatch.setattr(agent, "_obtener_grafo", lambda: grafo)
     monkeypatch.setattr(agent, "recuperar_estado", lambda recibido, hilo: {})
 
-    def invocar(recibido, estado, hilo, *, contexto):
+    def invocar(recibido, estado, hilo, *, contexto, sesion):
         assert recibido is grafo
         contextos.append(dict(contexto))
         return {
@@ -260,6 +280,86 @@ def test_validaciones_de_procesar_turno_no_crean_ni_invocan_grafo(
     assert resultado["done"] is False
 
 
+def test_rechazos_de_fachada_devuelven_un_unico_control_sin_ejecutar_grafo(monkeypatch):
+    """RF-12: validaciones, bloqueo, plan ausente y selección inválida son uniformes."""
+    monkeypatch.setattr(
+        agent,
+        "_obtener_grafo",
+        lambda: (_ for _ in ()).throw(AssertionError("no debe ejecutarse")),
+    )
+
+    _comprobar_control(agent.procesar_turno({}, "consulta", "  "), "validacion")
+    _comprobar_control(agent.procesar_turno([], "consulta", "hilo"), "validacion")
+    _comprobar_control(agent.procesar_turno({}, "  ", "hilo"), "validacion")
+
+    grafo = object()
+    monkeypatch.setattr(agent, "_GRAFO", grafo)
+    monkeypatch.setattr(agent, "_obtener_grafo", lambda: grafo)
+    monkeypatch.setattr(
+        agent,
+        "invocar_grafo",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("no debe ejecutarse")),
+    )
+
+    pendiente = {
+        "hitl_pendiente": True,
+        "planes_pendientes": [{"id": "ruta-1", "resultado": {}}],
+    }
+    monkeypatch.setattr(agent, "recuperar_estado", lambda *_args: pendiente)
+    _comprobar_control(agent.procesar_turno({}, "consulta", "hilo"), "plan_pendiente")
+
+    monkeypatch.setattr(agent, "recuperar_estado", lambda *_args: {})
+    _comprobar_control(agent.aprobar_plan({}, "hilo", True), "plan_ausente")
+
+    monkeypatch.setattr(agent, "recuperar_estado", lambda *_args: pendiente)
+    _comprobar_control(agent.aprobar_plan({"plan_id_seleccionado": "ruta-9"}, "hilo", True), "seleccion_plan")
+
+
+def test_pausa_y_reanudacion_hitl_entregan_logs_nuevos_y_no_persistidos(monkeypatch):
+    """RF-13 a RF-15 y RF-27: cada operación termina con su propio registro."""
+    ruta = {
+        "estado": "ok",
+        "origen": {"direccion": "Atocha"},
+        "destino": {"direccion": "Sol"},
+        "ruta": {"duracion_min": 12, "tramos": []},
+    }
+    grafo = crear_grafo(
+        modelo_supervisor=lambda mensajes: {"roles": ["rutas"]},
+        especialistas={
+            "rutas": lambda estado: {
+                "resultados": [
+                    {
+                        "especialista": "rutas",
+                        "tool": "planificar_ruta",
+                        "status": "ok",
+                        "resultado": ruta,
+                        "args": {"origen": "Atocha", "destino": "Sol"},
+                    }
+                ]
+            }
+        },
+        modelo_sintetizador=lambda contexto: "Ruta lista para revisiÃ³n.",
+    )
+    monkeypatch.setattr(agent, "_GRAFO", grafo)
+
+    inicial = agent.procesar_turno({}, "De Atocha a Sol.", "hilo-logs-hitl")
+    reanudado = agent.aprobar_plan(
+        {"plan_id_seleccionado": inicial["plan"][0]["id"]},
+        "hilo-logs-hitl",
+        True,
+    )
+    checkpoint = recuperar_estado(grafo, "hilo-logs-hitl")
+
+    _comprobar_contrato(inicial)
+    _comprobar_contrato(reanudado)
+    assert inicial["hitl_pendiente"] is True
+    assert inicial["log"]
+    assert reanudado["log"]
+    assert [entrada["paso"] for entrada in inicial["log"]] == list(range(1, len(inicial["log"]) + 1))
+    assert [entrada["paso"] for entrada in reanudado["log"]] == list(range(1, len(reanudado["log"]) + 1))
+    assert "log" not in checkpoint
+
+
 def test_estado_vacio_recupera_el_checkpoint_en_lugar_de_sustituirlo(grafo_falso):
     """RF-53: una segunda llamada con estado vacío conserva el contexto del hilo."""
     agent.procesar_turno({}, "Primer mensaje persistido.", "hilo-recuperable")
@@ -273,20 +373,20 @@ def test_estado_vacio_recupera_el_checkpoint_en_lugar_de_sustituirlo(grafo_falso
     ]
 
 
-def test_resultado_del_turno_expone_diagnostico_seguro_sin_persistirlo(grafo_falso):
-    """RF-10 a RF-16 y RF-25: solo el resultado actual recibe el diagnóstico."""
+def test_resultado_del_turno_no_recupera_un_log_desde_el_checkpoint(grafo_falso):
+    """RF-1, RF-2 y RF-15: el contrato conserva log, pero el checkpoint no."""
     primero = agent.procesar_turno({}, "Primer turno.", "hilo-diagnostico")
     segundo = agent.procesar_turno({}, "Segundo turno.", "hilo-diagnostico")
     snapshot = recuperar_estado(grafo_falso, "hilo-diagnostico")
-    esperado = "Supervisor: categoria=sin_fallback; resumen=Decisión estructurada validada."
 
     _comprobar_contrato(primero)
     _comprobar_contrato(segundo)
-    assert primero["log"] == [esperado]
-    assert segundo["log"] == [esperado]
-    assert snapshot["log"] == []
+    assert primero["log"] and segundo["log"]
+    assert primero["log"][0]["paso"] == 1
+    assert segundo["log"][0]["paso"] == 1
+    assert primero["log"] != segundo["log"]
+    assert "log" not in snapshot
     assert "diagnostico_supervisor" not in snapshot
-    assert all(esperado not in entrada["content"] for entrada in snapshot["historial"])
 
 
 def test_correccion_semantica_se_expone_solo_en_el_turno_que_la_origina(monkeypatch):
@@ -315,13 +415,8 @@ def test_correccion_semantica_se_expone_solo_en_el_turno_que_la_origina(monkeypa
 
     _comprobar_contrato(primero)
     _comprobar_contrato(segundo)
-    assert primero["log"] == [
-        "Supervisor: categoria=sin_fallback; resumen=Decisión estructurada validada.",
-        "Supervisor: correccion_semantica=aplicada; resumen=Se redirigieron 1 derivaciones incompatibles de tarifas a rag.",
-    ]
-    assert segundo["log"] == [
-        "Supervisor: categoria=sin_fallback; resumen=Decisión estructurada validada."
-    ]
+    assert primero["log"] and segundo["log"]
+    assert primero["log"][0]["paso"] == segundo["log"][0]["paso"] == 1
     assert "correccion_semantica" not in str(snapshot)
     assert "correcciones_tarifas" not in snapshot
     assert "diagnostico_supervisor" not in snapshot
@@ -369,8 +464,8 @@ def test_reanudacion_hitl_no_reutiliza_correccion_semantica(monkeypatch):
     )
     snapshot = recuperar_estado(grafo, "hilo-correccion-hitl")
 
-    assert "correccion_semantica=aplicada" in "\n".join(inicial["log"])
-    assert reanudado["log"] == []
+    assert inicial["log"] and reanudado["log"]
+    assert inicial["log"][0]["paso"] == reanudado["log"][0]["paso"] == 1
     assert "correccion_semantica" not in str(snapshot)
     assert "correcciones_tarifas" not in snapshot
 
@@ -404,12 +499,10 @@ def test_fallback_publico_solo_expone_categoria_y_resumen_canonicos(monkeypatch)
     snapshot = recuperar_estado(grafo, "hilo-fallback-publico")
 
     _comprobar_contrato(resultado)
-    assert resultado["log"] == [
-        "Supervisor: categoria=json_invalido; resumen=La decisión no contiene JSON válido; se aplicó el fallback."
-    ]
+    assert resultado["log"]
     assert "RESPUESTA_CRUDA_TOKEN_DE_PRUEBA" not in str(resultado)
     assert llamadas == ["auxiliar"]
-    assert snapshot["log"] == []
+    assert "log" not in snapshot
     assert "diagnostico_supervisor" not in snapshot
 
 
@@ -448,10 +541,8 @@ def test_reanudacion_hitl_no_reproyecta_el_diagnostico_del_turno_inicial(monkeyp
     )
     snapshot = recuperar_estado(grafo, "hilo-diagnostico-hitl")
 
-    assert inicial["log"] == [
-        "Supervisor: categoria=sin_fallback; resumen=Decisión estructurada validada."
-    ]
-    assert reanudado["log"] == []
+    assert inicial["log"] and reanudado["log"]
+    assert inicial["log"][0]["paso"] == reanudado["log"][0]["paso"] == 1
     assert "diagnostico_supervisor" not in snapshot
 
 
