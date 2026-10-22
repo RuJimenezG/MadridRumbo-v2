@@ -336,3 +336,19 @@ parte de `pytest`.
 |---|---|---|
 | RF-37 | Sesión compartida y bucle de CLI sin transformaciones | `tests/test_sesion.py::test_referencia_de_demo_se_reenvia_sin_modificar` y `tests/test_cli.py::test_cli_reenvia_referencia_de_demo_sin_modificar` |
 | RF-37 | Chat Streamlit conserva el mensaje literal | Manual: modo simulado, escribir la referencia y revisar el historial |
+
+## Cambio 2026-10-22: mensaje visible al enviar y pasos seguidos en la web
+
+| Archivo | Acción | Qué contiene |
+|---|---|---|
+| `src/clientes/presentacion.py` | Modificar | `pasos_del_turno(log, traza, ocultar_tecnicas)`: líneas con las tools numeradas y el registro visible; vacía si no hay nada (RF-39, RF-41). |
+| `src/clientes/sesion.py` | Modificar | Cada respuesta del asistente guarda en el historial una copia del registro y de la traza de su turno (RF-40). |
+| `app.py` | Modificar | Antes de llamar al grafo se dibuja la burbuja de la persona y un indicador de espera (RF-38); bajo cada respuesta se dibuja el desplegable «Pasos seguidos» (RF-39 a RF-41). |
+| `tests/test_presentacion.py`, `tests/test_sesion.py`, `tests/test_app_streamlit.py` | Modificar / Crear | Tests sin API; los de Streamlit con `AppTest` y un agente de prueba. |
+
+| RF | Cómo se cubre | Prueba |
+|---|---|---|
+| RF-38 | La burbuja y el indicador se dibujan antes de `enviar` | `tests/test_app_streamlit.py` |
+| RF-39 | Desplegable con tools y registro visible | `tests/test_presentacion.py`, `tests/test_app_streamlit.py` |
+| RF-40 | El historial guarda registro y traza por respuesta | `tests/test_sesion.py`, `tests/test_app_streamlit.py` |
+| RF-41 | Sin pasos no hay desplegable | `tests/test_presentacion.py`, `tests/test_app_streamlit.py` |
