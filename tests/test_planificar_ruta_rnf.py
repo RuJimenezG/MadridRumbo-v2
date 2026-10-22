@@ -244,16 +244,19 @@ def test_mensajes_en_espanol(esc, monkeypatch):
 @pytest.mark.parametrize("cambios, titulo, llamadas", [
     ({}, None, 2),                                                                  # caso normal
     ({}, "x" * 61, 1),                                                              # título largo: solo la zona
-    ({"rag": {"zona tarifaria": RuntimeError("x"), "precio": "p"}}, None, 1),       # zona con error: sin precio
+    # Spec 010 (T13): el precio se pregunta sin zona aunque la zona falle o sea demasiado larga (antes 1 llamada).
+    ({"rag": {"zona tarifaria": RuntimeError("x"), "precio": "p"}}, None, 2),       # zona con error: precio igualmente
     ({"rag": {"zona tarifaria": "z", "precio": RuntimeError("x")}}, None, 2),       # precio con error: sin reintento
-    ({"rag": {"zona tarifaria": "z" * 201, "precio": "p"}}, None, 1),               # zona demasiado larga
+    ({"rag": {"zona tarifaria": "z" * 201, "precio": "p"}}, None, 2),               # zona demasiado larga: precio sin zona
+    ({"rag": {"zona tarifaria": "z", "precio": config.FRASE_ABSTENCION}}, None, 3),   # abstención: segundo intento con zona
+    ({"rag": {"zona tarifaria": "z" * 201, "precio": config.FRASE_ABSTENCION}}, None, 2),   # abstención sin zona usable
     ({"google": TimeoutError("t")}, None, 2),                                       # Google caído: municipios, igual
 ])
-def test_maximo_2_llamadas_al_rag(esc, cambios, titulo, llamadas):
-    # RF-49: como máximo una llamada de zona y una de precio, sin reintentos, ocurra lo que ocurra.
+def test_maximo_3_llamadas_al_rag(esc, cambios, titulo, llamadas):
+    # RF-49 revisado por la spec 010 (RF-38): como máximo zona, precio y (tras una abstención) precio con zona; sin reintentos.
     from src.tools import planificar_ruta as pr
 
     for clave, valor in cambios.items():
         setattr(esc, clave, valor)
     pr.planificar_ruta("Sol", "Bernabéu", titulo=titulo)
-    assert esc.cuantas("rag") == llamadas <= 2
+    assert esc.cuantas("rag") == llamadas <= 3

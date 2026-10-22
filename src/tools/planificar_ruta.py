@@ -8,6 +8,7 @@ import logging
 import math
 import re
 import time
+import unicodedata
 import urllib.request
 from datetime import datetime, timedelta, timezone
 from urllib.parse import urlencode
@@ -148,6 +149,16 @@ def _http_json(url: str, *, headers: dict | None = None, body: dict | None = Non
         return json.loads(respuesta.read().decode("utf-8"))
 
 
+# Prefijos de estación al inicio del texto: Nominatim devuelve 0 resultados con «Metro X» pero sí con «X» (spec 010, RF-1).
+_PREFIJO_ESTACION = re.compile(r"^\s*(?:estaci[oó]n\s+de\s+metro|estaci[oó]n\s+de|parada\s+de|metro)\b[\s,:\-]*", re.IGNORECASE)
+
+
+def normalizar_lugar(texto: str) -> str:
+    """Quita un prefijo de estación del inicio (una sola pasada); si no quedaría nada, devuelve el texto tal cual."""
+    resto = _PREFIJO_ESTACION.sub("", texto, count=1)
+    return resto if resto.strip() else texto
+
+
 def geocodificar(direccion: str) -> dict:
     """Busca una dirección en Nominatim y devuelve `{"estado", "candidatos"}`.
 
@@ -163,7 +174,7 @@ def geocodificar(direccion: str) -> dict:
             time.sleep(falta)
 
     parametros = {
-        "q": direccion,
+        "q": normalizar_lugar(direccion),
         "format": "jsonv2",
         "countrycodes": config.NOMINATIM_PAIS,
         # El viewbox solo es una preferencia (sin bounded=1): así una dirección fuera del ámbito llega y se
@@ -229,6 +240,31 @@ def misma_ubicacion(a: dict, b: dict) -> bool:
     return distancia_m(a["lat"], a["lon"], b["lat"], b["lon"]) <= config.RADIO_MISMA_UBICACION_M
 
 
+def _etiqueta(texto) -> str:
+    """Texto comparable: minúsculas, sin tildes, guiones como espacios y espacios simples."""
+    sin_tildes = unicodedata.normalize("NFD", str(texto).lower().replace("-", " "))
+    return " ".join("".join(c for c in sin_tildes if unicodedata.category(c) != "Mn").split())
+
+
+def mismo_lugar(a: dict, b: dict) -> bool:
+    """Indica si dos candidatos son el mismo lugar (spec 010, RF-44).
+
+    Sí si están a ≤ RADIO_MISMA_UBICACION_M, si su dirección es idéntica (la persona no podría distinguirlos) o si
+    ambos son el propio municipio con otra etiqueta: mismo `municipio` y el primer componente de cada dirección es
+    el nombre del municipio o su comienzo por palabras («Rivas» → «Rivas-Vaciamadrid»). Sin umbral de distancia.
+    """
+    if misma_ubicacion(a, b) or _etiqueta(a["direccion"]) == _etiqueta(b["direccion"]):
+        return True
+    municipio = a.get("municipio")
+    if not isinstance(municipio, str) or not municipio.strip() or municipio != b.get("municipio"):
+        return False
+    nombre = _etiqueta(municipio).split()
+    def es_municipio(c: dict) -> bool:
+        primero = _etiqueta(c["direccion"].split(",")[0]).split()
+        return bool(primero) and nombre[:len(primero)] == primero
+    return es_municipio(a) and es_municipio(b)
+
+
 def clasificar_candidatos(candidatos: list[dict]) -> dict:
     """Clasifica los resultados de Nominatim de una dirección.
 
@@ -243,11 +279,18 @@ def clasificar_candidatos(candidatos: list[dict]) -> dict:
     dentro = [c for c in candidatos if dentro_de_ambito(c["lat"], c["lon"])]
     if not dentro:
         return {"estado": "fuera_cobertura", "elegido": None, "candidatos": []}
-    # Resultados casi en el mismo punto (edificio y calle) son un solo lugar: se queda el primero,
+    # La caja de cobertura abarca partes de Guadalajara, Toledo, Segovia… (spec 010): si hay candidatos de la Comunidad
+    # de Madrid verificados, solo ellos entran en la lista y en la elección. Sin ninguno verificado no se filtra nada y
+    # el error lo da después la verificación (RF-55 de la spec 004).
+    verificados = [c for c in dentro if verificar_candidato(c)]
+    if verificados:
+        dentro = verificados
+    # El mismo lugar (casi en el mismo punto, la misma dirección o el municipio con otra etiqueta, RF-44) cuenta una vez:
+    # se queda el primero,
     # que es el mejor clasificado por Nominatim.
     distintos = []
     for c in dentro:
-        if not any(misma_ubicacion(c, previo) for previo in distintos):
+        if not any(mismo_lugar(c, previo) for previo in distintos):
             distintos.append(c)
     if len(distintos) == 1:
         return {"estado": "ok", "elegido": distintos[0], "candidatos": distintos}
@@ -396,27 +439,28 @@ def _dato_rag(pregunta: str) -> dict:
 
 
 def consultar_tarifa(origen: str | None, destino: str | None, titulo=None) -> dict:
-    """Consulta al RAG primero la zona y después el precio del título en esa zona; devuelve `{"zona", "precio"}`.
+    """Consulta al RAG la zona y el precio del título; devuelve `{"zona", "precio"}`.
 
     `origen` y `destino` son los municipios de origen y destino de Nominatim (RF-54, RF-20). Cada dato es `{"estado", "texto", "fuente": "RAG"}` con estado
     ok, sin_evidencia, error u omitida (sin consulta). Si falta origen o destino no se consulta nada.
-    Como mucho 2 llamadas, sin reintentos (RF-49). El precio se omite sin consultar si:
-    - el título no se puede interpretar, por demasiado largo (RF-48);
-    - la zona no está (sin evidencia o error del RAG, RF-52);
-    - el texto de zona, sin saltos de línea, supera ZONA_LONGITUD_MAX: se pasa entero o no se pasa (RF-53).
+    Como mucho 3 llamadas, sin reintentos (spec 010, RF-38): la zona, el precio sin zona y, solo si este se abstiene
+    (sin_evidencia) y hay zona de longitud ≤ ZONA_LONGITUD_MAX (sin saltos de línea, entera), el precio con zona.
+    Un error del RAG en el precio no provoca el segundo intento. El precio se omite sin consultar si el título no se
+    puede interpretar, por demasiado largo (RF-48).
     """
     omitida = {"estado": "omitida", "texto": None, "fuente": "RAG"}
     if not (origen and origen.strip() and destino and destino.strip()):
         return {"zona": dict(omitida), "precio": dict(omitida)}
     titulo_considerado, interpretable = resolver_titulo(titulo)
     zona = _dato_rag(config.PREGUNTA_ZONA.format(origen=origen, destino=destino))
-    if not interpretable or zona["estado"] != "ok":
+    if not interpretable:
         return {"zona": zona, "precio": dict(omitida)}
-    # La zona del RAG es texto libre que entra en otra pregunta: sin saltos de línea y nunca cortada (RF-53).
-    zona_saneada = _SALTOS_DE_LINEA.sub(" ", zona["texto"]).strip()
-    if len(zona_saneada) > config.ZONA_LONGITUD_MAX:
-        return {"zona": zona, "precio": dict(omitida)}
-    precio = _dato_rag(config.PREGUNTA_PRECIO.format(titulo=titulo_considerado, zona=zona_saneada))
+    precio = _dato_rag(config.PREGUNTA_PRECIO.format(titulo=titulo_considerado))
+    if precio["estado"] == "sin_evidencia" and zona["estado"] == "ok":
+        # La zona del RAG es texto libre que entra en otra pregunta: sin saltos de línea y nunca cortada (RF-53).
+        zona_saneada = _SALTOS_DE_LINEA.sub(" ", zona["texto"]).strip()
+        if len(zona_saneada) <= config.ZONA_LONGITUD_MAX:
+            precio = _dato_rag(config.PREGUNTA_PRECIO_CON_ZONA.format(titulo=titulo_considerado, zona=zona_saneada))
     return {"zona": zona, "precio": precio}
 
 
@@ -507,17 +551,25 @@ def _encabezado(validacion: dict, hora_salida, hora_llegada, titulo_considerado:
 
 def planificar_ruta(origen: str, destino: str, hora_salida: str | None = None,
                     hora_llegada: str | None = None, titulo: str | None = None,
-                    opcion_origen: int | None = None, opcion_destino: int | None = None) -> dict:
+                    opcion_origen: int | None = None, opcion_destino: int | None = None,
+                    texto_alternativo_origen: str | None = None, texto_alternativo_destino: str | None = None,
+                    probable_origen: bool | None = None, probable_destino: bool | None = None) -> dict:
     """Ruta en transporte público CRTM con zona y precio del RAG. Devuelve siempre un dict con `estado` primero.
 
     `opcion_origen` / `opcion_destino` (T24): posición, desde 1, del candidato de un extremo ambiguo; se geocodifica
     el mismo texto y se toma esa posición (si no existe, la 1). Sin opción, un extremo ambiguo no calcula (RF-8).
 
+    Capa 2 (spec 010, T6): `texto_alternativo_origen` / `texto_alternativo_destino` son un único texto por extremo que se
+    geocodifica (+1 llamada a Nominatim por extremo, ≤ 4 en total) y se verifica en Madrid si el extremo no se resolvió;
+    si tampoco se verifica, se devuelve el error original sin más intentos. `probable_origen` / `probable_destino` (True)
+    marcan que la `opcion_*` fue una elección automática del LLM: el aviso lo indica y dice cómo corregirla.
+
     Nunca lanza excepciones: un fallo inesperado (RF-42) se registra en el log interno y se devuelve como
     `error_interno` con un mensaje genérico en español, sin el texto de la excepción ni datos internos.
     """
     try:
-        return _planificar_ruta(origen, destino, hora_salida, hora_llegada, titulo, opcion_origen, opcion_destino)
+        return _planificar_ruta(origen, destino, hora_salida, hora_llegada, titulo, opcion_origen, opcion_destino,
+                                texto_alternativo_origen, texto_alternativo_destino, probable_origen, probable_destino)
     except Exception:
         logger.exception("Error inesperado en planificar_ruta")
     # La cabecera se rehace aparte: si el fallo vino de la propia hora o del título, no debe repetirse aquí.
@@ -534,10 +586,12 @@ def planificar_ruta(origen: str, destino: str, hora_salida: str | None = None,
                       titulo_considerado, **({"hora_llegada": hora_txt} if llegada else {}))
 
 
-def _planificar_ruta(origen, destino, hora_salida, hora_llegada, titulo, opcion_origen=None, opcion_destino=None) -> dict:
+def _planificar_ruta(origen, destino, hora_salida, hora_llegada, titulo, opcion_origen=None, opcion_destino=None,
+                     texto_alternativo_origen=None, texto_alternativo_destino=None,
+                     probable_origen=None, probable_destino=None) -> dict:
     """Cuerpo de `planificar_ruta`: validar hora y datos (sin red) → geocodificar → Google Routes → RAG.
 
-    Si un paso falla, los siguientes no se ejecutan. Como mucho 2 llamadas a Nominatim, 1 a Google y 2 al RAG.
+    Si un paso falla, los siguientes no se ejecutan. Como mucho 2 llamadas a Nominatim (4 con la capa 2 de la spec 010), 1 a Google y 2 al RAG.
     """
     validacion = validar_hora(hora_salida, hora_llegada)
     titulo_considerado, interpretable = resolver_titulo(titulo)
@@ -551,6 +605,8 @@ def _planificar_ruta(origen, destino, hora_salida, hora_llegada, titulo, opcion_
 
     def salir(estado: str, texto: str, **extra) -> dict:
         texto = " ".join([texto, *avisos])
+        if avisos:   # spec 010, RF-21: la «opción usada» y la elección automática también van en `bloques`
+            extra["bloques"] = [*extra.get("bloques", []), *avisos]
         # Con hora de llegada, `hora_salida` solo lleva la salida que devuelva Google (RF-44); la pedida va en `hora_llegada`.
         if llegada:
             extra.setdefault("salida_resultante", None)
@@ -586,8 +642,23 @@ def _planificar_ruta(origen, destino, hora_salida, hora_llegada, titulo, opcion_
             # bool es int en Python: True no es una posición. Opción inexistente → la 1.
             n = opcion if isinstance(opcion, int) and not isinstance(opcion, bool) and 1 <= opcion <= len(lista) else 1
             clasificadas[rol] = {"estado": "ok", "elegido": lista[n - 1], "candidatos": lista}
-            avisos.append(f"Para el {rol} («{texto}») se usó la opción {n}: {lista[n - 1]['direccion']}. "
+            automatica = {"origen": probable_origen, "destino": probable_destino}[rol] is True
+            avisos.append(f"{'Elección automática: para' if automatica else 'Para'} el {rol} («{texto}») se usó la opción {n}: "
+                          f"{lista[n - 1]['direccion']}. "
                           f"Si no es la que querías, indica otra opción (1 a {len(lista)}) o una dirección más precisa.")
+        # Capa 2 (spec 010, RF-19 y RF-20): un único texto alternativo por extremo no resuelto; si no se verifica, el
+        # error original se mantiene y no hay más intentos.
+        alternativo = {"origen": texto_alternativo_origen, "destino": texto_alternativo_destino}[rol]
+        if clasificadas[rol]["estado"] != "ok" and isinstance(alternativo, str) and alternativo.strip():
+            geo_alt = geocodificar(alternativo)
+            if geo_alt["estado"] != "ok":
+                return salir("geocodificacion_fallida",
+                             "No he podido localizar las direcciones ahora mismo. Inténtalo de nuevo más tarde.")
+            alt = clasificar_candidatos(geo_alt["candidatos"])
+            if alt["estado"] == "ok" and verificar_candidato(alt["elegido"]):
+                clasificadas[rol] = alt
+                avisos.append(f"Para el {rol} («{texto}») no se encontró una dirección válida; se usó «{alternativo}»: "
+                              f"{alt['elegido']['direccion']}. Si no es la que querías, indica una dirección más precisa.")
 
     problemas = {rol: c for rol, c in clasificadas.items() if c["estado"] != "ok"}
     if problemas:
@@ -598,8 +669,10 @@ def _planificar_ruta(origen, destino, hora_salida, hora_llegada, titulo, opcion_
         candidatos = {rol: [{"direccion": c["direccion"]} for c in clasificadas[rol]["candidatos"]]
                       if clasificadas[rol]["estado"] == "ambigua" else [] for rol in textos}
         extra = {"candidatos": candidatos} if estado == "ambigua" else {}
-        mensaje = " ".join(_problema_direccion(rol, textos[rol], c) for rol, c in problemas.items())
-        return salir("direccion_no_encontrada" if estado == "no_encontrada" else estado, mensaje, **extra)
+        frases = [_problema_direccion(rol, textos[rol], c) for rol, c in problemas.items()]
+        # Spec 010, RF-5: las mismas frases (con las opciones de una ambigua) también en `bloques`, para que lleguen enteras.
+        return salir("direccion_no_encontrada" if estado == "no_encontrada" else estado, " ".join(frases),
+                     bloques=frases, **extra)
 
     lugar_o, lugar_d = clasificadas["origen"]["elegido"], clasificadas["destino"]["elegido"]
     identificados = {"origen": {"direccion": lugar_o["direccion"]}, "destino": {"direccion": lugar_d["direccion"]}}
@@ -611,17 +684,19 @@ def _planificar_ruta(origen, destino, hora_salida, hora_llegada, titulo, opcion_
     sin_verificar = [rol for rol, lugar in (("origen", lugar_o), ("destino", lugar_d)) if not verificar_candidato(lugar)]
     if sin_verificar:
         textos = {"origen": origen, "destino": destino}
-        return salir("direccion_no_encontrada", " ".join(
-            f"No se pudo verificar que la dirección de {rol} «{textos[rol]}» esté en la {CCAA_NOMBRE}. Indica una más precisa."
-            for rol in sin_verificar))
+        frases = [f"No se pudo verificar que la dirección de {rol} «{textos[rol]}» esté en la {CCAA_NOMBRE}. Indica una más precisa."
+                  for rol in sin_verificar]
+        return salir("direccion_no_encontrada", " ".join(frases), bloques=frases)
 
     # 3) Ruta con Google (máx. 1 llamada).
     trayecto = f"De «{lugar_o['direccion']}» a «{lugar_d['direccion']}»"
     # Spec 009, RF-20/22/27: sin hora pedida se consulta el tiempo actual del origen (importación perezosa) y, si no es
     # apto, la ruta se pide con menos tramos a pie. Con hora pedida o sin dato de clima la petición es la de siempre.
+    # Spec 010, RF-47: solo si la bici es posible por las reglas sin red (R1 hora pedida, R2 distancia).
+    from src.tools.bicimad import clima_origen, rechazo_oferta
+    hora_pedida = validacion["salida_rfc3339"] is not None or validacion["llegada_rfc3339"] is not None
     clima = None
-    if validacion["salida_rfc3339"] is None and validacion["llegada_rfc3339"] is None:
-        from src.tools.bicimad import clima_origen
+    if rechazo_oferta(lugar_o, lugar_d, hora_pedida) is None:
         clima = clima_origen(lugar_o)
     menos_a_pie = "LESS_WALKING" if clima and clima["estado"] == "ok" and not clima["apto"] else None
     google = consultar_google(lugar_o, lugar_d, validacion["salida_rfc3339"], validacion["llegada_rfc3339"],
@@ -631,7 +706,8 @@ def _planificar_ruta(origen, destino, hora_salida, hora_llegada, titulo, opcion_
         tarifa = consultar_tarifa(lugar_o["municipio"], lugar_d["municipio"], titulo)
         texto = (f"{trayecto}: no se pudo calcular la ruta con Google Routes. Inténtalo de nuevo más tarde. "
                  + _mensaje_tarifa(tarifa, interpretable))
-        return salir("ruta_no_calculada", texto, **identificados, **tarifa)
+        # Spec 010, T5b (a): el mensaje del fallo (con su zona y precio, si los hay) también va en `bloques`.
+        return salir("ruta_no_calculada", texto, bloques=[texto], **identificados, **tarifa)
     interpretada = interpretar_respuesta_google(google["respuesta"])
     if interpretada["estado"] != "ok":
         return salir("sin_ruta", f"{trayecto}: no hay ruta disponible en transporte público de la red del CRTM. "
@@ -654,16 +730,24 @@ def _planificar_ruta(origen, destino, hora_salida, hora_llegada, titulo, opcion_
         else:
             texto += "No se pudo determinar la hora de salida con Google Routes. "
     texto += _mensaje_tarifa(tarifa, interpretable)
-    if clima is not None:   # RF-24 y RF-26: línea del tiempo (si hay dato) y campo `clima`, solo sin hora pedida
+    bloques = []   # spec 010, RF-6 a RF-8: textos literales que el sintetizador no puede omitir
+    if "ok" in (tarifa["zona"]["estado"], tarifa["precio"]["estado"]):   # T5b (a): zona y precio, solo si existen
+        bloques.append(_mensaje_tarifa(tarifa, interpretable))
+    if clima is not None:   # RF-24 y RF-26: línea del tiempo (si hay dato) y campo `clima`, solo si se consultó
         from src.tools.bicimad import texto_clima
         texto = f"{texto} {texto_clima(clima)}".rstrip()
         extra["clima"] = clima
+        bloques.append(texto_clima(clima) or config.CLIMA_SIN_DATO_AVISO)   # RF-10: sin dato, el aviso de clima caído
     # Spec 009, RF-1/16/17: único punto de enganche de la alternativa en bici. No lanza y nunca cambia la ruta ni su estado.
-    from src.tools.bicimad import alternativa_bici
-    bici, texto_bici = alternativa_bici(lugar_o, lugar_d, clima is None, clima)
+    from src.tools.bicimad import alternativa_bici, linea_motivo_bici
+    bici, texto_bici = alternativa_bici(lugar_o, lugar_d, hora_pedida, clima)
     extra["bici"] = bici
     if texto_bici:
         texto = f"{texto} {texto_bici}"
+    bloques.append(texto_bici or linea_motivo_bici(bici, lugar_o, lugar_d, hora_pedida, clima))
+    bloques = [b for b in bloques if b]
+    if bloques:
+        extra["bloques"] = bloques
     return salir("ok", texto, **identificados, ruta=ruta, **tarifa, **extra)
 
 

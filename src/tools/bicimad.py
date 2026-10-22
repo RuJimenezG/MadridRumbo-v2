@@ -7,6 +7,8 @@ import json
 import logging
 import math
 import re
+import socket
+import ssl
 import time
 import urllib.error
 import urllib.parse
@@ -29,14 +31,31 @@ def distancia_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     return 2 * 6_371_000 * math.asin(math.sqrt(a))
 
 
-def _get_json(url, headers=None, timeout=10):
+def _contexto_ssl(usar_certifi: bool):
+    """Contexto SSL con el bundle de `certifi` si se pide y existe; None = el contexto por defecto de urllib.
+
+    Ambos verifican siempre el certificado y el nombre del servidor: nunca se desactiva la verificación (spec 010, RF-35).
+    """
+    if not usar_certifi:
+        return None
+    try:
+        import certifi
+        return ssl.create_default_context(cafile=certifi.where())
+    except Exception:  # noqa: BLE001 - sin certifi o con el bundle ilegible: contexto por defecto, que también verifica
+        return None
+
+
+def _get_json(url, headers=None, timeout=10, contexto_certifi=False):
     """GET que devuelve `(status_http, cuerpo_json)`; el cuerpo es None si un error HTTP no trae JSON.
 
-    Lanza OSError (red, timeout) o ValueError (JSON inválido en una respuesta 200).
+    Lanza OSError (red, timeout) o ValueError (JSON inválido en una respuesta 200). Con `contexto_certifi` verifica el
+    certificado con el bundle de `certifi` (Open-Meteo: el almacén de Windows fallaba con «certificate has expired»).
     """
     peticion = urllib.request.Request(url, headers=headers or {}, method="GET")
+    contexto = _contexto_ssl(contexto_certifi)
+    opciones = {"context": contexto} if contexto is not None else {}
     try:
-        with urllib.request.urlopen(peticion, timeout=timeout) as r:
+        with urllib.request.urlopen(peticion, timeout=timeout, **opciones) as r:
             return r.status, json.loads(r.read().decode("utf-8"))
     except urllib.error.HTTPError as e:
         try:
@@ -206,10 +225,43 @@ FRASES_NO_OFRECIDA = {   # RF-4: solo en R3 y R4
     "misma_estacion": "No hay una alternativa en bici con estaciones de origen y destino distintas.",
 }
 FRASE_NO_DISPONIBLE = "La alternativa en bici (BiciMAD) no está disponible ahora."   # RF-13, RF-14, RF-15
+# Spec 010, T5b (b): la causa del fallo se distingue en `bici["causa"]` y en su frase. `interno` es un error inesperado.
+FRASES_NO_DISPONIBLE = {
+    "sin_credenciales": "La alternativa en bici (BiciMAD) no está disponible ahora: falta configurar el acceso a la EMT.",
+    "emt": "La alternativa en bici (BiciMAD) no está disponible ahora: el servicio de BiciMAD (EMT) no responde.",
+    "google": "La alternativa en bici (BiciMAD) no está disponible ahora: no se pudo calcular el trayecto en bici con Google.",
+    "interno": FRASE_NO_DISPONIBLE,
+}
 
 
-def _no_disponible() -> tuple[dict, str]:
-    return {"estado": "no_disponible", "motivo": FRASE_NO_DISPONIBLE}, FRASE_NO_DISPONIBLE
+def _no_disponible(causa: str) -> tuple[dict, str]:
+    frase = FRASES_NO_DISPONIBLE[causa]
+    return {"estado": "no_disponible", "motivo": frase, "causa": causa}, frase
+
+
+def linea_motivo_bici(bici: dict, origen: dict, destino: dict, hora_pedida: bool, clima: dict | None) -> str:
+    """Línea corta con el motivo por el que la bici no se ofrece o no está disponible (spec 010, RF-7).
+
+    "" si la bici es `ok` o no se conoce la causa. R3, R4 y el fallo ya traen su frase en `bici["motivo"]`; R1, R2 y R0
+    se deducen de los mismos datos que usó `alternativa_bici`. Nunca lanza: un fallo aquí no debe romper la ruta.
+    """
+    try:
+        if bici.get("estado") == "ok":
+            return ""
+        if bici.get("motivo"):
+            return bici["motivo"]
+        rechazo = rechazo_oferta(origen, destino, hora_pedida)
+        if rechazo == "R1":
+            return ("La alternativa en bici no se ofrece con hora de salida o de llegada pedida: "
+                    "la disponibilidad de bicis es la de ahora.")
+        if rechazo == "R2":
+            return ("La alternativa en bici no se ofrece: la distancia entre origen y destino queda fuera del rango de "
+                    f"{config.BICI_DISTANCIA_MIN_M / 1000:g} a {config.BICI_DISTANCIA_MAX_M / 1000:g} km.")
+        if isinstance(clima, dict) and clima.get("estado") == "ok" and clima.get("apto") is not True:
+            return f"La alternativa en bici no se ofrece con mal tiempo ({', '.join(clima['motivos'])})."
+    except Exception:  # noqa: BLE001 - sin detalles: la línea de motivo es opcional
+        pass
+    return ""
 
 
 def _cuantos(n: int, singular: str, plural: str) -> str:
@@ -227,11 +279,15 @@ def alternativa_bici(origen: dict, destino: dict, hora_pedida: bool, clima: dict
     try:
         if rechazo_oferta(origen, destino, hora_pedida) is not None:
             return {"estado": "no_ofrecida", "motivo": None}, ""
-        if not (isinstance(clima, dict) and clima.get("estado") == "ok" and clima.get("apto") is True):
-            return {"estado": "no_ofrecida", "motivo": None}, ""    # R0: sin buen tiempo o sin dato no hay bici (RF-23, RF-25)
+        # R0 (spec 010, RF-9 y RF-10): solo un mal tiempo comprobado impide la bici; con el clima no disponible se ofrece.
+        clima_caido = isinstance(clima, dict) and clima.get("estado") == "no_disponible"
+        buen_tiempo = isinstance(clima, dict) and clima.get("estado") == "ok" and clima.get("apto") is True
+        if not (clima_caido or buen_tiempo):
+            return {"estado": "no_ofrecida", "motivo": None}, ""
         estaciones = emt_estaciones()
         if estaciones["estado"] != "ok":
-            return _no_disponible()
+            con_claves = _credencial(config.EMT_CLIENT_ID) and _credencial(config.EMT_PASS_KEY)
+            return _no_disponible("emt" if con_claves else "sin_credenciales")
         elegidas = elegir_estaciones(estaciones["estaciones"], origen, destino)
         if elegidas["estado"] != "ok":
             frase = FRASES_NO_OFRECIDA[elegidas["motivo"]]
@@ -241,7 +297,7 @@ def alternativa_bici(origen: dict, destino: dict, hora_pedida: bool, clima: dict
         pie_1 = tramo_google("WALK", origen, e_o) if bici["estado"] == "ok" else None
         pie_2 = tramo_google("WALK", e_d, destino) if pie_1 and pie_1["estado"] == "ok" else None
         if not (pie_2 and pie_2["estado"] == "ok"):
-            return _no_disponible()
+            return _no_disponible("google")
         tramos = [
             {"modo": "A pie", "desde": "Origen", "hasta": e_o["nombre"], "duracion_min": pie_1["duracion_min"]},
             {"modo": "Bici", "desde": e_o["nombre"], "hasta": e_d["nombre"], "duracion_min": bici["duracion_min"]},
@@ -268,7 +324,7 @@ def alternativa_bici(origen: dict, destino: dict, hora_pedida: bool, clima: dict
         return resultado, texto
     except Exception as e:  # noqa: BLE001 - nunca rompe la ruta; solo el tipo, la excepción puede llevar datos sensibles
         logger.error("Error inesperado en la alternativa en bici: %s", type(e).__name__)
-        return _no_disponible()
+        return _no_disponible("interno")
 
 
 # --- Clima (Open-Meteo): funciones internas, no una tool (spec 009, RF-20 a RF-26) ---
@@ -293,34 +349,55 @@ def _numero(x) -> bool:
     return isinstance(x, (int, float)) and not isinstance(x, bool) and math.isfinite(x)
 
 
+def _causa_excepcion_clima(e: Exception) -> str:
+    """Categoría de un fallo de red de Open-Meteo (spec 010, RF-48): timeout, tls, red o error."""
+    causa = e.reason if isinstance(e, urllib.error.URLError) else e
+    if isinstance(causa, (TimeoutError, socket.timeout)) or "timed out" in str(causa).lower():
+        return "timeout"
+    if isinstance(causa, ssl.SSLError):
+        return "tls"
+    if isinstance(e, OSError):
+        return "red"
+    return "error"
+
+
 def clima_origen(origen: dict) -> dict:
     """Tiempo actual del origen con Open-Meteo: una llamada, sin clave ni reintentos (RF-20, RF-25, RF-26).
 
     Devuelve `{"estado": "ok", temperatura_c, precipitacion_mm, codigo, viento_kmh, apto, motivos, fuente, licencia}`
     o `{"estado": "no_disponible"}` si falla algo o falta alguna de las cuatro variables. Nunca lanza.
+    Cada fallo deja en el log su categoría (spec 010, RF-48), sin URL, coordenadas ni cuerpo.
     """
     fallo = {"estado": "no_disponible"}
+
+    def fallar(causa: str, detalle: str = "") -> dict:
+        logger.warning("Open-Meteo no disponible: causa=%s%s", causa, detalle)
+        return fallo
+
     try:
         if not (isinstance(origen, dict) and _numero(origen.get("lat")) and _numero(origen.get("lon"))):
-            return fallo
+            return fallar("sin_coordenadas")
         consulta = urllib.parse.urlencode({
             "latitude": origen["lat"], "longitude": origen["lon"],
             "current": "temperature_2m,precipitation,weather_code,wind_speed_10m"})
-        estado, cuerpo = _get_json(f"{config.OPEN_METEO_URL}?{consulta}", timeout=config.OPEN_METEO_TIMEOUT_S)
-        if estado != 200 or not isinstance(cuerpo, dict) or not isinstance(cuerpo.get("current"), dict):
-            return fallo
+        estado, cuerpo = _get_json(f"{config.OPEN_METEO_URL}?{consulta}", timeout=config.OPEN_METEO_TIMEOUT_S,
+                                   contexto_certifi=True)
+        if estado != 200:
+            return fallar(f"http_{estado}")
+        if not isinstance(cuerpo, dict) or not isinstance(cuerpo.get("current"), dict):
+            return fallar("respuesta_invalida")
         actual = cuerpo["current"]
         temp, lluvia, codigo, viento = (actual.get(k) for k in
                                         ("temperature_2m", "precipitation", "weather_code", "wind_speed_10m"))
         if not (_numero(temp) and _numero(lluvia) and _numero(viento) and isinstance(codigo, int)
                 and not isinstance(codigo, bool)):
-            return fallo
+            return fallar("datos_incompletos")
         apto, motivos = apto_exterior(temp, lluvia, codigo, viento)
         return {"estado": "ok", "temperatura_c": temp, "precipitacion_mm": lluvia, "codigo": codigo,
                 "viento_kmh": viento, "apto": apto, "motivos": motivos, "fuente": "Open-Meteo", "licencia": "CC BY 4.0"}
-    except Exception as e:  # noqa: BLE001 - sin detalles: solo el tipo de la excepción
-        logger.warning("Open-Meteo no disponible: %s", type(e).__name__)
-        return fallo
+    except Exception as e:  # noqa: BLE001 - sin detalles: solo el tipo de la excepción y, en un URLError, su `reason`
+        motivo = f" ({e.reason})" if isinstance(e, urllib.error.URLError) else ""
+        return fallar(_causa_excepcion_clima(e), f" {type(e).__name__}{motivo}")
 
 
 def texto_clima(clima: dict) -> str:

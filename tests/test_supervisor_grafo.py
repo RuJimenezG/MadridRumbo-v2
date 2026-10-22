@@ -138,7 +138,8 @@ def test_prompt_del_supervisor_se_genera_desde_el_catalogo_de_roles():
     instruccion = mensajes_recibidos[0][0]["content"]
     for rol, ficha in CATALOGO_ROLES.items():
         assert f"- {rol}: {ficha.responsabilidad}." in instruccion
-    assert "Una consulta textual de tarifa sin imagen debe seleccionar rag." in instruccion
+    # Spec 010: la regla de exclusión se amplía (consulta con origen y destino → rutas); antes era solo «…debe seleccionar rag.».
+    assert "Una consulta textual de tarifa sin imagen y sin origen ni destino debe seleccionar rag; con origen y destino selecciona rutas, que incluye la zona y el precio del trayecto, también para un título concreto (p. ej. abono joven)." in instruccion
     assert "No selecciones tarifas salvo que exista una imagen aportada válida." in instruccion
 
 

@@ -108,7 +108,7 @@ class Red:
         self.respuestas = list(respuestas)
         self.llamadas = []
 
-    def __call__(self, url, headers=None, timeout=10):
+    def __call__(self, url, headers=None, timeout=10, contexto_certifi=False):   # T12: parámetro nuevo, ignorado
         self.llamadas.append((url, dict(headers or {}), timeout))
         respuesta = self.respuestas.pop(0)
         if isinstance(respuesta, Exception):
@@ -620,11 +620,14 @@ def test_si_falla_un_tramo_no_hay_alternativa_parcial(orq, falla_en):
     assert len(o.google) == falla_en + 1                    # se corta al primer fallo
 
 
-def test_emt_no_disponible_no_llama_a_google(orq):
+def test_emt_no_disponible_no_llama_a_google(orq, monkeypatch):
+    # Spec 010, T5b (b): la frase depende de la causa (aquí la EMT con credenciales); antes era una sola frase.
+    monkeypatch.setattr(config, "EMT_CLIENT_ID", "ID-DE-TEST")
+    monkeypatch.setattr(config, "EMT_PASS_KEY", "CLAVE-DE-TEST")
     o = orq(estaciones={"estado": "no_disponible", "estaciones": []})
     bici, texto = o.bici.alternativa_bici(ORIGEN, DESTINO, hora_pedida=False, clima=CLIMA_APTO)
     assert bici["estado"] == "no_disponible" and o.google == [] and o.emt_llamadas == 1
-    assert texto == "La alternativa en bici (BiciMAD) no está disponible ahora."
+    assert bici["causa"] == "emt" and texto == bici["motivo"] == o.bici.FRASES_NO_DISPONIBLE["emt"]
 
 
 @pytest.mark.parametrize("donde", ["emt", "google"])
@@ -790,12 +793,21 @@ def test_error_inesperado_en_clima_no_rompe_la_ruta(meteo, monkeypatch, caplog):
 
 # --- T14: integración del clima (R0, LESS_WALKING, línea y campo `clima`) ---
 
-@pytest.mark.parametrize("clima", [CLIMA_LLUVIA, CLIMA_SIN_DATO])
-def test_no_apto_o_sin_dato_no_ofrece_bici_ni_llama_a_la_emt(orq, clima):
+# Spec 010, RF-9 y RF-10 (T3): solo el mal tiempo comprobado impide la bici. Antes este test también fijaba que
+# la falta de dato de clima (`CLIMA_SIN_DATO`) la impedía (spec 009, RF-25); esa parte cambia y pasa al test siguiente.
+@pytest.mark.parametrize("clima", [CLIMA_LLUVIA, None])
+def test_no_apto_o_sin_consulta_no_ofrece_bici_ni_llama_a_la_emt(orq, clima):
     o = orq()
     assert o.bici.alternativa_bici(ORIGEN, DESTINO, hora_pedida=False, clima=clima) == (
         {"estado": "no_ofrecida", "motivo": None}, "")                         # el clima ya lo explica su línea
     assert o.emt_llamadas == 0 and o.google == []
+
+
+def test_sin_dato_de_clima_sigue_el_flujo_normal(orq):
+    o = orq()
+    bici, texto = o.bici.alternativa_bici(ORIGEN, DESTINO, hora_pedida=False, clima=CLIMA_SIN_DATO)
+    assert bici["estado"] == "ok" and texto.startswith("Alternativa en bici (BiciMAD)")
+    assert o.emt_llamadas == 1 and len(o.google) == 3
 
 
 def test_apto_aplica_la_regla_de_oferta(orq):
@@ -939,7 +951,7 @@ def test_alternativa_junto_a_la_ruta_sin_cambiar_su_estado(monkeypatch):
 def test_campo_bici_solo_en_ok_y_campos_existentes_intactos(monkeypatch):
     esc = Escenario(monkeypatch)
     r = ruta_con_bici(esc)
-    assert set(r) == CLAVES_BASE | {"clima", "bici"}                       # solo se añaden clima y bici
+    assert set(r) == CLAVES_BASE | {"clima", "bici", "bloques"}            # solo se añaden clima, bici y bloques (spec 010, RF-4)
     # Estados que no son ok: sin campo bici (y sin llamadas de bici).
     for cambio in ({"google": TimeoutError("t")}, {"google": {}}, {"nominatim": [[SOL, ATOCHA], [BERNABEU]]},
                    {"nominatim": [[BARCELONA], [BERNABEU]]}):
@@ -966,7 +978,7 @@ def test_enganche_unico_en_planificar_ruta():
 def test_el_rag_mantiene_sus_dos_llamadas(monkeypatch):
     esc = Escenario(monkeypatch)
     ruta_con_bici(esc)
-    assert esc.cuantas("rag") == 2 and "zona tarifaria" in esc.preguntas[0] and "precio" in esc.preguntas[1]
+    assert esc.cuantas("rag") == 2 and "zona tarifaria" in esc.preguntas[0] and "cuesta" in esc.preguntas[1]   # T13: precio sin zona
     assert not any("bici" in p.lower() or "bicimad" in p.lower() for p in esc.preguntas)
 
 
@@ -985,13 +997,16 @@ def test_limites_de_llamadas_emt_2_google_4_nominatim_2(monkeypatch):
 
 
 def test_fallo_de_la_emt_deja_la_ruta_intacta_con_aviso(monkeypatch):
+    monkeypatch.setattr(config, "EMT_CLIENT_ID", "ID-DE-TEST")        # T5b (b): sin esto la causa dependería del entorno
+    monkeypatch.setattr(config, "EMT_PASS_KEY", "CLAVE-DE-TEST")
     _, base = sin_bici(monkeypatch)
     for fallo in ((403, {"code": "84", "description": "", "data": []}), TimeoutError("t")):
         esc = Escenario(monkeypatch)
         esc.emt_login = fallo
         r = ruta_con_bici(esc)
-        assert r["estado"] == "ok" and r["bici"] == {"estado": "no_disponible", "motivo": bicimad.FRASE_NO_DISPONIBLE}
-        assert r["mensaje"].endswith(bicimad.FRASE_NO_DISPONIBLE) and r["mensaje"].startswith(base["mensaje"])
+        frase = bicimad.FRASES_NO_DISPONIBLE["emt"]
+        assert r["estado"] == "ok" and r["bici"] == {"estado": "no_disponible", "motivo": frase, "causa": "emt"}
+        assert r["mensaje"].endswith(frase) and r["mensaje"].startswith(base["mensaje"])
         assert r["ruta"] == base["ruta"] and r["zona"] == base["zona"] and r["precio"] == base["precio"]
         assert [u for u, _ in esc.llamadas_bici if u == config.GOOGLE_ROUTES_URL] == []   # sin Google de bici
 
@@ -1003,7 +1018,8 @@ def test_fallo_de_google_en_la_bici_deja_la_ruta_intacta_con_aviso(monkeypatch, 
     esc.tramos_bici[falla_en] = TimeoutError("t")
     r = ruta_con_bici(esc)
     assert r["estado"] == "ok" and r["bici"]["estado"] == "no_disponible" and "tramos" not in r["bici"]
-    assert r["mensaje"].endswith(bicimad.FRASE_NO_DISPONIBLE) and r["ruta"] == base["ruta"]
+    assert r["bici"]["causa"] == "google"                                  # T5b (b)
+    assert r["mensaje"].endswith(bicimad.FRASES_NO_DISPONIBLE["google"]) and r["ruta"] == base["ruta"]
     assert len([u for u, _ in esc.llamadas_bici if u == config.GOOGLE_ROUTES_URL]) == llamadas
 
 

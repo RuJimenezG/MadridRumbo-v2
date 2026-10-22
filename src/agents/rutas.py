@@ -13,6 +13,7 @@ import unicodedata
 from typing import Any, Callable, Mapping
 
 from src.reloj import ahora
+from src.supervisor_reglas import eleccion_tras_ambigua
 from src.tools.hora_actual import hora_actual
 
 
@@ -22,8 +23,10 @@ destino. Usa el historial de la conversación para recuperar un extremo aportado
 en un turno anterior.
 
 Tool disponible únicamente:
-- planificar_ruta(origen, destino, hora_salida?, hora_llegada?, titulo?, opcion_origen?, opcion_destino?):
+- planificar_ruta(origen, destino, hora_salida?, hora_llegada?, titulo?, opcion_origen?, opcion_destino?,
+  texto_alternativo_origen?, texto_alternativo_destino?, probable_origen?, probable_destino?):
   calcula la ruta y consulta internamente el RAG para zona y precio.
+  `titulo` es el título de transporte que pide la persona, tal como lo escribe (texto libre).
 
 Reglas:
 - No inventes ni supongas origen o destino. Si falta alguno, responde con una
@@ -37,6 +40,28 @@ Reglas:
   no la respuesta) y añade opcion_origen u opcion_destino con ese número (entero desde 1).
   Si en lugar de un número escribe una dirección, envíala como texto nuevo de ese extremo
   con opcion 1 (opcion_origen=1 u opcion_destino=1).
+- Si la persona menciona un título de transporte o pregunta por su precio, pásalo en `titulo`;
+  si no pide ninguno, no envíes `titulo`.
+- Si la tool devuelve un extremo ambiguo (estado "ambigua"), tu "final" debe copiar literalmente las
+  opciones numeradas del `mensaje` de la tool y pedir que elija una.
+- Si la tool devuelve "ruta_no_calculada", no reescribas el resultado: copia el `mensaje` de la tool tal cual.
+- Si la persona pregunta después «¿y cuánto cuesta?» (o por otro título), vuelve a pedir planificar_ruta
+  con los mismos origen y destino del historial y el `titulo` pedido.
+- Si la persona pide ir en bici (o en BiciMAD) con origen y destino, solicita planificar_ruta igualmente:
+  la tool devuelve la ruta en transporte público y la alternativa en BiciMAD si procede o el motivo por el
+  que no se ofrece. Tu "final" debe copiar lo que devuelva la tool y no rechaces la petición por ser en bici.
+- Segunda capa (solo cuando el turno anterior ya dejó ese extremo sin resolver, ambiguo o no encontrado, y la
+  nueva entrada de la persona tampoco lo resuelve): actúa una sola vez por extremo y nunca en el primer intento.
+  - Si la tool mostró opciones, elige solo entre las opciones que la tool mostró, con opcion_origen u
+    opcion_destino y probable_origen=true o probable_destino=true. Si tu confianza es baja, no elijas:
+    vuelve a preguntar a la persona con las opciones.
+  - Si hubo 0 candidatos, propone un único texto alternativo por extremo en texto_alternativo_origen o
+    texto_alternativo_destino (el nombre del lugar sin prefijos como «metro»); no encadenes más intentos.
+  - La respuesta de la tool indica qué dirección se usó y cómo corregirla: conserva esa frase.
+- En una pregunta de seguimiento sobre la misma ruta (por ejemplo «¿y cómo puedo ir en bici?»), pide
+  planificar_ruta con los mismos textos de origen y destino, las mismas opciones elegidas (opcion_origen u
+  opcion_destino, si la persona eligió con un número) y el mismo `titulo` del historial; no los sustituyas
+  por valores por defecto.
 - Conserva el JSON, las aclaraciones y los errores que devuelva la tool.
 - No consultes directamente el RAG ni otra tool.
 - Responde SOLO con un JSON por mensaje:
@@ -47,6 +72,9 @@ Reglas:
 PATRON_FORMULACION_RUTA = re.compile(
     r"\b(?:quiero\W+ir\W+de|necesito\W+ir\W+de|voy\W+de)\b(?P<resto>.*)"
 )
+
+
+SEPARADORES_DESTINO = {"a", "al", "hasta"}
 
 
 def _aclaracion_formulacion_incompleta(mensaje: Any) -> str | None:
@@ -67,9 +95,9 @@ def _aclaracion_formulacion_incompleta(mensaje: Any) -> str | None:
     if not extremos:
         return "Falta indicar el origen y el destino para planificar la ruta."
 
-    try:
-        separador = len(extremos) - 1 - extremos[::-1].index("a")
-    except ValueError:
+    # Separador del destino: la primera «a», «al» o «hasta» (spec 010); con la última, «de Sol a Moncloa a las 8» se parte mal.
+    separador = next((i for i, token in enumerate(extremos) if token in SEPARADORES_DESTINO), None)
+    if separador is None:
         return "Falta indicar el destino para planificar la ruta."
 
     tiene_origen = separador > 0
@@ -148,6 +176,17 @@ def nodo_rutas(
     aclaracion = _aclaracion_formulacion_incompleta(estado.get("mensaje"))
     if aclaracion is not None:
         return terminar(aclaracion)
+
+    # Spec 010, RF-46: respuesta solo con números tras una ambigua → misma llamada con las opciones, sin LLM.
+    args_eleccion = eleccion_tras_ambigua(estado)
+    if args_eleccion is not None:
+        try:
+            resultado = str(ejecutar("planificar_ruta", args_eleccion, traza))
+        except Exception:
+            resultado = "ERROR: no se pudo ejecutar planificar_ruta."
+            traza.append({"tool": "planificar_ruta", "args": args_eleccion, "status": "error", "preview": resultado})
+        resultado_ruta = (resultado, args_eleccion)
+        return terminar("Se ha planificado la ruta con las opciones elegidas.")
 
     args_replanificar = estado.get("replanificar_args")
     if isinstance(args_replanificar, Mapping):

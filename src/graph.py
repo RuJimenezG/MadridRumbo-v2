@@ -28,7 +28,7 @@ from src.agents.tarifas import (
 )
 from src.estado import EstadoGrafo, crear_plan
 from src.modelos import crear_modelo_especialista
-from src.sintetizador import nodo_sintetizador, renderizar_respaldo
+from src.sintetizador import nodo_sintetizador, renderizar_respaldo, turno_actual
 from src.supervisor import nodo_supervisor
 from src.tools import ejecutar_tool
 
@@ -441,6 +441,11 @@ def _envolver_especialista(
             return salida_redireccion
         if not resultados:
             resultados = _resultados_desde_traza(rol, traza)
+        # Cada resultado lleva el turno en que se produjo: `resultados` acumula toda la conversación y el sintetizador
+        # solo fuerza los bloques del turno actual.
+        turno = turno_actual(estado)
+        if turno is not None:
+            resultados = [{**r, "turno": turno} if isinstance(r, Mapping) else r for r in resultados]
 
         salida = {
             clave: valor
@@ -513,7 +518,10 @@ def crear_grafo(
     grafo.add_node("pausa_hitl", _nodo_pausa_hitl)
     grafo.add_node("aceptar_plan", _aceptar_plan)
     grafo.add_node("rechazar_plan", _rechazar_plan)
-    grafo.add_node("sintetizador_aprobacion", lambda estado: nodo_sintetizador(estado, modelo=modelo_sintetizador))
+    grafo.add_node(
+        "sintetizador_aprobacion",
+        lambda estado: nodo_sintetizador(estado, modelo=modelo_sintetizador, tras_aprobacion=True),
+    )
     grafo.add_node("finalizar_turno", _finalizar_turno)
 
     destinos = {f"nodo_{rol}": f"nodo_{rol}" for rol in ROLES_GRAFO}

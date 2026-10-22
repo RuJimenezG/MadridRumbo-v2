@@ -203,3 +203,71 @@ def test_rutas_no_asume_un_origen_por_defecto(args):
 def test_prompt_prohibe_inventar_o_suponer_extremos():
     """RF-27: el prompt ordena no inventar ni suponer origen o destino."""
     assert "No inventes ni supongas origen o destino" in PROMPT_RUTAS
+
+
+# --- Spec 010: «de X al Y», «hasta» y «en bici» llegan a la herramienta ---
+
+from src.agents.rutas import _aclaracion_formulacion_incompleta  # noqa: E402
+
+SOL_BERNABEU = "¿Cómo voy de Puerta del Sol al Estadio Santiago Bernabéu?"
+
+
+@pytest.mark.parametrize("mensaje", [
+    SOL_BERNABEU,
+    SOL_BERNABEU[:-1] + " y cuánto cuesta el abono joven?",
+    "Quiero ir de Atocha hasta Sol",
+    "voy de Sol a Moncloa a las 8",
+    "necesito ir de Sol al Retiro",
+])
+def test_de_x_al_y_y_hasta_no_dan_aviso_de_destino(mensaje):
+    assert _aclaracion_formulacion_incompleta(mensaje) is None
+
+
+@pytest.mark.parametrize("mensaje", [SOL_BERNABEU, SOL_BERNABEU[:-1] + " y cuánto cuesta el abono joven?"])
+def test_de_x_al_y_llega_a_la_herramienta(mensaje):
+    llm = LLMFalso([
+        {"tool": "planificar_ruta", "args": {"origen": "Puerta del Sol", "destino": "Estadio Santiago Bernabéu"}},
+        {"final": "Ruta propuesta."},
+    ])
+    ejecutor = EjecutorFalso({"planificar_ruta": json.dumps(RUTA_OK, ensure_ascii=False)})
+    salida = nodo_rutas(_estado(mensaje), llm, ejecutor)
+    assert ejecutor.llamadas == [("planificar_ruta", {"origen": "Puerta del Sol", "destino": "Estadio Santiago Bernabéu"})]
+    assert salida["notas"][-1].endswith("Ruta propuesta.")
+
+
+@pytest.mark.parametrize("mensaje", ["voy de Sol a", "voy de Sol al", "Quiero ir de Atocha hasta", "voy de Sol hasta?"])
+def test_sin_destino_sigue_el_aviso(mensaje):
+    assert _aclaracion_formulacion_incompleta(mensaje) == "Falta indicar el destino para planificar la ruta."
+
+
+def test_sin_origen_y_sin_nada_siguen_el_aviso():
+    assert _aclaracion_formulacion_incompleta("voy de a Sol") == "Falta indicar el origen para planificar la ruta."
+    assert _aclaracion_formulacion_incompleta("voy de al Sol") == "Falta indicar el origen para planificar la ruta."
+    assert _aclaracion_formulacion_incompleta("quiero ir de") == "Falta indicar el origen y el destino para planificar la ruta."
+
+
+def test_se_parte_por_la_primera_aparicion_del_separador():
+    # «a las 8» no debe tomarse como destino: el destino es «Moncloa a las 8» y el origen «Sol».
+    assert _aclaracion_formulacion_incompleta("voy de Sol a Moncloa a las 8") is None
+    assert _aclaracion_formulacion_incompleta("voy de Sol a a") is None          # primera «a»: hay origen y destino
+
+
+def test_prompt_rutas_pide_la_tool_tambien_para_ir_en_bici():
+    prompt = " ".join(PROMPT_RUTAS.split())
+    assert "pide ir en bici" in prompt and "solicita planificar_ruta igualmente" in prompt
+    assert "la alternativa en BiciMAD si procede o el motivo por el que no se ofrece" in prompt
+    assert "no rechaces la petición por ser en bici" in prompt
+
+
+def test_ir_en_bici_llega_a_la_herramienta_con_origen_y_destino():
+    mensaje = "Como puedo ir en bici desde Cibeles hasta Plaza de España?"
+    assert _aclaracion_formulacion_incompleta(mensaje) is None
+    llm = LLMFalso([
+        {"tool": "planificar_ruta", "args": {"origen": "Cibeles", "destino": "Plaza de España"}},
+        {"final": "Ruta en transporte público y alternativa en BiciMAD según la herramienta."},
+    ])
+    ejecutor = EjecutorFalso({"planificar_ruta": json.dumps(RUTA_OK, ensure_ascii=False)})
+    salida = nodo_rutas(_estado(mensaje), llm, ejecutor)
+    assert ejecutor.llamadas == [("planificar_ruta", {"origen": "Cibeles", "destino": "Plaza de España"})]
+    assert "rechaces la petición por ser en bici" in llm.llamadas[0][0]["content"]       # el LLM recibe la regla
+    assert salida["notas"][-1].startswith("[rutas] Ruta en transporte público")
