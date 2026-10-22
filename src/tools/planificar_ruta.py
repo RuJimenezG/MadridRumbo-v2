@@ -8,6 +8,7 @@ import logging
 import math
 import re
 import time
+import unicodedata
 import urllib.request
 from datetime import datetime, timedelta, timezone
 from urllib.parse import urlencode
@@ -239,6 +240,31 @@ def misma_ubicacion(a: dict, b: dict) -> bool:
     return distancia_m(a["lat"], a["lon"], b["lat"], b["lon"]) <= config.RADIO_MISMA_UBICACION_M
 
 
+def _etiqueta(texto) -> str:
+    """Texto comparable: minúsculas, sin tildes, guiones como espacios y espacios simples."""
+    sin_tildes = unicodedata.normalize("NFD", str(texto).lower().replace("-", " "))
+    return " ".join("".join(c for c in sin_tildes if unicodedata.category(c) != "Mn").split())
+
+
+def mismo_lugar(a: dict, b: dict) -> bool:
+    """Indica si dos candidatos son el mismo lugar (spec 010, RF-44).
+
+    Sí si están a ≤ RADIO_MISMA_UBICACION_M, si su dirección es idéntica (la persona no podría distinguirlos) o si
+    ambos son el propio municipio con otra etiqueta: mismo `municipio` y el primer componente de cada dirección es
+    el nombre del municipio o su comienzo por palabras («Rivas» → «Rivas-Vaciamadrid»). Sin umbral de distancia.
+    """
+    if misma_ubicacion(a, b) or _etiqueta(a["direccion"]) == _etiqueta(b["direccion"]):
+        return True
+    municipio = a.get("municipio")
+    if not isinstance(municipio, str) or not municipio.strip() or municipio != b.get("municipio"):
+        return False
+    nombre = _etiqueta(municipio).split()
+    def es_municipio(c: dict) -> bool:
+        primero = _etiqueta(c["direccion"].split(",")[0]).split()
+        return bool(primero) and nombre[:len(primero)] == primero
+    return es_municipio(a) and es_municipio(b)
+
+
 def clasificar_candidatos(candidatos: list[dict]) -> dict:
     """Clasifica los resultados de Nominatim de una dirección.
 
@@ -259,11 +285,12 @@ def clasificar_candidatos(candidatos: list[dict]) -> dict:
     verificados = [c for c in dentro if verificar_candidato(c)]
     if verificados:
         dentro = verificados
-    # Resultados casi en el mismo punto (edificio y calle) son un solo lugar: se queda el primero,
+    # El mismo lugar (casi en el mismo punto, la misma dirección o el municipio con otra etiqueta, RF-44) cuenta una vez:
+    # se queda el primero,
     # que es el mejor clasificado por Nominatim.
     distintos = []
     for c in dentro:
-        if not any(misma_ubicacion(c, previo) for previo in distintos):
+        if not any(mismo_lugar(c, previo) for previo in distintos):
             distintos.append(c)
     if len(distintos) == 1:
         return {"estado": "ok", "elegido": distintos[0], "candidatos": distintos}
@@ -665,9 +692,11 @@ def _planificar_ruta(origen, destino, hora_salida, hora_llegada, titulo, opcion_
     trayecto = f"De «{lugar_o['direccion']}» a «{lugar_d['direccion']}»"
     # Spec 009, RF-20/22/27: sin hora pedida se consulta el tiempo actual del origen (importación perezosa) y, si no es
     # apto, la ruta se pide con menos tramos a pie. Con hora pedida o sin dato de clima la petición es la de siempre.
+    # Spec 010, RF-47: solo si la bici es posible por las reglas sin red (R1 hora pedida, R2 distancia).
+    from src.tools.bicimad import clima_origen, rechazo_oferta
+    hora_pedida = validacion["salida_rfc3339"] is not None or validacion["llegada_rfc3339"] is not None
     clima = None
-    if validacion["salida_rfc3339"] is None and validacion["llegada_rfc3339"] is None:
-        from src.tools.bicimad import clima_origen
+    if rechazo_oferta(lugar_o, lugar_d, hora_pedida) is None:
         clima = clima_origen(lugar_o)
     menos_a_pie = "LESS_WALKING" if clima and clima["estado"] == "ok" and not clima["apto"] else None
     google = consultar_google(lugar_o, lugar_d, validacion["salida_rfc3339"], validacion["llegada_rfc3339"],
@@ -704,18 +733,18 @@ def _planificar_ruta(origen, destino, hora_salida, hora_llegada, titulo, opcion_
     bloques = []   # spec 010, RF-6 a RF-8: textos literales que el sintetizador no puede omitir
     if "ok" in (tarifa["zona"]["estado"], tarifa["precio"]["estado"]):   # T5b (a): zona y precio, solo si existen
         bloques.append(_mensaje_tarifa(tarifa, interpretable))
-    if clima is not None:   # RF-24 y RF-26: línea del tiempo (si hay dato) y campo `clima`, solo sin hora pedida
+    if clima is not None:   # RF-24 y RF-26: línea del tiempo (si hay dato) y campo `clima`, solo si se consultó
         from src.tools.bicimad import texto_clima
         texto = f"{texto} {texto_clima(clima)}".rstrip()
         extra["clima"] = clima
         bloques.append(texto_clima(clima) or config.CLIMA_SIN_DATO_AVISO)   # RF-10: sin dato, el aviso de clima caído
     # Spec 009, RF-1/16/17: único punto de enganche de la alternativa en bici. No lanza y nunca cambia la ruta ni su estado.
     from src.tools.bicimad import alternativa_bici, linea_motivo_bici
-    bici, texto_bici = alternativa_bici(lugar_o, lugar_d, clima is None, clima)
+    bici, texto_bici = alternativa_bici(lugar_o, lugar_d, hora_pedida, clima)
     extra["bici"] = bici
     if texto_bici:
         texto = f"{texto} {texto_bici}"
-    bloques.append(texto_bici or linea_motivo_bici(bici, lugar_o, lugar_d, clima is None, clima))
+    bloques.append(texto_bici or linea_motivo_bici(bici, lugar_o, lugar_d, hora_pedida, clima))
     bloques = [b for b in bloques if b]
     if bloques:
         extra["bloques"] = bloques

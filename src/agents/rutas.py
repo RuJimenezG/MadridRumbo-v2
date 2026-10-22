@@ -13,6 +13,7 @@ import unicodedata
 from typing import Any, Callable, Mapping
 
 from src.reloj import ahora
+from src.supervisor_reglas import eleccion_tras_ambigua
 from src.tools.hora_actual import hora_actual
 
 
@@ -175,6 +176,17 @@ def nodo_rutas(
     aclaracion = _aclaracion_formulacion_incompleta(estado.get("mensaje"))
     if aclaracion is not None:
         return terminar(aclaracion)
+
+    # Spec 010, RF-46: respuesta solo con números tras una ambigua → misma llamada con las opciones, sin LLM.
+    args_eleccion = eleccion_tras_ambigua(estado)
+    if args_eleccion is not None:
+        try:
+            resultado = str(ejecutar("planificar_ruta", args_eleccion, traza))
+        except Exception:
+            resultado = "ERROR: no se pudo ejecutar planificar_ruta."
+            traza.append({"tool": "planificar_ruta", "args": args_eleccion, "status": "error", "preview": resultado})
+        resultado_ruta = (resultado, args_eleccion)
+        return terminar("Se ha planificado la ruta con las opciones elegidas.")
 
     args_replanificar = estado.get("replanificar_args")
     if isinstance(args_replanificar, Mapping):

@@ -1,4 +1,5 @@
 """Reglas deterministas del supervisor: fallback por palabras clave cuando el LLM falla."""
+import json
 import re
 import unicodedata
 
@@ -151,3 +152,75 @@ def elegir_roles_por_reglas(mensaje: str) -> list[str]:
         roles.add("rutas")
 
     return [rol for rol in ORDEN_FALLBACK if rol in roles]
+
+
+# Spec 010, T16 (RF-45 y RF-46): elección de opción tras una ruta ambigua. El historial solo guarda los mensajes de la
+# persona, así que ni el supervisor ni el LLM de rutas ven las opciones: «2 y 2» parecía una suma.
+_PALABRAS_ELECCION = {"y", "e", "la", "el", "las", "los", "opcion", "opciones", "numero", "origen", "destino", "para", "en"}
+
+
+def interpretar_eleccion(mensaje: object) -> dict | None:
+    """`{"origen", "destino", "sueltos"}` si el mensaje solo contiene 1 o 2 números de opción; si no, None.
+
+    «origen N» / «destino M» asignan su extremo; sin etiquetas, dos números son origen y destino y uno queda «suelto».
+    """
+    if not isinstance(mensaje, str):
+        return None
+    tokens = re.findall(r"[a-zñ]+|\d+|[^\sa-zñ\d]", _texto_normalizado(mensaje))
+    if any(t.isalpha() and t not in _PALABRAS_ELECCION for t in tokens) or set(tokens) & set("+-*/=×"):
+        return None
+    eleccion: dict = {"origen": None, "destino": None, "sueltos": []}
+    etiqueta = None
+    for t in tokens:
+        if t in ("origen", "destino"):
+            etiqueta = t
+        elif t.isdigit():
+            if etiqueta:
+                eleccion[etiqueta], etiqueta = int(t), None
+            else:
+                eleccion["sueltos"].append(int(t))
+    total = len(eleccion["sueltos"]) + (eleccion["origen"] is not None) + (eleccion["destino"] is not None)
+    if not 1 <= total <= 2:
+        return None
+    if len(eleccion["sueltos"]) == 2:   # «N y M»: el orden es origen y destino
+        eleccion["origen"], eleccion["destino"] = eleccion["sueltos"]
+        eleccion["sueltos"] = []
+    return eleccion
+
+
+def eleccion_tras_ambigua(estado) -> dict | None:
+    """Argumentos para repetir `planificar_ruta` con las opciones elegidas, o None si no aplica (RF-45, RF-46).
+
+    Solo si el último resultado de `planificar_ruta` es `ambigua` y del turno anterior (sin marca de turno se acepta).
+    """
+    eleccion = interpretar_eleccion(estado.get("mensaje"))
+    resultados = estado.get("resultados")
+    if eleccion is None or not isinstance(resultados, list):
+        return None
+    previo = next((r for r in reversed(resultados) if isinstance(r, dict) and r.get("tool") == "planificar_ruta"), None)
+    if previo is None or not isinstance(previo.get("args"), dict):
+        return None
+    try:
+        datos = json.loads(previo.get("resultado"))
+    except (TypeError, ValueError):
+        return None
+    if not isinstance(datos, dict) or datos.get("estado") != "ambigua":
+        return None
+    historial = estado.get("historial")
+    if "turno" in previo and isinstance(historial, list):
+        turno_actual = sum(1 for m in historial if isinstance(m, dict) and m.get("role") == "user")
+        if previo["turno"] != turno_actual - 1:
+            return None
+    candidatos = datos.get("candidatos") if isinstance(datos.get("candidatos"), dict) else {}
+    ambiguos = [rol for rol in ("origen", "destino") if candidatos.get(rol)]
+    if eleccion["sueltos"]:
+        if len(ambiguos) != 1:
+            return None
+        eleccion[ambiguos[0]] = eleccion["sueltos"][0]
+    descartar = {"opcion_origen", "opcion_destino", "probable_origen", "probable_destino",
+                 "texto_alternativo_origen", "texto_alternativo_destino"}
+    args = {k: v for k, v in previo["args"].items() if k not in descartar}
+    for rol in ("origen", "destino"):
+        if eleccion[rol] is not None:
+            args[f"opcion_{rol}"] = eleccion[rol]
+    return args

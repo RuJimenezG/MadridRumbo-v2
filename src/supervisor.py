@@ -20,6 +20,7 @@ from src.modelos import ErrorProveedorModelo, crear_modelo_supervisor
 from src.supervisor_reglas import (
     MENSAJE_REFORMULACION,
     completar_rutas_con_extremos,
+    eleccion_tras_ambigua,
     elegir_roles_por_reglas,
 )
 
@@ -160,6 +161,10 @@ def decidir_decision_supervisor(
     tiene_imagen_valida: bool = False,
 ) -> DecisionSupervisor:
     """Clasifica la decisión del Supervisor antes de usar el fallback seguro."""
+    # Spec 010, RF-45: tras una ruta ambigua, «2 y 2» o «1» eligen opción; sin ver las opciones el LLM lo toma por un cálculo.
+    if eleccion_tras_ambigua(estado) is not None:
+        return DecisionSupervisor(roles=["rutas"], uso_fallback=False, categoria="sin_fallback",
+                                  resumen=RESUMENES_DIAGNOSTICO["sin_fallback"])
     try:
         modelo_efectivo = modelo or crear_modelo_supervisor()
         respuesta = modelo_efectivo(_mensajes_para_modelo(estado))

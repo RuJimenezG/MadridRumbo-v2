@@ -1,6 +1,6 @@
 # Spec 010 — Lugares, bloques literales y precio en `planificar_ruta`
 
-> Estado: **Borrador** (Fases A y B implementadas 2026-10-21, con dobles; pendientes de aprobar; ver `validacion.md`) · Fecha: 2026-10-21
+> Estado: **Borrador** (Fases A y B implementadas 2026-10-21; T16 el 2026-10-22, con dobles; pendientes de aprobar; ver `validacion.md`) · Fecha: 2026-10-21
 > Cambia comportamiento de las specs 004 (RF-27, en Fase B) y 009 (RF-4, RF-13, RF-16, RF-23 y RF-25, en Fase A). Ver «Cambios explícitos sobre specs anteriores». No se edita ninguna spec anterior.
 
 ## Contexto y objetivo
@@ -144,6 +144,16 @@ Causa del resumen repetido: tras `pausa_hitl`, `aceptar_plan` conserva el plan y
 
 Tensión con la spec 005, asumida: RF-31 pide que la aprobación «devuelva su resultado»; la respuesta confirma la aprobación sin repetir la ruta. El plan elegido sigue disponible en `plan_aprobado` y en las notas del contexto del LLM.
 
+#### Elección tras una ambigua, duplicados y clima solo si la bici es posible (T16, 2026-10-22)
+
+Diagnóstico (logs reales, sin llamadas nuevas): (1) Streamlit «Plaza de Cataluña → Sol» mostró dos opciones idénticas («Puerta del Sol») y la respuesta «2 y 2» fue a `calculadora`: el `historial` solo guarda los mensajes de la persona (`_registrar_mensaje`, `src/graph.py`), así que el supervisor y el LLM de rutas no ven las opciones y «2 y 2» parece una suma; el LLM de rutas, sin saber qué extremo era el ambiguo, volvió a llamar sin `opcion_*` (o con una que no cuadraba) y la herramienta devolvió otra vez `ambigua`. (2) CLI «Plaza Castilla → Rivas»: «Rivas» y «Rivas-Vaciamadrid» (mismo municipio) a más de `RADIO_MISMA_UBICACION_M` no se fusionaron. (3) El clima se consulta antes de comprobar la distancia de la bici (R2), por eso salieron a la vez `CLIMA_SIN_DATO_AVISO` y «fuera de rango». (4) `clima_origen` solo registra en el log las excepciones; un HTTP distinto de 200 o datos incompletos devuelven `no_disponible` sin dejar rastro.
+
+- RF-44: EL SISTEMA trata como **el mismo lugar** dos candidatos (y deja el primero, el mejor clasificado por Nominatim) si: (a) están a ≤ `RADIO_MISMA_UBICACION_M` (como hasta ahora); o (b) su `direccion` es idéntica sin distinguir mayúsculas, tildes ni espacios (la persona no puede distinguirlos); o (c) ambos tienen el mismo `municipio` y el primer componente de su `direccion` (antes de la primera coma), normalizado (sin mayúsculas ni tildes, guiones como espacios), es el nombre del municipio o su comienzo por palabras completas («Rivas» → «Rivas-Vaciamadrid»). El criterio (c) no usa umbral numérico: los dos representan el **propio municipio** con otra etiqueta; las calles o lugares del municipio («Calle de Rivas», «Plaza Mayor») no lo cumplen. Se aplica después del filtro de la Comunidad de Madrid (RF-34): si queda un único lugar, el extremo no es ambiguo.
+- RF-45: SI el último resultado de `planificar_ruta` de la conversación es `ambigua` y es del turno anterior (marca `turno`; sin marca se acepta), Y el mensaje solo contiene números de opción con, como mucho, las palabras «y», «e», «la», «el», «las», «los», «opción/opciones», «número», «origen», «destino», «para», «en» y puntuación, ENTONCES EL SUPERVISOR encola solo `rutas`, sin llamar al LLM ni a las reglas por palabras. Ejemplos: «2 y 2», «1», «la 2 y la 1», «origen 2, destino 1».
+- RF-46: EN ese caso, EL ESPECIALISTA de rutas no llama al LLM: repite `planificar_ruta` con los argumentos del resultado ambiguo (mismos textos originales, horas y `titulo`, sin `opcion_*` anteriores, `probable_*` ni `texto_alternativo_*`) y las opciones así: con etiquetas «origen N»/«destino M», cada una a su extremo; sin etiquetas y dos números «N y M», `opcion_origen=N` y `opcion_destino=M` (una opción en un extremo no ambiguo la ignora la herramienta, como hasta ahora); un solo número, al extremo ambiguo si solo hay uno. Si los dos extremos eran ambiguos y llega un solo número, o hay más de dos números, no se interpreta y se sigue el flujo normal (LLM).
+- RF-47: EL SISTEMA solo consulta el clima si se podría ofrecer la bici por las reglas sin red: sin hora pedida (R1) y con la distancia en el rango de la bici (R2, `BICI_DISTANCIA_MIN_M` a `BICI_DISTANCIA_MAX_M`). Si la bici se rechaza por distancia, no hay consulta a Open-Meteo, ni línea del clima, ni `CLIMA_SIN_DATO_AVISO`, ni `LESS_WALKING`; `bloques` lleva solo el motivo de R2. `CLIMA_SIN_DATO_AVISO` solo aparece cuando la bici sigue su flujo con el clima no disponible.
+- RF-48: SI la consulta del clima no da un dato utilizable, ENTONCES EL SISTEMA registra en el log una **categoría** de causa: `sin_coordenadas`, `http_<código>`, `respuesta_invalida`, `datos_incompletos`, `timeout`, `tls`, `red` o `error` (otra excepción), más el tipo de la excepción y, en un `URLError`, su `reason` (RF-11). Nunca la URL, las coordenadas, claves ni el cuerpo de la respuesta.
+
 ### Cambios explícitos sobre specs anteriores
 
 - **Spec 004, RF-27** («no asume ninguna ubicación por defecto para el origen ni el destino»): **se revierte conscientemente en la Fase B** (RF-21 a RF-24). Con la capa 2, el LLM puede elegir una opción o proponer un texto alternativo cuando la entrada no es válida por segunda vez. Siempre se declara qué se usó y cómo corregirlo. En Fase A no cambia.
@@ -151,6 +161,9 @@ Tensión con la spec 005, asumida: RF-31 pide que la aprobación «devuelva su r
 - **Spec 009, RF-25** («sin dato de clima no se ofrece bici»): **cambia** (RF-10): con el clima no disponible, la bici se ofrece con un aviso. **Spec 009, RF-23** se mantiene para el mal tiempo (RF-9).
 - **Spec 009, RF-4, RF-13 y RF-16** (el `mensaje` solo habla de la bici en R3/R4/no disponible/ok): el `mensaje` no añade nada nuevo salvo que la frase de «no disponible» es ahora la de su causa (RF-27); los motivos de R0, R1 y R2 viajan solo en `bloques` (RF-7).
 - **Spec 004, RF-49** (como máximo 2 llamadas al RAG): pasa a 3 (RF-38). **RF-52** (sin zona no se consulta el precio): el precio se consulta igualmente, porque la pregunta ya no depende de la zona (RF-36); sin zona no hay segundo intento. **RF-53** (el texto de zona entra en la pregunta de precio y, si supera `ZONA_LONGITUD_MAX`, no se consulta el precio): ahora solo condiciona el segundo intento (RF-37). **RF-46** (el precio se pregunta con la zona): el primer intento es sin zona.
+- **Spec 009, RF-20 y RF-22** (sin hora pedida se consulta el clima y, si no es apto, la ruta se pide con `LESS_WALKING`): **cambia** por RF-47: en trayectos fuera del rango de la bici no se consulta el clima, no hay línea del tiempo y la ruta en transporte público se pide sin `LESS_WALKING` aunque llueva. **Spec 010, RF-8 y caso límite «Clima no disponible y mal trayecto para bici (distancia…)»**: con la distancia fuera de rango ya no conviven las dos líneas (sí con R3/R4, que se deciden tras la EMT).
+- **Spec 004, RF-8 y RF-10** (ambigua con candidatos distintos; mismo punto a ≤ 100 m): se amplía la deduplicación (RF-44).
+- **Spec 005, supervisor** (decide el LLM y, si falla, las reglas): tras una ambigua, una respuesta solo con números decide `rutas` de forma determinista (RF-45).
 - **Spec 009, contrato de `bici`**: gana el campo aditivo `causa` en `no_disponible` (RF-27); los tests que comparaban el dict completo se ajustaron.
 
 ## Requisitos no funcionales
@@ -170,7 +183,7 @@ Tensión con la spec 005, asumida: RF-31 pide que la aprobación «devuelva su r
 - Ruta ambigua en un extremo y no encontrada en el otro: `bloques` lleva las dos frases (RF-5).
 - Varias rutas en un turno (replanificación): el sintetizador añade los bloques de cada una sin repetir textos idénticos (RF-13, RF-14).
 - Resultado de la herramienta que no es JSON (`ERROR: no se pudo ejecutar planificar_ruta.`): se ignora en el volcado (RF-15).
-- Clima no disponible y mal trayecto para bici (distancia, estaciones): la línea de RF-10 y el motivo de la bici conviven en `bloques` (RF-7, RF-8).
+- Clima no disponible y mal trayecto para bici por estaciones (R3/R4): la línea de RF-10 y el motivo de la bici conviven en `bloques` (RF-7, RF-8). Por distancia (R2) no se consulta el clima (RF-47).
 
 ## Fuera de alcance
 

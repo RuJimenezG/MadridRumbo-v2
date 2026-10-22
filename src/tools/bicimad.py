@@ -7,6 +7,7 @@ import json
 import logging
 import math
 import re
+import socket
 import ssl
 import time
 import urllib.error
@@ -348,36 +349,55 @@ def _numero(x) -> bool:
     return isinstance(x, (int, float)) and not isinstance(x, bool) and math.isfinite(x)
 
 
+def _causa_excepcion_clima(e: Exception) -> str:
+    """Categoría de un fallo de red de Open-Meteo (spec 010, RF-48): timeout, tls, red o error."""
+    causa = e.reason if isinstance(e, urllib.error.URLError) else e
+    if isinstance(causa, (TimeoutError, socket.timeout)) or "timed out" in str(causa).lower():
+        return "timeout"
+    if isinstance(causa, ssl.SSLError):
+        return "tls"
+    if isinstance(e, OSError):
+        return "red"
+    return "error"
+
+
 def clima_origen(origen: dict) -> dict:
     """Tiempo actual del origen con Open-Meteo: una llamada, sin clave ni reintentos (RF-20, RF-25, RF-26).
 
     Devuelve `{"estado": "ok", temperatura_c, precipitacion_mm, codigo, viento_kmh, apto, motivos, fuente, licencia}`
     o `{"estado": "no_disponible"}` si falla algo o falta alguna de las cuatro variables. Nunca lanza.
+    Cada fallo deja en el log su categoría (spec 010, RF-48), sin URL, coordenadas ni cuerpo.
     """
     fallo = {"estado": "no_disponible"}
+
+    def fallar(causa: str, detalle: str = "") -> dict:
+        logger.warning("Open-Meteo no disponible: causa=%s%s", causa, detalle)
+        return fallo
+
     try:
         if not (isinstance(origen, dict) and _numero(origen.get("lat")) and _numero(origen.get("lon"))):
-            return fallo
+            return fallar("sin_coordenadas")
         consulta = urllib.parse.urlencode({
             "latitude": origen["lat"], "longitude": origen["lon"],
             "current": "temperature_2m,precipitation,weather_code,wind_speed_10m"})
         estado, cuerpo = _get_json(f"{config.OPEN_METEO_URL}?{consulta}", timeout=config.OPEN_METEO_TIMEOUT_S,
                                    contexto_certifi=True)
-        if estado != 200 or not isinstance(cuerpo, dict) or not isinstance(cuerpo.get("current"), dict):
-            return fallo
+        if estado != 200:
+            return fallar(f"http_{estado}")
+        if not isinstance(cuerpo, dict) or not isinstance(cuerpo.get("current"), dict):
+            return fallar("respuesta_invalida")
         actual = cuerpo["current"]
         temp, lluvia, codigo, viento = (actual.get(k) for k in
                                         ("temperature_2m", "precipitation", "weather_code", "wind_speed_10m"))
         if not (_numero(temp) and _numero(lluvia) and _numero(viento) and isinstance(codigo, int)
                 and not isinstance(codigo, bool)):
-            return fallo
+            return fallar("datos_incompletos")
         apto, motivos = apto_exterior(temp, lluvia, codigo, viento)
         return {"estado": "ok", "temperatura_c": temp, "precipitacion_mm": lluvia, "codigo": codigo,
                 "viento_kmh": viento, "apto": apto, "motivos": motivos, "fuente": "Open-Meteo", "licencia": "CC BY 4.0"}
     except Exception as e:  # noqa: BLE001 - sin detalles: solo el tipo de la excepción y, en un URLError, su `reason`
         motivo = f" ({e.reason})" if isinstance(e, urllib.error.URLError) else ""
-        logger.warning("Open-Meteo no disponible: %s%s", type(e).__name__, motivo)
-        return fallo
+        return fallar(_causa_excepcion_clima(e), f" {type(e).__name__}{motivo}")
 
 
 def texto_clima(clima: dict) -> str:

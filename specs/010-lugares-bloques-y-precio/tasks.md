@@ -64,3 +64,8 @@
 
 - [x] T15. *(hecha 2026-10-21)* Tras aprobar el plan, el sintetizador (mismo nodo, con el LLM) recibe la nota «El plan ya se mostró; confirma brevemente la aprobación sin repetir la ruta.» y no se vuelven a añadir bloques ni avisos (RF-42). La rama se identifica por el nodo, no por `plan_aprobado` (RF-43). Tests primero; sin tocar tests existentes.
       Hecho cuando: pasan `tests/test_sintetizador_aprobacion.py` (tras aprobar, el contexto lleva la nota y no los textos de los bloques; la respuesta es la del modelo sin bloques ni avisos; sin aprobación nada cambia aunque `plan_aprobado` siga puesto; con varios planes sigue exigiendo elegir; el turno siguiente a la aprobación vuelve al comportamiento normal), los dos tests de HITL existentes citados en el plan siguen en verde y `python -m pytest` en verde.
+
+## Elección tras ambigua, duplicados y clima (T16)
+
+- [x] T16. *(hecha 2026-10-22; logs reales de Streamlit y CLI, sin llamadas nuevas)* Tests primero y: (a) `mismo_lugar` en `clasificar_candidatos` (RF-44); (b) `eleccion_tras_ambigua` en `src/supervisor_reglas.py`, usada por el supervisor (solo `rutas`, sin LLM; RF-45) y por `nodo_rutas` (repite la llamada con las opciones, sin LLM; RF-46); (c) clima solo sin R1 ni R2 y `hora_pedida` real a la bici (RF-47); (d) categoría de causa en el log del clima (RF-48).
+      Hecho cuando: pasan `tests/test_eleccion_tras_ambigua.py`, `tests/test_candidatos_duplicados.py` y `tests/test_clima_solo_si_bici.py`; `python -m pytest` en verde.

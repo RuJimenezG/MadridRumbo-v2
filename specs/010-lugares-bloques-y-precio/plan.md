@@ -238,6 +238,16 @@ consultar_tarifa(origen, destino, titulo):
 
 Código muerto tras T13: en `_mensaje_tarifa`, las ramas «no se pudo usar la zona devuelta» y «Faltan la zona y el precio» ya no se alcanzan desde `consultar_tarifa` (el precio solo se omite con título no interpretable o sin municipios). Se dejan (tienen tests propios) y quedan como limpieza futura.
 
+## T16 — elección tras ambigua, duplicados y clima (2026-10-22)
+
+- `src/tools/planificar_ruta.py`: `mismo_lugar(a, b)` (distancia, dirección idéntica normalizada o etiqueta del propio municipio) sustituye a `misma_ubicacion` en el dedupe de `clasificar_candidatos` (RF-44). `misma_ubicacion` sigue igual para origen = destino.
+- `src/supervisor_reglas.py`: `interpretar_eleccion(mensaje)` (números y palabras permitidas → `{"origen", "destino", "sueltos"}` o None) y `eleccion_tras_ambigua(estado)` (último resultado de `planificar_ruta` ambiguo del turno anterior → argumentos de la nueva llamada o None). Puro, sin red.
+- `src/supervisor.py`: antes del LLM, si `eleccion_tras_ambigua` devuelve argumentos, la cola es `["rutas"]` (RF-45).
+- `src/agents/rutas.py`: tras el atajo de aclaración, si hay elección, ejecuta la herramienta con esos argumentos sin LLM (RF-46), como ya hace con `replanificar_args`.
+- `_planificar_ruta`: `hora_pedida` explícita; `clima_origen` solo si `rechazo_oferta(...) is None` (RF-47); `alternativa_bici` y `linea_motivo_bici` reciben `hora_pedida` (antes `clima is None`, que mezclaba «sin clima» con «hora pedida»).
+- `bicimad.clima_origen`: `logger.warning("Open-Meteo no disponible: causa=...")` en cada salida sin dato (RF-48).
+- Causa raíz no corregida (fuera de alcance): el `historial` no guarda las respuestas del asistente; el supervisor y los LLM de especialistas no ven las opciones mostradas. RF-45 y RF-46 lo esquivan para la elección de opción. Guardarlas cambia el contrato del estado (spec 005) y el contexto de todos los LLM: mejora futura.
+
 ## Riesgos
 
 - **Prompt frágil.** RF-18 es una instrucción al LLM: puede no cumplirse. Por eso lo crítico (opciones, bici, clima, motivo) lo fuerza el sintetizador (RF-13), no el prompt.
@@ -265,6 +275,9 @@ Código muerto tras T13: en `_mensaje_tarifa`, las ramas «no se pudo usar la zo
 | RF-25 a 28 | Zona, precio, `causa`, ficha | `test_bloques_ruta.py`, `test_catalogo_roles.py` |
 | RF-29, 30 | Regla de exclusión y `completar_rutas_con_extremos` | `test_catalogo_roles.py`, `test_supervisor_ruta_con_extremos.py` |
 | RF-31, 32 | `SEPARADORES_DESTINO` y `PROMPT_RUTAS` | `test_especialista_rutas.py` |
+| RF-44 | `mismo_lugar` en `clasificar_candidatos` | `test_candidatos_duplicados.py` |
+| RF-45, 46 | `eleccion_tras_ambigua`, supervisor y `nodo_rutas` | `test_eleccion_tras_ambigua.py` |
+| RF-47, 48 | clima tras R1/R2, log por categoría | `test_clima_solo_si_bici.py` |
 
 ## Fase C (solo documentada, no es parte de esta spec)
 
