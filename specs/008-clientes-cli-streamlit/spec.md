@@ -66,6 +66,10 @@ Esta spec define los dos clientes como **capas finas** sobre el grafo: muestran 
 - RF-23: CUANDO la persona pulsa «Nueva conversación», EL SISTEMA crea un identificador nuevo y vacía el historial y el estado en pantalla.
 - RF-24: EL SISTEMA ofrece un panel de depuración desplegable con el registro de especialistas, la traza de tools, el identificador de conversación y los indicadores de plan pendiente y de conversación terminada.
 - RF-25: SI el grafo falla, ENTONCES EL SISTEMA muestra un mensaje de error en español sin perder el historial.
+- RF-38: CUANDO la persona envía un mensaje en la web, EL SISTEMA lo muestra en el chat de inmediato, sin esperar a la respuesta del grafo, y muestra un indicador de espera hasta que llega la respuesta.
+- RF-39: EL SISTEMA muestra bajo cada respuesta del asistente en la web un desplegable «Pasos seguidos» con las tools ejecutadas en ese turno (nombre, estado y extracto) y las entradas del registro que no sean diagnósticos técnicos del supervisor (RF-35).
+- RF-40: EL SISTEMA conserva los pasos de cada turno junto a su respuesta, de modo que el desplegable de una respuesta anterior no cambia con los turnos siguientes.
+- RF-41: SI un turno no ejecutó ninguna tool ni dejó ninguna entrada de registro visible, ENTONCES EL SISTEMA no muestra el desplegable «Pasos seguidos» en esa respuesta.
 
 ### Contrato común
 
@@ -128,6 +132,9 @@ Esta spec define los dos clientes como **capas finas** sobre el grafo: muestran 
 Ninguna. Cerrada: **alcance de RF-35.** Los diagnósticos del supervisor se ocultan en toda la web de Streamlit (chat y panel de depuración), la lectura más estricta de la spec 006, y se muestran solo en el CLI.
 
 ## Decisiones tomadas
+
+- **Pasos seguidos (2026-10-22, incidencia #19).** El CLI ya muestra en cada turno el registro y la traza (RF-15) y no cambia. La web pasa a mostrarlos bajo cada respuesta (RF-39 a RF-41), con el filtro de RF-35. Solo se dispone de lo que el contrato de seis claves expone: la traza de tools y el registro. El recorrido por especialistas (qué rol actuó) no es visible hasta que el grafo lo exponga, y eso lo decide su autor.
+- **Mensaje visible al enviar (2026-10-22).** Streamlit solo dibujaba el mensaje al terminar el turno, porque el historial se pinta antes de llamar al grafo. Ahora se dibuja la burbuja de la persona y un indicador de espera antes de llamarlo (RF-38).
 
 - **Contrato con el grafo (2026-10-15).** Se propone en el plan un contrato basado en el enunciado. Como el grafo real aún no existe, se toma como propuesta y se ajustará cuando se suba el real.
 - **Streamlit con plan pendiente (2026-10-15).** Se bloquea el cuadro de mensaje hasta que se apruebe o se rechace el plan (RF-22b).

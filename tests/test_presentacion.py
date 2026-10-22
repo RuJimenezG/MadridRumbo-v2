@@ -239,3 +239,53 @@ def test_la_depuracion_tambien_puede_ocultar_las_tecnicas():
     assert datos_depuracion(estado, "h")["log"] == LOG_CON_TECNICAS
     oculto = datos_depuracion(estado, "h", ocultar_tecnicas=True)["log"]
     assert oculto == ["[supervisor] -> rutas", "[rutas] nota lista"]
+
+
+# --- Pasos seguidos (spec 008, RF-39, RF-40 y RF-41) ---
+
+DIAGNOSTICO = "Supervisor: categoria=sin_fallback; resumen=Decisión estructurada validada."
+
+
+def test_pasos_numeran_las_tools_con_nombre_estado_y_extracto():
+    # RF-39: cada tool ejecutada aparece numerada con su nombre, su estado y un extracto.
+    from src.clientes.presentacion import pasos_del_turno
+
+    assert pasos_del_turno([], ESTADO["traza"]) == [
+        "1. hora_actual [ok] Hoy es jueves",
+        "2. rag_ask [error] ERROR",
+    ]
+
+
+def test_pasos_incluyen_el_registro_antes_de_las_tools():
+    # RF-39: el registro de especialistas va primero y las tools después.
+    from src.clientes.presentacion import pasos_del_turno
+
+    pasos = pasos_del_turno(ESTADO["log"], ESTADO["traza"])
+    assert pasos[:2] == ESTADO["log"]
+    assert pasos[2].startswith("1. hora_actual")
+
+
+def test_pasos_ocultan_el_diagnostico_del_supervisor_por_defecto():
+    # RF-39 y RF-35: la web no muestra los diagnósticos técnicos; el CLI puede pedirlos.
+    from src.clientes.presentacion import pasos_del_turno
+
+    log = [DIAGNOSTICO, "[horarios] nota lista"]
+    assert pasos_del_turno(log, []) == ["[horarios] nota lista"]
+    assert pasos_del_turno(log, [], ocultar_tecnicas=False) == log
+
+
+def test_pasos_vacios_sin_tools_ni_registro_visible():
+    # RF-41: sin nada que mostrar no hay pasos, ni siquiera con solo un diagnóstico oculto.
+    from src.clientes.presentacion import pasos_del_turno
+
+    assert pasos_del_turno([], []) == []
+    assert pasos_del_turno([DIAGNOSTICO], []) == []
+
+
+def test_pasos_recortan_el_extracto_largo():
+    # RF-39: el extracto de cada tool tiene la misma longitud máxima que en el CLI.
+    from src.clientes.presentacion import PREVIEW_MAX, pasos_del_turno
+
+    largo = "x" * (PREVIEW_MAX + 50)
+    (linea,) = pasos_del_turno([], [{"tool": "rag_ask", "args": {}, "status": "ok", "preview": largo}])
+    assert linea == f"1. rag_ask [ok] {'x' * PREVIEW_MAX}"

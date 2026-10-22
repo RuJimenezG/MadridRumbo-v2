@@ -269,3 +269,40 @@ def test_el_estado_de_la_sesion_no_se_ensucia_con_el_plan_elegido():
     sesion.decidir(True, plan_id="ruta-2")
     assert "plan_id_seleccionado" not in sesion.estado
     assert sesion.historial[-1]["rol"] == "error"
+
+
+# --- Pasos de cada respuesta (spec 008, RF-40) ---
+
+class AgenteConPasos:
+    """Agente de prueba: cada turno devuelve su propio registro y su propia traza."""
+
+    def procesar_turno(self, estado, mensaje, thread_id):
+        return {
+            **estado_vacio(),
+            "respuesta": f"Respuesta a {mensaje}",
+            "log": [f"[horarios] nota de {mensaje}"],
+            "traza": [{"tool": "hora_actual", "args": {}, "status": "ok", "preview": mensaje}],
+        }
+
+
+def test_cada_respuesta_guarda_el_registro_y_la_traza_de_su_turno():
+    # RF-40: los pasos de un turno quedan junto a su respuesta y los turnos siguientes no los cambian.
+    sesion = SesionChat(AgenteConPasos())
+    sesion.enviar("uno")
+    sesion.enviar("dos")
+    primera, segunda = [e for e in sesion.historial if e["rol"] == "asistente"]
+    assert primera["log"] == ["[horarios] nota de uno"]
+    assert primera["traza"][0]["preview"] == "uno"
+    assert segunda["log"] == ["[horarios] nota de dos"]
+    assert segunda["traza"][0]["preview"] == "dos"
+
+
+def test_los_pasos_guardados_son_una_copia_del_estado():
+    # RF-40: cambiar el estado de la sesión después no altera lo guardado en el historial.
+    sesion = SesionChat(AgenteConPasos())
+    sesion.enviar("uno")
+    sesion.estado["log"].append("otra cosa")
+    sesion.estado["traza"].clear()
+    respuesta = sesion.historial[-1]
+    assert respuesta["log"] == ["[horarios] nota de uno"]
+    assert len(respuesta["traza"]) == 1
