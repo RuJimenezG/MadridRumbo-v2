@@ -13,7 +13,7 @@ import streamlit as st
 
 from src.clientes.cargar import GrafoNoDisponible, cargar_agente
 from src.clientes.planes import ids_de_planes, resumir_plan
-from src.clientes.presentacion import datos_depuracion
+from src.clientes.presentacion import datos_depuracion, pasos_del_turno
 from src.clientes.sesion import SesionChat
 
 st.set_page_config(page_title="MadridRumbo", page_icon="assets/icono.png")
@@ -76,6 +76,13 @@ for entrada in sesion.historial:
     else:
         with st.chat_message("user" if entrada["rol"] == "usuario" else "assistant"):
             st.write(entrada["texto"])
+            if entrada["rol"] == "asistente":
+                # Pasos de ese turno: tools y registro visible, sin los diagnósticos del supervisor (RF-39 a RF-41).
+                pasos = pasos_del_turno(entrada.get("log", []), entrada.get("traza", []), ocultar_tecnicas=True)
+                if pasos:
+                    with st.expander("Pasos seguidos"):
+                        for linea in pasos:
+                            st.text(linea)
 
 # Con un plan pendiente el cuadro de mensaje queda bloqueado hasta aprobar o rechazar (RF-22b).
 mensaje = st.chat_input(
@@ -86,5 +93,10 @@ if sesion.puede_decidir:
     st.info("Hay un plan pendiente: apruébalo o recházalo en la barra lateral para continuar.")
 
 if mensaje:
-    sesion.enviar(mensaje)
+    # El historial se dibuja antes de llamar al grafo: sin esto la pregunta no aparecería hasta recibir la
+    # respuesta. Se dibuja la burbuja de la persona y un indicador de espera mientras responde (RF-38).
+    with st.chat_message("user"):
+        st.write(mensaje)
+    with st.chat_message("assistant"), st.spinner("Consultando al asistente..."):
+        sesion.enviar(mensaje)
     st.rerun()

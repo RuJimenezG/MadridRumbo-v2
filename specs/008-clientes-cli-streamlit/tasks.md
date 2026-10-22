@@ -94,3 +94,22 @@
        Archivos: `specs/008-clientes-cli-streamlit/validacion.md`.
        Hecho cuando: se sustituye la limitación resuelta de imagen por la evidencia de T36 y T37 y se registra la comprobación manual de Streamlit en modo simulado: escribir el literal, comprobar que se conserva en el historial y que no se realiza ninguna selección de archivo. `python -m pytest` termina correctamente; no se inicia Streamlit ni se usan APIs durante las pruebas automatizadas.
        Estado: completada el 2026-10-19. La comprobación manual queda descrita sin iniciar Streamlit; `python -m pytest -q` termina correctamente sin proveedores.
+
+## Cambio 2026-10-22: mensaje visible al enviar y pasos seguidos en la web (incidencia #19)
+
+- [x] T39. Escribir los tests de la función de pasos y de la sesión. (RF-39, RF-40, RF-41)
+       Archivos: `tests/test_presentacion.py`, `tests/test_sesion.py`.
+       Hecho cuando: hay tests en rojo de `pasos_del_turno` (tools numeradas, filtro del supervisor, vacío sin pasos) y de que la sesión guarda el registro y la traza de cada respuesta.
+- [x] T40. Implementar `pasos_del_turno` y guardar registro y traza en el historial de la sesión. (RF-39, RF-40, RF-41)
+       Archivos: `src/clientes/presentacion.py`, `src/clientes/sesion.py`.
+       Hecho cuando: los tests de T39 pasan y `python -m pytest -q` sigue en verde.
+- [x] T41. Escribir los tests de Streamlit con `AppTest`. (RF-38, RF-39, RF-40, RF-41)
+       Archivos: `tests/test_app_streamlit.py`.
+       Hecho cuando: hay tests en rojo de que la burbuja del usuario y el indicador de espera se dibujan antes de llamar al grafo, del desplegable «Pasos seguidos» y de que no aparece sin pasos.
+- [x] T42. Modificar `app.py`. (RF-38, RF-39, RF-40, RF-41)
+       Archivos: `app.py`.
+       Hecho cuando: los tests de T41 pasan y `python -m pytest -q` sigue en verde.
+- [x] T43. Actualizar la validación y el README. (RF-38 a RF-41)
+       Archivos: `specs/008-clientes-cli-streamlit/validacion.md`, `README.md`.
+       Hecho cuando: cada RF nuevo tiene su evidencia y el README describe el desplegable.
+       Estado: completada el 2026-10-22. T39 a T43 hechas con tests primero; la suite da 936 passed y 5 failed, los 5 son `tests/test_bicimad.py` de la PR #16 (dependen de credenciales de la EMT en el entorno) y no tocan los clientes.

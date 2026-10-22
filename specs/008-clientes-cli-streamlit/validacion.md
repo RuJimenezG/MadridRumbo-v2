@@ -1,7 +1,7 @@
 # Validación — Spec 008
 
-> Fecha: 2026-10-19 · Resultado de `python -m pytest -q`: correcto, sin
-> errores ni llamadas a API.
+> Fecha: 2026-10-19 · Actualizada el 2026-10-22 (RF-38 a RF-41) · Resultado de `python -m pytest -q`: 936 passed, 5 failed
+> (los 5 son de `tests/test_bicimad.py`, ajenos a los clientes), sin llamadas a API.
 
 | RF | Cómo se comprueba | Test o comprobación manual | Resultado |
 |---|---|---|---|
@@ -43,6 +43,10 @@
 | RF-35 | Automático + manual | `tests/test_planes.py::test_entradas_tecnicas`, `tests/test_presentacion.py::test_ocultar_tecnicas`, `tests/test_cli.py::test_el_cli_muestra_las_entradas_tecnicas_del_supervisor`, `tests/test_clientes_grafo_real.py::test_el_cli_muestra_y_la_web_oculta_el_diagnostico_del_supervisor`; además manual (`AppTest`): el diagnóstico no aparece en ninguna parte de la web | ✅ |
 | RF-36 | Automático | `tests/test_grafo_falso.py::test_ruta_devuelve_un_plan_con_formato_real`, `tests/test_grafo_falso.py::test_varias_rutas_devuelven_varios_planes` | ✅ |
 | RF-37 | Automático + manual descrita | `tests/test_sesion.py::test_referencia_de_demo_se_reenvia_sin_modificar` y `tests/test_cli.py::test_cli_reenvia_referencia_de_demo_sin_modificar`; sección «Referencia de imagen demo». | ✅ |
+| RF-38 | Automático | `tests/test_app_streamlit.py::test_el_mensaje_se_dibuja_antes_de_llamar_al_grafo`, `::test_hay_indicador_de_espera_mientras_el_grafo_responde` | ✅ |
+| RF-39 | Automático | `tests/test_presentacion.py::test_pasos_numeran_las_tools_con_nombre_estado_y_extracto`, `::test_pasos_incluyen_el_registro_antes_de_las_tools`, `::test_pasos_ocultan_el_diagnostico_del_supervisor_por_defecto`, `tests/test_app_streamlit.py::test_la_respuesta_muestra_los_pasos_seguidos`, `::test_los_pasos_no_muestran_el_diagnostico_del_supervisor` | ✅ |
+| RF-40 | Automático | `tests/test_sesion.py::test_cada_respuesta_guarda_el_registro_y_la_traza_de_su_turno`, `::test_los_pasos_guardados_son_una_copia_del_estado`, `tests/test_app_streamlit.py::test_cada_respuesta_conserva_sus_propios_pasos` | ✅ |
+| RF-41 | Automático | `tests/test_presentacion.py::test_pasos_vacios_sin_tools_ni_registro_visible`, `tests/test_app_streamlit.py::test_sin_pasos_no_hay_desplegable` | ✅ |
 | Demo CLI (simulado) | Manual | `python main.py --demo --auto-aprobar`, el chat con rechazo y aprobación y la elección entre dos planes, con `MADRIDRUMBO_GRAFO=falso` | ✅ |
 | Demo web (simulado) | Manual | `AppTest` de Streamlit: horarios sin plan, ruta con un plan, dos planes con selector, rechazo, aprobación, filtro del supervisor y nueva conversación | ✅ |
 | Demo con el grafo real y API | Manual ⚠️ | Horarios, una ruta con aprobación y una pregunta fuera de corpus con Gemini, Nominatim y Google | ⏭ Pendiente |

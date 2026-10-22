@@ -22,6 +22,18 @@ def _log_visible(log: list, ocultar_tecnicas: bool) -> list:
     return [entrada for entrada in log if not es_entrada_tecnica_supervisor(entrada)]
 
 
+def pasos_del_turno(log: list, traza: list, ocultar_tecnicas: bool = True) -> list[str]:
+    """Líneas de los pasos seguidos en un turno: registro visible y tools numeradas (spec 008, RF-39).
+
+    Es lo que la web dibuja bajo cada respuesta. Devuelve una lista vacía si no hay nada que mostrar (RF-41).
+    """
+    lineas = [str(entrada) for entrada in _log_visible(log, ocultar_tecnicas)]
+    for numero, paso in enumerate(traza, start=1):
+        extracto = str(paso.get("preview", ""))[:PREVIEW_MAX]
+        lineas.append(f"{numero}. {paso.get('tool', '?')} [{paso.get('status', '?')}] {extracto}".rstrip())
+    return lineas
+
+
 def formatear_turno(estado: dict, thread_id: str, ocultar_tecnicas: bool = False) -> str:
     """Texto de un turno: respuesta, planes, especialistas, tools y banderas.
 

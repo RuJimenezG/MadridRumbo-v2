@@ -5,6 +5,7 @@ y traslada al grafo lo que decide la persona. No decide nada por su cuenta: `don
 `hitl_pendiente` se copian tal cual de lo que devuelve el grafo (spec 008, RF-27).
 """
 import uuid
+from copy import deepcopy
 
 from src.clientes.contrato import estado_vacio, normalizar_estado
 from src.clientes.planes import ids_de_planes
@@ -53,7 +54,13 @@ class SesionChat:
         self.estado = normalizar_estado(nuevo_estado)
         self.error = None
         if self.estado["respuesta"]:
-            self.historial.append({"rol": "asistente", "texto": self.estado["respuesta"]})
+            # Los pasos del turno se guardan con su respuesta (copia) para que los turnos siguientes no los cambien.
+            self.historial.append({
+                "rol": "asistente",
+                "texto": self.estado["respuesta"],
+                "log": deepcopy(self.estado["log"]),
+                "traza": deepcopy(self.estado["traza"]),
+            })
 
     def enviar(self, mensaje: str) -> None:
         """Envía un mensaje al grafo. Se ignora si hay un plan pendiente de decisión."""
