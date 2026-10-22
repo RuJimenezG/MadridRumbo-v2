@@ -2,8 +2,70 @@
 
 > Fecha: 2026-10-21 · `python -m pytest`: **1142 passed**, sin red ni LLM (todo con dobles). No se hizo ninguna llamada real a ningún servicio en esta spec; los diagnósticos reales previos (Nominatim, ruta Sol → Bernabéu) están en la conversación, no en tests.
 > **Veredicto: Sí con dobles; la verificación real queda pendiente de autorización** (ver «Qué no se ha comprobado»).
+> **Actualización 2026-10-22:** pruebas reales en CLI y Streamlit (21-22 oct). Ver «Pruebas reales»: verificación real **parcial**, RF-42/43 no cumplidos en real y precio por ruta pendiente.
 
-## RF por RF
+## Pruebas reales (CLI y Streamlit, 21-22 oct 2026)
+
+> Pruebas manuales hechas por el equipo con los servicios reales (Nominatim, Google Routes, EMT BiciMAD, Open-Meteo, RAG y LLM), tras T16. `python -m pytest` tras T16: **1205 passed**, sin red. Este apartado **prevalece** sobre la tabla «RF por RF» (con dobles) de más abajo: un RF solo se marca **cumplido** si hay evidencia real; si no, **pendiente de verificación**.
+
+### Verificado en real
+
+- **«De X al Y»**: con el separador «al», la consulta llega a la herramienta.
+- **Ambigüedad de capa 1**: las opciones son solo de la Comunidad de Madrid. Respuesta «N y M» y un solo «N» (aplicado al extremo ambiguo). «2 y 2» ya no va a `calculadora`.
+- **Prefijo «Metro X»**: «Metro Concha Espina → Metro Legazpi» encuentra candidatos; «1 y 1» calcula la ruta (37 min).
+- **«Hospital La Princesa»** se resuelve sin ambigüedad. **«Sol»** sale ambiguo (Calle de la Aduana / Puerta del Sol); con «2»: ruta de 22 min, clima real, BiciMAD (estaciones 191 y 33) y aviso beta de Google.
+- **Clima real con `certifi`**: sin error TLS. Con la bici fuera de rango no aparece el aviso de clima contradictorio (T16).
+- **Zona por RAG** («zona A») funciona. Los bloques no se duplican. El seguimiento reutiliza la opción y el título.
+- **Streamlit con la PR de José**: la pregunta es visible y hay desplegable de pasos (spec 008, no de esta spec).
+
+### RF a RF (real)
+
+| RF | Estado real | Evidencia |
+|---|---|---|
+| RF-1 | **Cumplido** | «Metro Concha Espina → Metro Legazpi» encuentra candidatos |
+| RF-2, RF-3 | Pendiente de verificación | — |
+| RF-4, RF-5 | **Cumplido** | Opciones de «Sol» y de «Metro …» visibles y elegibles |
+| RF-6 | **Cumplido** | Párrafo de BiciMAD (estaciones 191 y 33) con aviso beta de Google |
+| RF-7 | Parcial: **cumplido R2** | Motivo de distancia sin aviso de clima contradictorio; demás motivos pendientes |
+| RF-8 | **Cumplido** | Línea del clima real en la ruta «Sol» → 22 min |
+| RF-9 a RF-12 | Pendiente de verificación | No se dio mal tiempo, clima caído ni hora pedida en las pruebas |
+| RF-13, RF-14 | **Cumplido** | Bloques sin duplicar |
+| RF-15, RF-16 | Pendiente de verificación | — |
+| RF-17, RF-18 | Pendiente de verificación | El título se reutiliza en el seguimiento (RF-41), pero el precio no se pudo validar |
+| RF-19 a RF-24 (capa 2) | Pendiente de verificación | «La que sea» tras una ambigüedad no se ha probado en real |
+| RF-25 | Parcial: **cumplido para la zona** | «Zona A» por RAG; precio pendiente |
+| RF-26 a RF-30 | Pendiente de verificación | — |
+| RF-31 | **Cumplido** | «De X al Y» llega a la herramienta |
+| RF-32, RF-33 | Pendiente de verificación | — |
+| RF-34 | **Cumplido** | Candidatos solo de la Comunidad de Madrid |
+| RF-35 | **Cumplido** | Open-Meteo con `certifi` sin error TLS |
+| RF-36 a RF-38 | Pendiente de verificación | Precio por ruta no validado (ver «Pendiente») |
+| RF-39 | **Cumplido** | Bloques sin duplicar en la respuesta final |
+| RF-40 | Pendiente de verificación | — |
+| RF-41 | **Cumplido** | El seguimiento reutiliza la opción y el título |
+| RF-42, RF-43 | **No cumplido en real** | El LLM vuelve a resumir tras aprobar el plan (ver «Limitaciones») |
+| RF-44 | Pendiente de verificación | «Sol» sigue ambiguo por etiquetas distintas a más de 100 m (fuera del criterio); el caso «Rivas» no se ha repetido |
+| RF-45, RF-46 | **Cumplido** | «N y M», un solo «N» y «2 y 2» no va a `calculadora` |
+| RF-47 | **Cumplido** | Bici fuera de rango sin aviso de clima |
+| RF-48 | Pendiente de verificación | No hubo fallo de clima con el que ver la categoría en el log |
+
+### Pendiente de verificación
+
+- **«La que sea» tras una ambigüedad** (capa 2, RF-22 a RF-24) con el LLM real.
+- **Precio por ruta** (RF-36 a RF-38): el RAG devuelve opciones de precio sin etiquetar. El índice local está incompleto (**313 de 4054 chunks** en ChromaDB, **7 de 3748** de paradas), a la espera del índice de Rubén.
+- **Desglose del abono joven** contra el corpus.
+
+### Limitaciones conocidas
+
+- **El LLM vuelve a resumir tras aprobar el plan** (RF-42 no se cumple en real).
+- **El seguimiento crea un plan duplicado** (grafo).
+- **No hay modo «solo bici»** (mejora futura 7).
+- **El historial no guarda las respuestas del asistente**: el supervisor y los LLM no ven las opciones mostradas. RF-45 y RF-46 lo esquivan solo para la elección de opción.
+- **Tramos «A pie (0 min)»** en la ruta.
+- **«Sol» es ambiguo** por etiquetas distintas a más de 100 m (Calle de la Aduana / Puerta del Sol): RF-44 no las fusiona porque no son el mismo texto ni el propio municipio.
+- **Codificación rota en los chunks de paradas** («Descripci�n», «R�os»): es del corpus (de Rubén).
+
+## RF por RF (con dobles)
 
 | RF | Resultado | Evidencia (tests) |
 |---|---|---|
