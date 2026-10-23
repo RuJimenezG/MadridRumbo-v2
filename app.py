@@ -63,9 +63,9 @@ with st.sidebar:
         sesion.nueva_conversacion()
         st.rerun()
 
-    # La web no muestra los diagnósticos técnicos del supervisor (RF-35); el CLI sí.
+    # El panel es para desarrollo: muestra el registro completo, incluidos diagnósticos del Supervisor.
     with st.expander("Depuración"):
-        st.json(datos_depuracion(sesion.estado, sesion.thread_id, ocultar_tecnicas=True))
+        st.json(datos_depuracion(sesion.estado, sesion.thread_id, ocultar_tecnicas=False))
 
 # --- Chat ---
 st.title("MadridRumbo — Asistente de transporte de Madrid")

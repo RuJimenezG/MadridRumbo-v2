@@ -1,10 +1,10 @@
-"""Estado y dobles del grafo multiagente (spec 005, T2)."""
+"""Estado persistible y proyección pública del grafo multiagente."""
 from src.estado import acumular_listas, crear_estado_inicial, crear_plan, proyectar_resultado
 from tests.dobles_grafo import CheckpointerFalso, EjecutorFalso, LLMFalso
 
 
-def test_estado_inicial_tiene_colecciones_independientes_y_valores_seguros():
-    """RF-25 y RF-35: el estado inicial no comparte auditoría entre conversaciones."""
+def test_estado_inicial_no_contiene_el_log_efimero_y_mantiene_colecciones_aisladas():
+    """RF-15: el registro público no forma parte del estado persistible."""
     primero = crear_estado_inicial("Consulta uno")
     segundo = crear_estado_inicial()
 
@@ -14,9 +14,8 @@ def test_estado_inicial_tiene_colecciones_independientes_y_valores_seguros():
     assert primero["planes_pendientes"] == []
     assert primero["hitl_pendiente"] is False
     assert primero["done"] is False
-
-    primero["log"].append("evento")
-    assert segundo["log"] == []
+    assert "log" not in primero
+    assert "log" not in segundo
 
 
 def test_reducer_de_auditoria_acumula_sin_mutar_las_entradas():
@@ -50,13 +49,22 @@ def test_plan_identificado_conserva_id_y_oculta_argumentos_internos():
     assert plan["args"] == {"origen": "Atocha", "destino": "Sol"}
 
 
-def test_proyeccion_publica_tiene_solo_las_seis_claves_y_traza_normalizada():
-    """RF-25 a RF-27: la fachada podrá devolver una estructura pública uniforme."""
+def test_proyeccion_publica_tiene_seis_claves_log_efimero_y_traza_normalizada():
+    """RF-1, RF-2 y RF-26: el log se recibe fuera del estado y traza no cambia."""
     estado = crear_estado_inicial()
     estado.update(
         {
             "respuesta": "Información disponible.",
-            "log": ["nodo_rag completado"],
+            # Ninguna entrada estructurada persistida puede reaparecer en la proyección pública.
+            "log": [{
+                "paso": 1,
+                "tipo": "nodo",
+                "nodo": "heredado",
+                "entrada": None,
+                "salida": None,
+                "resultado": "completado",
+                "detalle": None,
+            }],
             "traza": [
                 {
                     "tool": "rag_ask",
@@ -71,11 +79,23 @@ def test_proyeccion_publica_tiene_solo_las_seis_claves_y_traza_normalizada():
         }
     )
 
-    resultado = proyectar_resultado(estado)
+    registro = [
+        {
+            "paso": 1,
+            "tipo": "nodo",
+            "nodo": "entrada",
+            "entrada": {"mensaje": "Consulta"},
+            "salida": {"mensaje": "Consulta"},
+            "resultado": "completado",
+            "detalle": None,
+        }
+    ]
+
+    resultado = proyectar_resultado(estado, registro=registro)
 
     assert set(resultado) == {"respuesta", "plan", "log", "traza", "hitl_pendiente", "done"}
     assert resultado["plan"] == []
-    assert resultado["log"] == ["nodo_rag completado"]
+    assert resultado["log"] == registro
     assert resultado["traza"] == [
         {
             "tool": "rag_ask",
@@ -86,68 +106,35 @@ def test_proyeccion_publica_tiene_solo_las_seis_claves_y_traza_normalizada():
     ]
     assert isinstance(resultado["hitl_pendiente"], bool)
     assert isinstance(resultado["done"], bool)
+    registro[0]["nodo"] = "modificado_fuera"
+    assert resultado["log"][0]["nodo"] == "entrada"
 
 
-def test_proyeccion_anade_diagnostico_canonico_sin_mutar_estado_ni_filtrar_texto():
-    """RF-10 a RF-14: el diagnóstico se añade solo a la copia pública de log."""
+def test_proyeccion_usa_lista_vacia_si_no_recibe_registro_efimero():
+    """RF-2 y RF-15: un checkpoint no aporta historial de depuración."""
     estado = crear_estado_inicial()
-    estado["log"] = ["nodo_rag completado"]
-    diagnostico = {
-        "categoria": "proveedor",
-        "resumen": "TOKEN_DE_PRUEBA_NO_EXPOSABLE",
-    }
+    estado["log"] = [{
+        "paso": 1,
+        "tipo": "nodo",
+        "nodo": "heredado",
+        "entrada": None,
+        "salida": None,
+        "resultado": "completado",
+        "detalle": None,
+    }]
 
-    resultado = proyectar_resultado(estado, diagnostico_supervisor=diagnostico)
+    resultado = proyectar_resultado(estado)
 
-    assert set(resultado) == {"respuesta", "plan", "log", "traza", "hitl_pendiente", "done"}
-    assert resultado["log"] == [
-        "nodo_rag completado",
-        "Supervisor: categoria=proveedor; resumen=El proveedor no entregó una respuesta utilizable.",
-    ]
-    assert estado["log"] == ["nodo_rag completado"]
-    assert "TOKEN_DE_PRUEBA_NO_EXPOSABLE" not in str(resultado)
-    assert resultado["traza"] == []
+    assert resultado["log"] == []
+    assert estado["log"][0]["nodo"] == "heredado"
 
 
-def test_proyeccion_anade_indicador_de_correccion_semantica_seguro_y_separado():
-    """RF-14 a RF-17: la corrección no es una categoría de fallback ni persiste."""
-    estado = crear_estado_inicial()
-    estado["log"] = ["nodo_rag completado"]
-    diagnostico = {
-        "categoria": "sin_fallback",
-        "resumen": "RESPUESTA_CRUDA_TOKEN_DE_PRUEBA",
-    }
+def test_el_checkpoint_de_un_estado_inicial_no_contiene_log():
+    """RF-15: al persistir estado de conversación no se guarda el registro efímero."""
+    checkpointer = CheckpointerFalso()
+    checkpointer.guardar("hilo-1", crear_estado_inicial("Consulta"))
 
-    resultado = proyectar_resultado(
-        estado,
-        diagnostico_supervisor=diagnostico,
-        correcciones_tarifas=2,
-    )
-
-    assert resultado["log"] == [
-        "nodo_rag completado",
-        "Supervisor: categoria=sin_fallback; resumen=Decisión estructurada validada.",
-        "Supervisor: correccion_semantica=aplicada; resumen=Se redirigieron 2 derivaciones incompatibles de tarifas a rag.",
-    ]
-    assert set(resultado) == {"respuesta", "plan", "log", "traza", "hitl_pendiente", "done"}
-    assert estado["log"] == ["nodo_rag completado"]
-    assert "RESPUESTA_CRUDA_TOKEN_DE_PRUEBA" not in str(resultado)
-
-
-def test_proyeccion_ignora_contadores_de_correccion_no_seguros_o_nulos():
-    """RF-16 y RF-17: solo un entero positivo alimenta el resumen canónico."""
-    estado = crear_estado_inicial()
-    diagnostico = {"categoria": "sin_fallback", "resumen": "texto no fiable"}
-
-    for contador in (None, 0, -1, True, "2"):
-        resultado = proyectar_resultado(
-            estado,
-            diagnostico_supervisor=diagnostico,
-            correcciones_tarifas=contador,
-        )
-        assert resultado["log"] == [
-            "Supervisor: categoria=sin_fallback; resumen=Decisión estructurada validada."
-        ]
+    assert "log" not in checkpointer.recuperar("hilo-1")
 
 
 def test_dobles_comunes_registran_llamadas_y_aislan_snapshots():

@@ -16,7 +16,7 @@ from src.clientes.presentacion import (
 ESTADO = {
     "respuesta": "El metro cierra a la 1:30.",
     "plan": ["Informar del horario", "Citar la fuente"],
-    "log": ["[supervisor] -> horarios", "[horarios] nota lista"],
+    "log": [],
     "traza": [
         {"tool": "hora_actual", "args": {}, "status": "ok", "preview": "Hoy es jueves"},
         {"tool": "rag_ask", "args": {"consulta": "horario"}, "status": "error", "preview": "ERROR"},
@@ -24,6 +24,59 @@ ESTADO = {
     "hitl_pendiente": True,
     "done": False,
 }
+
+
+REGISTRO_ESTRUCTURADO = [
+    {
+        "paso": 1,
+        "tipo": "nodo",
+        "nodo": "supervisor",
+        "entrada": {"mensaje": "¿Cuál es la tarifa?"},
+        "salida": {"roles": ["rag"]},
+        "resultado": "completado",
+        "detalle": None,
+    },
+    {
+        "paso": 2,
+        "tipo": "tool",
+        "nodo": "rag_ask",
+        "entrada": {"consulta": "tarifa"},
+        "salida": {"texto": "La tarifa es 1,50 €."},
+        "resultado": "completado",
+        "detalle": None,
+    },
+    {
+        "paso": 3,
+        "tipo": "control",
+        "nodo": "fachada",
+        "entrada": None,
+        "salida": None,
+        "resultado": "rechazado",
+        "detalle": {"categoria": "plan_pendiente", "resumen": "Aprueba o rechaza el plan."},
+    },
+    {
+        "paso": 4,
+        "tipo": "nodo",
+        "nodo": "supervisor",
+        "entrada": {"mensaje": "Consulta ambigua"},
+        "salida": None,
+        "resultado": "fallido",
+        "detalle": {"categoria": "json_invalido", "resumen": "Se aplicó el fallback del Supervisor."},
+    },
+]
+
+DIAGNOSTICO_ESTRUCTURADO = {
+    "paso": 9,
+    "tipo": "nodo",
+    "nodo": "supervisor",
+    "entrada": {"mensaje": "Consulta ambigua"},
+    "salida": None,
+    "resultado": "fallido",
+    "detalle": {"categoria": "json_invalido", "resumen": "Se aplicó el fallback del Supervisor."},
+}
+
+# Los consumidores reciben exclusivamente el contrato estructurado del registro.
+ESTADO["log"] = [REGISTRO_ESTRUCTURADO[0], REGISTRO_ESTRUCTURADO[1]]
 
 
 # --- Contrato ---
@@ -60,7 +113,8 @@ def test_formato_incluye_respuesta_log_traza():
     # RF-15: respuesta, especialistas que actuaron y tools con su estado.
     texto = formatear_turno(ESTADO, "hilo-1")
     assert "El metro cierra a la 1:30." in texto
-    assert "[supervisor] -> horarios" in texto and "[horarios] nota lista" in texto
+    assert "Paso 1 · nodo · supervisor [completado]" in texto
+    assert "Paso 2 · tool · rag_ask [completado]" in texto
     assert "hora_actual" in texto and "rag_ask" in texto
     assert "ok" in texto and "error" in texto
 
@@ -85,6 +139,26 @@ def test_formato_con_estado_parcial_no_falla():
     texto = formatear_turno({"respuesta": "hola"}, "hilo-2")
     assert "hola" in texto and "hilo-2" in texto
     assert "Plan pendiente: no" in texto
+
+
+def test_formato_muestra_el_registro_estructurado_completo_y_ordenado():
+    """RF-23: CLI recibe todas las clases de entrada con sus siete campos."""
+    texto = formatear_turno({"respuesta": "Resultado", "log": REGISTRO_ESTRUCTURADO}, "hilo-registro")
+
+    assert "Registro de depuración:" in texto
+    for paso, tipo, nodo, resultado in (
+        (1, "nodo", "supervisor", "completado"),
+        (2, "tool", "rag_ask", "completado"),
+        (3, "control", "fachada", "rechazado"),
+        (4, "nodo", "supervisor", "fallido"),
+    ):
+        assert f"Paso {paso} · {tipo} · {nodo} [{resultado}]" in texto
+    assert 'entrada: {"mensaje": "¿Cuál es la tarifa?"}' in texto
+    assert 'salida: {"texto": "La tarifa es 1,50 €."}' in texto
+    assert "detalle: null" in texto
+    assert '"categoria": "plan_pendiente"' in texto
+    assert '"categoria": "json_invalido"' in texto
+    assert texto.index("Paso 1") < texto.index("Paso 2") < texto.index("Paso 3") < texto.index("Paso 4")
 
 
 # --- Entradas de la persona (RF-3, RF-4, RF-10) ---
@@ -137,6 +211,20 @@ def test_datos_depuracion():
     assert datos["hitl_pendiente"] is True and datos["done"] is False
 
 
+def test_panel_depuracion_conserva_el_diagnostico_estructurado_y_el_chat_lo_filtra():
+    """RF-24 y RF-25: el panel es completo; el chat solo omite el diagnóstico técnico."""
+    from src.clientes.presentacion import pasos_del_turno
+
+    visible = REGISTRO_ESTRUCTURADO[0]
+    estado = {"respuesta": "x", "log": [visible, DIAGNOSTICO_ESTRUCTURADO]}
+
+    assert datos_depuracion(estado, "h")['log'] == [visible, DIAGNOSTICO_ESTRUCTURADO]
+    assert datos_depuracion(estado, "h", ocultar_tecnicas=True)['log'] == [visible]
+    pasos = pasos_del_turno([visible, DIAGNOSTICO_ESTRUCTURADO], [])
+    assert len(pasos) == 1 and "Paso 1 · nodo · supervisor [completado]" in pasos[0]
+    assert "json_invalido" not in "\n".join(pasos)
+
+
 # --- Mismo formato en CLI y Streamlit (RF-26) ---
 
 def test_cli_usa_el_mismo_formato():
@@ -145,7 +233,7 @@ def test_cli_usa_el_mismo_formato():
 
     estado_grafo = {
         "respuesta": "Respuesta del grafo",
-        "log": ["[supervisor] -> horarios"],
+        "log": [REGISTRO_ESTRUCTURADO[0]],
         "traza": [{"tool": "hora_actual", "args": {}, "status": "ok", "preview": "Hoy es jueves"}],
         "hitl_pendiente": False,
         "done": False,
@@ -184,10 +272,34 @@ def _plan_de_ruta(numero):
 
 
 LOG_CON_TECNICAS = [
-    "[supervisor] -> rutas",
-    "Supervisor: categoria=json_invalido; resumen=La decisión no contiene JSON válido; se aplicó el fallback.",
-    "[rutas] nota lista",
-    "Supervisor: correccion_semantica=aplicada; resumen=Se redirigieron 1 derivaciones incompatibles de tarifas a rag.",
+    {
+        "paso": 1,
+        "tipo": "nodo",
+        "nodo": "rutas",
+        "entrada": {"mensaje": "ruta"},
+        "salida": {"nota": "ruta lista"},
+        "resultado": "completado",
+        "detalle": None,
+    },
+    DIAGNOSTICO_ESTRUCTURADO,
+    {
+        "paso": 3,
+        "tipo": "nodo",
+        "nodo": "rag",
+        "entrada": {"mensaje": "tarifa"},
+        "salida": {"nota": "tarifa lista"},
+        "resultado": "completado",
+        "detalle": None,
+    },
+    {
+        "paso": 4,
+        "tipo": "nodo",
+        "nodo": "supervisor",
+        "entrada": {"mensaje": "tarifa"},
+        "salida": None,
+        "resultado": "fallido",
+        "detalle": {"categoria": "correccion_semantica", "resumen": "Se redirigió a RAG."},
+    },
 ]
 
 
@@ -214,37 +326,35 @@ def test_un_plan_desconocido_no_rompe_el_formato():
 
 
 def test_por_defecto_se_muestran_las_entradas_tecnicas():
-    # El CLI las muestra: es lo que consulta el cliente técnico (spec 006, RF-15).
+    # El CLI muestra todo el registro estructurado, incluidos diagnósticos.
     texto = formatear_turno({"respuesta": "x", "log": LOG_CON_TECNICAS}, "h")
     for entrada in LOG_CON_TECNICAS:
-        assert entrada in texto
+        assert f"Paso {entrada['paso']} · {entrada['tipo']} · {entrada['nodo']} [{entrada['resultado']}]" in texto
 
 
 def test_ocultar_tecnicas():
-    # RF-35: la web las oculta y conserva el resto del registro de especialistas.
+    # RF-25: la web oculta diagnósticos y conserva los demás pasos estructurados.
     texto = formatear_turno({"respuesta": "x", "log": LOG_CON_TECNICAS}, "h", ocultar_tecnicas=True)
-    assert "Supervisor: categoria=" not in texto
-    assert "Supervisor: correccion_semantica=" not in texto
-    assert "[supervisor] -> rutas" in texto and "[rutas] nota lista" in texto
+    assert "json_invalido" not in texto
+    assert "correccion_semantica" not in texto
+    assert "Paso 1 · nodo · rutas [completado]" in texto
+    assert "Paso 3 · nodo · rag [completado]" in texto
 
 
 def test_si_todo_el_log_es_tecnico_no_queda_la_seccion_de_especialistas():
     solo_tecnicas = [LOG_CON_TECNICAS[1], LOG_CON_TECNICAS[3]]
     texto = formatear_turno({"respuesta": "x", "log": solo_tecnicas}, "h", ocultar_tecnicas=True)
-    assert "Especialistas" not in texto
+    assert "Registro de depuración" not in texto
 
 
 def test_la_depuracion_tambien_puede_ocultar_las_tecnicas():
     estado = {"respuesta": "x", "log": LOG_CON_TECNICAS}
     assert datos_depuracion(estado, "h")["log"] == LOG_CON_TECNICAS
     oculto = datos_depuracion(estado, "h", ocultar_tecnicas=True)["log"]
-    assert oculto == ["[supervisor] -> rutas", "[rutas] nota lista"]
+    assert oculto == [LOG_CON_TECNICAS[0], LOG_CON_TECNICAS[2]]
 
 
 # --- Pasos seguidos (spec 008, RF-39, RF-40 y RF-41) ---
-
-DIAGNOSTICO = "Supervisor: categoria=sin_fallback; resumen=Decisión estructurada validada."
-
 
 def test_pasos_numeran_las_tools_con_nombre_estado_y_extracto():
     # RF-39: cada tool ejecutada aparece numerada con su nombre, su estado y un extracto.
@@ -261,7 +371,8 @@ def test_pasos_incluyen_el_registro_antes_de_las_tools():
     from src.clientes.presentacion import pasos_del_turno
 
     pasos = pasos_del_turno(ESTADO["log"], ESTADO["traza"])
-    assert pasos[:2] == ESTADO["log"]
+    assert "Paso 1 · nodo · supervisor [completado]" in pasos[0]
+    assert "Paso 2 · tool · rag_ask [completado]" in pasos[1]
     assert pasos[2].startswith("1. hora_actual")
 
 
@@ -269,9 +380,9 @@ def test_pasos_ocultan_el_diagnostico_del_supervisor_por_defecto():
     # RF-39 y RF-35: la web no muestra los diagnósticos técnicos; el CLI puede pedirlos.
     from src.clientes.presentacion import pasos_del_turno
 
-    log = [DIAGNOSTICO, "[horarios] nota lista"]
-    assert pasos_del_turno(log, []) == ["[horarios] nota lista"]
-    assert pasos_del_turno(log, [], ocultar_tecnicas=False) == log
+    log = [DIAGNOSTICO_ESTRUCTURADO, LOG_CON_TECNICAS[0]]
+    assert pasos_del_turno(log, []) == [pasos_del_turno([LOG_CON_TECNICAS[0]], [])[0]]
+    assert len(pasos_del_turno(log, [], ocultar_tecnicas=False)) == 2
 
 
 def test_pasos_vacios_sin_tools_ni_registro_visible():
@@ -279,7 +390,7 @@ def test_pasos_vacios_sin_tools_ni_registro_visible():
     from src.clientes.presentacion import pasos_del_turno
 
     assert pasos_del_turno([], []) == []
-    assert pasos_del_turno([DIAGNOSTICO], []) == []
+    assert pasos_del_turno([DIAGNOSTICO_ESTRUCTURADO], []) == []
 
 
 def test_pasos_recortan_el_extracto_largo():

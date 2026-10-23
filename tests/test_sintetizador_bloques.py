@@ -102,4 +102,4 @@ def test_respaldo_intacto():
     salida = nodo_sintetizador(entrada, modelo_roto)
     assert salida["respuesta"] == renderizar_respaldo(entrada)           # el respaldo vuelca los resultados, sin añadidos
     assert salida["respuesta"].startswith("No se ha podido sintetizar la respuesta automáticamente.")
-    assert salida["log"] == ["Sintetizador: se ha usado el respaldo determinista."]
+    assert "log" not in salida

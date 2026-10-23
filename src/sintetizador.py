@@ -197,7 +197,6 @@ def nodo_sintetizador(
                 texto = f"{texto}\n\n{obligatorio}"
         return {"respuesta": texto}
     except Exception:
-        return {
-            "respuesta": renderizar_respaldo(contexto),
-            "log": ["Sintetizador: se ha usado el respaldo determinista."],
-        }
+        # El registro público lo añade la instrumentación efímera del nodo; no
+        # se reincorpora el antiguo log textual al estado persistible.
+        return {"respuesta": renderizar_respaldo(contexto)}

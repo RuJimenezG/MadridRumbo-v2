@@ -9,13 +9,6 @@ from __future__ import annotations
 from copy import deepcopy
 from typing import Annotated, Any, Mapping, TypedDict, TypeVar
 
-from src.supervisor import RESUMENES_DIAGNOSTICO
-
-
-_RESUMEN_CORRECCION_SEMANTICA = (
-    "Se redirigieron {cantidad} derivaciones incompatibles de tarifas a rag."
-)
-
 class EntradaTraza(TypedDict):
     """Entrada pública de auditoría de una invocación de tool."""
 
@@ -49,7 +42,6 @@ class EstadoGrafo(TypedDict, total=False):
     cola_roles: list[str]
     notas: Annotated[list[str], acumular_listas]
     resultados: Annotated[list[dict[str, Any]], acumular_listas]
-    log: Annotated[list[str], acumular_listas]
     traza: Annotated[list[EntradaTraza], acumular_listas]
     planes_pendientes: list[PlanPendiente]
     plan_id_seleccionado: str | None
@@ -75,7 +67,6 @@ def crear_estado_inicial(mensaje: str = "") -> EstadoGrafo:
         "cola_roles": [],
         "notas": [],
         "resultados": [],
-        "log": [],
         "traza": [],
         "planes_pendientes": [],
         "plan_id_seleccionado": None,
@@ -148,50 +139,65 @@ def _proyectar_traza(entradas: object) -> list[EntradaTraza]:
     return traza
 
 
-def _entrada_diagnostico_supervisor(diagnostico: object) -> str | None:
-    """Convierte una categoría permitida en la única entrada pública segura."""
-    if not isinstance(diagnostico, Mapping):
-        return None
-    categoria = diagnostico.get("categoria")
-    resumen = RESUMENES_DIAGNOSTICO.get(categoria)
-    if not isinstance(categoria, str) or not isinstance(resumen, str):
-        return None
-    return f"Supervisor: categoria={categoria}; resumen={resumen}"
+_CAMPOS_ENTRADA_DEPURACION = {
+    "paso",
+    "tipo",
+    "nodo",
+    "entrada",
+    "salida",
+    "resultado",
+    "detalle",
+}
+_TIPOS_ENTRADA_DEPURACION = {"nodo", "tool", "control"}
+_RESULTADOS_ENTRADA_DEPURACION = {"completado", "fallido", "rechazado"}
 
 
-def _entrada_correccion_semantica(correcciones_tarifas: object) -> str | None:
-    """Convierte un contador interno válido en la única corrección observable."""
-    if (
-        not isinstance(correcciones_tarifas, int)
-        or isinstance(correcciones_tarifas, bool)
-        or correcciones_tarifas <= 0
-    ):
-        return None
-    resumen = _RESUMEN_CORRECCION_SEMANTICA.format(cantidad=correcciones_tarifas)
-    return f"Supervisor: correccion_semantica=aplicada; resumen={resumen}"
+def _proyectar_registro(registro: object) -> list[dict[str, Any]]:
+    """Copia únicamente entradas estructuradas del registro efímero de la llamada."""
+    if not isinstance(registro, list):
+        return []
+
+    entradas: list[dict[str, Any]] = []
+    for entrada in registro:
+        if not isinstance(entrada, Mapping) or set(entrada) != _CAMPOS_ENTRADA_DEPURACION:
+            continue
+        paso = entrada.get("paso")
+        tipo = entrada.get("tipo")
+        nodo = entrada.get("nodo")
+        resultado = entrada.get("resultado")
+        if (
+            not isinstance(paso, int)
+            or isinstance(paso, bool)
+            or paso < 1
+            or tipo not in _TIPOS_ENTRADA_DEPURACION
+            or not isinstance(nodo, str)
+            or resultado not in _RESULTADOS_ENTRADA_DEPURACION
+        ):
+            continue
+        entradas.append(deepcopy(dict(entrada)))
+    return entradas
 
 
 def proyectar_resultado(
     estado: Mapping[str, Any],
     *,
+    registro: object = None,
     diagnostico_supervisor: Mapping[str, Any] | None = None,
     correcciones_tarifas: object = None,
 ) -> dict[str, Any]:
-    """Devuelve exclusivamente el contrato público que expondrá src.agent."""
+    """Devuelve el contrato público y el registro efímero de esta llamada.
+
+    ``diagnostico_supervisor`` y ``correcciones_tarifas`` se mantienen de forma
+    transitoria para no romper a los llamadores actuales; la instrumentación de
+    las tareas posteriores los registrará dentro de ``registro``. Nunca se leen
+    ni se escriben como parte de ``estado``.
+    """
     respuesta = estado.get("respuesta", "")
-    log = estado.get("log", [])
-    log_publico = list(log) if isinstance(log, list) else []
-    entrada_diagnostico = _entrada_diagnostico_supervisor(diagnostico_supervisor)
-    if entrada_diagnostico:
-        log_publico.append(entrada_diagnostico)
-    entrada_correccion = _entrada_correccion_semantica(correcciones_tarifas)
-    if entrada_correccion:
-        log_publico.append(entrada_correccion)
 
     return {
         "respuesta": respuesta if isinstance(respuesta, str) else str(respuesta),
         "plan": _proyectar_planes(estado.get("planes_pendientes", [])),
-        "log": log_publico,
+        "log": _proyectar_registro(registro),
         "traza": _proyectar_traza(estado.get("traza", [])),
         "hitl_pendiente": bool(estado.get("hitl_pendiente", False)),
         "done": bool(estado.get("done", False)),

@@ -25,7 +25,15 @@ class GrafoSinPlan:
             raise RuntimeError("fallo simulado")
         return {
             "respuesta": f"Eco: {mensaje}",
-            "log": ["[supervisor] -> eco"],
+            "log": [{
+                "paso": 1,
+                "tipo": "nodo",
+                "nodo": "supervisor",
+                "entrada": {"mensaje": mensaje},
+                "salida": {"roles": ["eco"]},
+                "resultado": "completado",
+                "detalle": None,
+            }],
             "hitl_pendiente": False,
             "done": False,
         }
@@ -293,13 +301,82 @@ def test_respuesta_sin_plan_no_pregunta():
 
 def test_el_cli_muestra_las_entradas_tecnicas_del_supervisor():
     # RF-35: el CLI las muestra (solo la web las oculta).
-    tecnica = "Supervisor: categoria=json_invalido; resumen=La decisión no contiene JSON válido; se aplicó el fallback."
+    tecnica = {
+        "paso": 2,
+        "tipo": "control",
+        "nodo": "supervisor",
+        "entrada": None,
+        "salida": None,
+        "resultado": "rechazado",
+        "detalle": {"categoria": "json_invalido", "resumen": "Se aplicó el fallback."},
+    }
 
     class GrafoConDiagnostico(GrafoSinPlan):
         def procesar_turno(self, estado, mensaje, thread_id):
             resultado = super().procesar_turno(estado, mensaje, thread_id)
-            resultado["log"] = ["[supervisor] -> eco", tecnica]
+            resultado["log"].append(tecnica)
             return resultado
 
     _, texto, _ = ejecutar(["hola", "salir"], GrafoConDiagnostico())
-    assert tecnica in texto
+    assert "Paso 2 · control · supervisor [rechazado]" in texto
+    assert '"categoria": "json_invalido"' in texto
+
+
+def test_cli_muestra_el_registro_estructurado_completo_en_orden():
+    """RF-23: la CLI expone nodo, tool, control y diagnóstico del Supervisor."""
+    registro = [
+        {
+            "paso": 1,
+            "tipo": "nodo",
+            "nodo": "supervisor",
+            "entrada": {"mensaje": "consulta"},
+            "salida": {"roles": ["rag"]},
+            "resultado": "completado",
+            "detalle": None,
+        },
+        {
+            "paso": 2,
+            "tipo": "tool",
+            "nodo": "rag_ask",
+            "entrada": {"consulta": "consulta"},
+            "salida": {"texto": "respuesta"},
+            "resultado": "completado",
+            "detalle": None,
+        },
+        {
+            "paso": 3,
+            "tipo": "control",
+            "nodo": "fachada",
+            "entrada": None,
+            "salida": None,
+            "resultado": "rechazado",
+            "detalle": {"categoria": "plan_pendiente", "resumen": "Plan pendiente."},
+        },
+        {
+            "paso": 4,
+            "tipo": "nodo",
+            "nodo": "supervisor",
+            "entrada": {"mensaje": "ambigua"},
+            "salida": None,
+            "resultado": "fallido",
+            "detalle": {"categoria": "json_invalido", "resumen": "Fallback del Supervisor."},
+        },
+    ]
+
+    class GrafoConRegistro:
+        def procesar_turno(self, estado, mensaje, thread_id):
+            return {
+                "respuesta": "Resultado",
+                "log": registro,
+                "traza": [],
+                "hitl_pendiente": False,
+                "done": True,
+            }
+
+    _, texto, _ = ejecutar(["hola", "salir"], GrafoConRegistro())
+    assert "Paso 1 · nodo · supervisor [completado]" in texto
+    assert "Paso 2 · tool · rag_ask [completado]" in texto
+    assert "Paso 3 · control · fachada [rechazado]" in texto
+    assert "Paso 4 · nodo · supervisor [fallido]" in texto
+    assert '"categoria": "json_invalido"' in texto
+    assert texto.index("Paso 1") < texto.index("Paso 2") < texto.index("Paso 3") < texto.index("Paso 4")

@@ -8,10 +8,20 @@ import pytest
 import streamlit as st
 from streamlit.testing.v1 import AppTest
 
+import src.agent as agent
 from src.clientes.contrato import estado_vacio
+from src.graph import crear_grafo
 
 APP = str(Path(__file__).resolve().parent.parent / "app.py")
-DIAGNOSTICO = "Supervisor: categoria=sin_fallback; resumen=Decisión estructurada validada."
+DIAGNOSTICO = {
+    "paso": 1,
+    "tipo": "nodo",
+    "nodo": "supervisor",
+    "entrada": {"mensaje": "consulta"},
+    "salida": None,
+    "resultado": "fallido",
+    "detalle": {"categoria": "json_invalido", "resumen": "Se aplicó el fallback del Supervisor."},
+}
 
 
 class AgenteDePrueba:
@@ -25,7 +35,18 @@ class AgenteDePrueba:
         self.eventos.append("grafo")
         respuesta = {**estado_vacio(), "respuesta": f"Respuesta a {mensaje}"}
         if self.con_pasos:
-            respuesta["log"] = [DIAGNOSTICO, f"[horarios] nota de {mensaje}"]
+            respuesta["log"] = [
+                DIAGNOSTICO,
+                {
+                    "paso": 2,
+                    "tipo": "nodo",
+                    "nodo": "horarios",
+                    "entrada": {"mensaje": mensaje},
+                    "salida": {"nota": f"nota de {mensaje}"},
+                    "resultado": "completado",
+                    "detalle": None,
+                },
+            ]
             respuesta["traza"] = [{"tool": "hora_actual", "args": {}, "status": "ok", "preview": f"hora de {mensaje}"}]
         return respuesta
 
@@ -52,8 +73,8 @@ def eventos(monkeypatch):
     return anotados
 
 
-def _abrir_app(monkeypatch, eventos, con_pasos=True):
-    agente = AgenteDePrueba(eventos, con_pasos)
+def _abrir_app(monkeypatch, eventos, con_pasos=True, agente=None):
+    agente = agente or AgenteDePrueba(eventos, con_pasos)
     monkeypatch.setattr("src.clientes.cargar.cargar_agente", lambda *args, **kwargs: (agente, None))
     return AppTest.from_file(APP, default_timeout=30).run()
 
@@ -85,7 +106,7 @@ def test_la_respuesta_muestra_los_pasos_seguidos(monkeypatch, eventos):
     at.chat_input[0].set_value("uno").run()
     (desplegable,) = _pasos(at)
     lineas = [t.value for t in desplegable.text]
-    assert "[horarios] nota de uno" in lineas
+    assert any("Paso 2 · nodo · horarios [completado]" in linea for linea in lineas)
     assert "1. hora_actual [ok] hora de uno" in lineas
 
 
@@ -94,7 +115,39 @@ def test_los_pasos_no_muestran_el_diagnostico_del_supervisor(monkeypatch, evento
     at = _abrir_app(monkeypatch, eventos)
     at.chat_input[0].set_value("uno").run()
     (desplegable,) = _pasos(at)
-    assert not any("Supervisor: categoria" in t.value for t in desplegable.text)
+    assert not any("json_invalido" in t.value for t in desplegable.text)
+
+
+def test_el_panel_depuracion_muestra_el_diagnostico_estructurado(monkeypatch, eventos):
+    """RF-24: el panel lateral no aplica el filtro que usa el chat."""
+    at = _abrir_app(monkeypatch, eventos)
+    at.chat_input[0].set_value("uno").run()
+    assert any("json_invalido" in str(elemento.value) for elemento in at.json)
+
+
+def test_el_panel_muestra_el_fallback_real_del_supervisor_y_el_chat_lo_filtra(monkeypatch, eventos):
+    """RF-23 a RF-25: la UI recibe el diagnóstico generado por el grafo real."""
+    grafo = crear_grafo(
+        modelo_supervisor=lambda mensajes: "RESPUESTA_CRUDA_QUE_NO_ES_JSON",
+        especialistas={
+            rol: lambda estado, rol=rol: {
+                "notas": [f"[{rol}] resultado de prueba"],
+                "traza": [],
+                "resultados": [],
+            }
+            for rol in ("rag", "horarios", "rutas", "auxiliar", "tarifas")
+        },
+        modelo_sintetizador=lambda contexto: "Respuesta de prueba.",
+    )
+    monkeypatch.setattr(agent, "_GRAFO", grafo)
+
+    at = _abrir_app(monkeypatch, eventos, agente=agent)
+    at.chat_input[0].set_value("¿Qué hora es?").run()
+
+    assert not at.exception
+    assert any("json_invalido" in str(elemento.value) for elemento in at.json)
+    (desplegable,) = _pasos(at)
+    assert not any("json_invalido" in texto.value for texto in desplegable.text)
 
 
 def test_cada_respuesta_conserva_sus_propios_pasos(monkeypatch, eventos):

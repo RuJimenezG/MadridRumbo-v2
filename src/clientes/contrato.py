@@ -7,7 +7,9 @@ Es una propuesta basada en el enunciado: se ajustará cuando exista el grafo rea
 Claves del estado:
 - respuesta:       texto para la persona usuaria.
 - plan:            viñetas del plan pendiente de aprobar.
-- log:             qué especialistas actuaron (p. ej. "[supervisor] -> horarios").
+- log:             entradas estructuradas de depuración de la llamada actual.
+                   Cada una contiene paso, tipo, nodo, entrada, salida,
+                   resultado y detalle. No forma parte del estado persistente.
 - traza:           entradas {"tool", "args", "status", "preview"} de las tools ejecutadas.
 - hitl_pendiente:  hay un plan esperando aprobar o rechazar.
 - done:            la conversación ha terminado. Solo lo decide el grafo.

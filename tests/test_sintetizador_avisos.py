@@ -100,8 +100,8 @@ def test_el_respaldo_determinista_no_cambia():
     salida = nodo_sintetizador(estado(resultado_ruta(bici=BICI_OK, clima=CLIMA_OK)), falla)
     assert salida["respuesta"].startswith("No se ha podido sintetizar la respuesta automáticamente.")
     assert salida["respuesta"].count(AVISO) == 1                                   # ya vuelca el JSON completo
-    assert salida["log"] == ["Sintetizador: se ha usado el respaldo determinista."]
-    assert nodo_sintetizador(estado(resultado_ruta(bici=BICI_OK)), lambda c: "   ")["log"]   # respuesta vacía → respaldo
+    assert "log" not in salida
+    assert "log" not in nodo_sintetizador(estado(resultado_ruta(bici=BICI_OK)), lambda c: "   ")  # respuesta vacía → respaldo
 
 
 def test_el_modelo_recibe_el_mismo_contexto():
