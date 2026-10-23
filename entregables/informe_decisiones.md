@@ -45,7 +45,7 @@ Todas viven en `src/tools/` y se ejecutan a través de `ejecutar_tool(nombre, ar
 
 ## 3. HITL: una aprobación y un rechazo
 
-Observado con el **grafo real** (`src/agent.py`) y la parte de modelos, especialistas y tools sustituida por dobles de prueba, sin gastar API (`tests/test_clientes_grafo_real.py`, PR de los clientes). No es una demostración con las APIs reales: eso sigue pendiente (faltan las claves de Google Routes y el contacto de Nominatim).
+Observado con el **grafo real** (`src/agent.py`) y la parte de modelos, especialistas y tools sustituida por dobles de prueba, sin gastar API (`tests/test_clientes_grafo_real.py`, PR de los clientes). Esta observación es con dobles. La demo con las APIs reales se hizo después en grupo (octubre de 2026) y el equipo la dio por correcta; el detalle de lo observado en ella no está anotado aquí.
 
 **Una aprobación.** Pedido: «Dame una ruta de Atocha a Sol.» El supervisor elige `rutas`, el grafo se pausa y devuelve el plan `ruta-1` (metro línea 1, 12 min) con `hitl_pendiente=True` y `done=False`. Al aprobarlo el grafo da `done=True`, vacía los planes pendientes y la conversación puede continuar en el mismo `thread_id`.
 
@@ -107,6 +107,8 @@ Con `gemini-3.8-flash` funcionó a la primera llamada válida, por lo que `MODEL
 9. **La demo de imagen y cálculo no encadena de forma fiable ni es rápida.** `ejecutar_especialista` (`src/agents/base.py`) solo da al modelo el prompt y el mensaje original, no las notas de los especialistas anteriores, así que `auxiliar` no ve los importes que leyó `tarifas`; y el supervisor no siempre incluye `auxiliar`. Una ejecución tardó 161 s. *Siguiente paso:* pasar a cada especialista las notas previas del turno, con un test, y medir la latencia.
 10. **El respaldo del sintetizador enseña JSON crudo.** Cuando el modelo de síntesis falla, la respuesta mostró los resultados de los especialistas como texto técnico («`{"especialista": "horarios", ...}`»). La pregunta «¿hasta qué hora hay metro hoy?» tampoco puede responderse: el corpus no tiene horarios. *Siguiente paso:* un respaldo en lenguaje natural y una pregunta de demo que sí esté en el corpus.
 
+*Los fallos 7 a 10 se observaron en pruebas individuales del 22 y 23 de octubre, antes de la demo en grupo. Hay que comprobar cuáles persisten antes de entregar.*
+
 
 
 ## 6. Clientes CLI y Streamlit (spec 008)
@@ -137,7 +139,7 @@ El enunciado pide que el CLI y Streamlit sean clientes del mismo grafo, con la p
 - **El mensaje se dibuja antes de llamar al grafo.** Streamlit solo pintaba la pregunta al terminar el turno porque el historial se dibuja antes de la llamada; ahora se dibuja la burbuja y un indicador de espera primero.
 - **Demo cambiada.** Se sustituyó el pedido de la imagen por una ruta porque la ruta es el único flujo que enseña el HITL. La imagen demo puede seleccionarse mediante su referencia literal, pero no genera una pausa HITL ni habilita subida de archivos.
 
-**Cómo se comprobó.** 43 requisitos (RF-1 a RF-42 y RF-22b) con test en verde y 1.225 tests que pasan sin API en `develop` (los 13 que fallan son de BiciMAD y no tocan los clientes; ver el fallo 6). Varios recorren los clientes contra el **grafo real** con los especialistas, el supervisor y el sintetizador sustituidos por dobles, y no hacen ninguna conexión a la red; la web se prueba con `AppTest` de Streamlit (el orden de lo que se dibuja y el desplegable de pasos) y se vio en un navegador real (modo simulado). Pendiente: la demo con las APIs reales.
+**Cómo se comprobó.** 43 requisitos (RF-1 a RF-42 y RF-22b) con test en verde y 1.225 tests que pasan sin API en `develop` (los 13 que fallan son de BiciMAD y no tocan los clientes; ver el fallo 6). Varios recorren los clientes contra el **grafo real** con los especialistas, el supervisor y el sintetizador sustituidos por dobles, y no hacen ninguna conexión a la red; la web se prueba con `AppTest` de Streamlit (el orden de lo que se dibuja y el desplegable de pasos) y se vio en un navegador real (modo simulado). La demo con las APIs reales se hizo en grupo (octubre de 2026), con resultado correcto según el equipo.
 
 **Limitaciones.** Los clientes no permiten aportar imágenes arbitrarias: solo reconocen la imagen demo mediante la referencia literal aprobada; con el grafo real la sesión vive en memoria y se pierde al reiniciar el proceso; y los diagnósticos del supervisor se ocultan en el chat y en «Pasos seguidos», pero se muestran en el panel de depuración y en el CLI (RF-35, reescrito al adoptar la spec 011).
 
@@ -147,7 +149,7 @@ Las tres funcionalidades de esta parte se desarrollaron con Spec-Driven Developm
 
 El SDD se notó sobre todo en tres momentos. Primero, cuando el grafo real llegó y obligó a cambiar el diseño: había una spec y un plan que actualizar en lugar de un código que reescribir a ciegas. Segundo, al renumerar la spec de los clientes de 005 a 008 porque colisionaba con la del grafo. Y tercero, al comprobar que los tests que citaban mis validaciones seguían existiendo: cinco habían desaparecido cuando Rubén reescribió `tests/test_flujo_imagen_calculo.py`, y la validación habría quedado diciendo algo falso.
 
-Un cuarto momento fue el cambio de la spec 011, que invirtió una decisión ya aprobada (RF-35, los diagnósticos del supervisor en la web): en lugar de dejar la spec contradictoria, se reescribieron RF-15, RF-24 y RF-35 y se registró la decisión. Las validaciones de las tres specs están en estado **Parcial** por las demos con APIs reales que quedan pendientes.
+Un cuarto momento fue el cambio de la spec 011, que invirtió una decisión ya aprobada (RF-35, los diagnósticos del supervisor en la web): en lugar de dejar la spec contradictoria, se reescribieron RF-15, RF-24 y RF-35 y se registró la decisión. Tras la demo real en grupo (octubre de 2026), las validaciones de las tres specs pasaron de **Parcial** a **Sí**.
 
 ## 8. Decisiones de alto impacto del proyecto
 
