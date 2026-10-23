@@ -113,3 +113,18 @@
        Archivos: `specs/008-clientes-cli-streamlit/validacion.md`, `README.md`.
        Hecho cuando: cada RF nuevo tiene su evidencia y el README describe el desplegable.
        Estado: completada el 2026-10-22. T39 a T43 hechas con tests primero; la suite da 936 passed y 5 failed, los 5 son `tests/test_bicimad.py` de la PR #16 (dependen de credenciales de la EMT en el entorno) y no tocan los clientes.
+
+## Cambio 2026-10-23: «Pasos seguidos» sobre el registro estructurado de la spec 011
+
+- [x] T44. Escribir los tests del resumen de pasos y del flujo. (RF-39, RF-42)
+       Archivos: `tests/test_presentacion.py`, `tests/test_app_streamlit.py`.
+       Hecho cuando: hay tests en rojo del flujo de nodos, del resumen sin entrada ni salida, de los pasos de control y de las entradas heredadas.
+       Estado: completada el 2026-10-23. Ocho tests nuevos o modificados en rojo antes de implementar.
+- [x] T45. Adaptar `pasos_del_turno` al registro estructurado. (RF-39, RF-41, RF-42)
+       Archivos: `src/clientes/presentacion.py`.
+       Hecho cuando: los tests de T44 pasan y `python -m pytest -q` no añade fallos.
+       Estado: completada el 2026-10-23. En una ruta simple con el grafo real y dobles, el desplegable pasa de unos 9.700 caracteres a 105.
+- [x] T46. Actualizar RF-15, RF-24 y RF-35, la validación y el README. (RF-15, RF-24, RF-35, RF-39, RF-42)
+       Archivos: `specs/008-clientes-cli-streamlit/spec.md`, `specs/008-clientes-cli-streamlit/validacion.md`, `README.md`.
+       Hecho cuando: spec, validación y README describen lo que hace la web con el registro estructurado.
+       Estado: completada el 2026-10-23.

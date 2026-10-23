@@ -106,7 +106,7 @@ def test_la_respuesta_muestra_los_pasos_seguidos(monkeypatch, eventos):
     at.chat_input[0].set_value("uno").run()
     (desplegable,) = _pasos(at)
     lineas = [t.value for t in desplegable.text]
-    assert any("Paso 2 · nodo · horarios [completado]" in linea for linea in lineas)
+    assert "Flujo: horarios" in lineas
     assert "1. hora_actual [ok] hora de uno" in lineas
 
 
@@ -165,3 +165,13 @@ def test_sin_pasos_no_hay_desplegable(monkeypatch, eventos):
     at = _abrir_app(monkeypatch, eventos, con_pasos=False)
     at.chat_input[0].set_value("uno").run()
     assert not _pasos(at)
+
+
+def test_los_pasos_del_chat_no_vuelcan_la_entrada_ni_la_salida_de_cada_paso(monkeypatch, eventos):
+    # RF-39: el chat muestra un resumen; la entrada y la salida completas de cada paso son del panel de depuración.
+    at = _abrir_app(monkeypatch, eventos)
+    at.chat_input[0].set_value("uno").run()
+    (desplegable,) = _pasos(at)
+    texto = "\n".join(t.value for t in desplegable.text)
+    assert "entrada:" not in texto and "salida:" not in texto
+    assert any("nota de uno" in str(elemento.value) for elemento in at.json)
