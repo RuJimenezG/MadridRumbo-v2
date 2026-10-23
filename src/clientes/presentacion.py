@@ -58,11 +58,21 @@ def formatear_entrada_log(entrada: Any) -> str:
 
 
 def pasos_del_turno(log: list, traza: list, ocultar_tecnicas: bool = True) -> list[str]:
-    """Líneas de los pasos seguidos en un turno: registro visible y tools numeradas (spec 008, RF-39).
+    """Resumen de los pasos seguidos en un turno, para el chat de la web (spec 008, RF-39, RF-41 y RF-42).
 
-    Es lo que la web dibuja bajo cada respuesta. Devuelve una lista vacía si no hay nada que mostrar (RF-41).
+    Con el registro estructurado: una línea «Flujo» con los nodos en orden, una línea por cada paso de control y las
+    tools de la traza numeradas. La entrada, la salida y el detalle de cada paso no se muestran aquí: son del panel
+    de depuración. Las entradas heredadas en texto se conservan tal cual. Lista vacía si no hay nada que mostrar.
     """
-    lineas = [formatear_entrada_log(entrada) for entrada in _log_visible(log, ocultar_tecnicas)]
+    visibles = _log_visible(log, ocultar_tecnicas)
+    nodos = [e["nodo"] for e in visibles if _es_entrada_estructurada(e) and e["tipo"] == "nodo"]
+    lineas = [f"Flujo: {' → '.join(str(nodo) for nodo in nodos)}"] if nodos else []
+    for entrada in visibles:
+        if not _es_entrada_estructurada(entrada):
+            lineas.append(str(entrada))
+        elif entrada["tipo"] == "control":
+            lineas.append(f"Paso {entrada['paso']} · control · {entrada['nodo']} [{entrada['resultado']}]")
+    # Las tools salen de la traza (con su extracto), no del registro, para no repetirlas.
     for numero, paso in enumerate(traza, start=1):
         extracto = str(paso.get("preview", ""))[:PREVIEW_MAX]
         lineas.append(f"{numero}. {paso.get('tool', '?')} [{paso.get('status', '?')}] {extracto}".rstrip())

@@ -146,9 +146,9 @@ streamlit run app.py
 ```
 
 - En la barra lateral aparecen los planes pendientes con su resumen. Si hay varios, un selector permite elegir cuál decidir; los botones **Aprobar** y **Rechazar** solo están activos con un plan pendiente. Mientras lo haya, el cuadro de mensaje queda bloqueado.
-- Al enviar un mensaje, aparece en el chat de inmediato con un indicador de espera. Bajo cada respuesta hay un desplegable **Pasos seguidos** con las tools ejecutadas en ese turno y el registro visible (sin los diagnósticos del supervisor); si el turno no ejecutó nada, no aparece.
+- Al enviar un mensaje, aparece en el chat de inmediato con un indicador de espera. Bajo cada respuesta hay un desplegable **Pasos seguidos** con un resumen del turno: el flujo de nodos recorridos («Flujo: supervisor → rutas → sintetizador»), los pasos de control y las tools ejecutadas, sin los diagnósticos del supervisor; si el turno no ejecutó nada, no aparece.
 - **Nueva conversación** crea un identificador nuevo y vacía el historial.
-- El desplegable **Depuración** muestra el identificador, los especialistas que actuaron, la traza de tools y las banderas de plan pendiente y conversación terminada. **No muestra** los diagnósticos técnicos del supervisor: esos solo salen en el CLI.
+- El desplegable **Depuración** muestra el identificador, el registro de depuración completo (con la entrada y la salida de cada nodo y tool, y los diagnósticos del supervisor), la traza de tools y las banderas de plan pendiente y conversación terminada.
 
 ### Cómo probar el HITL
 

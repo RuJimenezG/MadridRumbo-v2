@@ -221,7 +221,7 @@ def test_panel_depuracion_conserva_el_diagnostico_estructurado_y_el_chat_lo_filt
     assert datos_depuracion(estado, "h")['log'] == [visible, DIAGNOSTICO_ESTRUCTURADO]
     assert datos_depuracion(estado, "h", ocultar_tecnicas=True)['log'] == [visible]
     pasos = pasos_del_turno([visible, DIAGNOSTICO_ESTRUCTURADO], [])
-    assert len(pasos) == 1 and "Paso 1 · nodo · supervisor [completado]" in pasos[0]
+    assert pasos == ["Flujo: supervisor"]
     assert "json_invalido" not in "\n".join(pasos)
 
 
@@ -367,13 +367,13 @@ def test_pasos_numeran_las_tools_con_nombre_estado_y_extracto():
 
 
 def test_pasos_incluyen_el_registro_antes_de_las_tools():
-    # RF-39: el registro de especialistas va primero y las tools después.
+    # RF-39 y RF-42: el flujo de nodos va primero y las tools de la traza después, sin repetir la tool del registro.
     from src.clientes.presentacion import pasos_del_turno
 
     pasos = pasos_del_turno(ESTADO["log"], ESTADO["traza"])
-    assert "Paso 1 · nodo · supervisor [completado]" in pasos[0]
-    assert "Paso 2 · tool · rag_ask [completado]" in pasos[1]
-    assert pasos[2].startswith("1. hora_actual")
+    assert pasos[0] == "Flujo: supervisor"
+    assert pasos[1].startswith("1. hora_actual")
+    assert len(pasos) == 3
 
 
 def test_pasos_ocultan_el_diagnostico_del_supervisor_por_defecto():
@@ -381,8 +381,8 @@ def test_pasos_ocultan_el_diagnostico_del_supervisor_por_defecto():
     from src.clientes.presentacion import pasos_del_turno
 
     log = [DIAGNOSTICO_ESTRUCTURADO, LOG_CON_TECNICAS[0]]
-    assert pasos_del_turno(log, []) == [pasos_del_turno([LOG_CON_TECNICAS[0]], [])[0]]
-    assert len(pasos_del_turno(log, [], ocultar_tecnicas=False)) == 2
+    assert pasos_del_turno(log, []) == ["Flujo: rutas"]
+    assert pasos_del_turno(log, [], ocultar_tecnicas=False) == ["Flujo: supervisor → rutas"]
 
 
 def test_pasos_vacios_sin_tools_ni_registro_visible():
@@ -400,3 +400,44 @@ def test_pasos_recortan_el_extracto_largo():
     largo = "x" * (PREVIEW_MAX + 50)
     (linea,) = pasos_del_turno([], [{"tool": "rag_ask", "args": {}, "status": "ok", "preview": largo}])
     assert linea == f"1. rag_ask [ok] {'x' * PREVIEW_MAX}"
+
+
+# --- «Pasos seguidos» como resumen del registro estructurado (spec 008, RF-39 y RF-42) ---
+
+def _nodo(paso, nodo, entrada=None, salida=None):
+    return {"paso": paso, "tipo": "nodo", "nodo": nodo, "entrada": entrada, "salida": salida,
+            "resultado": "completado", "detalle": None}
+
+
+def test_pasos_muestran_el_flujo_de_nodos_en_orden():
+    # RF-42: el flujo recorrido se resume en una línea con los nodos en el orden en que actuaron.
+    from src.clientes.presentacion import pasos_del_turno
+
+    log = [_nodo(1, "supervisor"), _nodo(2, "rutas"), _nodo(3, "sintetizador")]
+    assert pasos_del_turno(log, []) == ["Flujo: supervisor → rutas → sintetizador"]
+
+
+def test_pasos_son_un_resumen_sin_entrada_ni_salida():
+    # RF-39: el detalle completo (entrada, salida y detalle de cada paso) es solo del panel de depuración.
+    from src.clientes.presentacion import pasos_del_turno
+
+    log = [_nodo(1, "rutas", entrada={"mensaje": "texto largo del usuario"}, salida={"nota": "resultado largo"})]
+    texto = "\n".join(pasos_del_turno(log, []))
+    assert "entrada:" not in texto and "salida:" not in texto and "detalle:" not in texto
+    assert "texto largo del usuario" not in texto and "resultado largo" not in texto
+
+
+def test_pasos_incluyen_los_pasos_de_control_que_no_son_diagnostico_del_supervisor():
+    # RF-39: un paso de control de la fachada se muestra resumido en una línea.
+    from src.clientes.presentacion import pasos_del_turno
+
+    control = {"paso": 1, "tipo": "control", "nodo": "fachada", "entrada": None, "salida": None,
+               "resultado": "rechazado", "detalle": {"categoria": "plan_pendiente", "resumen": "Aprueba o rechaza."}}
+    assert pasos_del_turno([control], []) == ["Paso 1 · control · fachada [rechazado]"]
+
+
+def test_pasos_conservan_las_entradas_heredadas_en_texto():
+    # RF-39: un cliente o grafo que aún devuelva textos en el registro no pierde esas líneas.
+    from src.clientes.presentacion import pasos_del_turno
+
+    assert pasos_del_turno(["[horarios] nota lista"], []) == ["[horarios] nota lista"]

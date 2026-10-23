@@ -51,7 +51,7 @@ Esta spec define los dos clientes como **capas finas** sobre el grafo: muestran 
 
 ### Trazas visibles
 
-- RF-15: EL SISTEMA muestra, en cada turno del CLI, la respuesta, el registro de qué especialistas actuaron y la traza de tools con su nombre y estado.
+- RF-15: EL SISTEMA muestra, en cada turno del CLI, la respuesta, el registro de depuración completo del grafo (spec 011) y la traza de tools con su nombre y estado.
 - RF-16: EL SISTEMA muestra, en cada turno del CLI, el identificador de conversación y si hay un plan pendiente o la conversación ha terminado.
 
 ### Chat web (Streamlit)
@@ -64,11 +64,12 @@ Esta spec define los dos clientes como **capas finas** sobre el grafo: muestran 
 - RF-22: MIENTRAS no haya plan pendiente, EL SISTEMA mantiene los botones Aprobar y Rechazar desactivados.
 - RF-22b: MIENTRAS haya un plan pendiente de decisión, EL SISTEMA mantiene desactivado el cuadro de mensaje.
 - RF-23: CUANDO la persona pulsa «Nueva conversación», EL SISTEMA crea un identificador nuevo y vacía el historial y el estado en pantalla.
-- RF-24: EL SISTEMA ofrece un panel de depuración desplegable con el registro de especialistas, la traza de tools, el identificador de conversación y los indicadores de plan pendiente y de conversación terminada.
+- RF-24: EL SISTEMA ofrece un panel de depuración desplegable con el registro de depuración completo del grafo (spec 011), la traza de tools, el identificador de conversación y los indicadores de plan pendiente y de conversación terminada.
 - RF-25: SI el grafo falla, ENTONCES EL SISTEMA muestra un mensaje de error en español sin perder el historial.
 - RF-38: CUANDO la persona envía un mensaje en la web, EL SISTEMA lo muestra en el chat de inmediato, sin esperar a la respuesta del grafo, y muestra un indicador de espera hasta que llega la respuesta.
-- RF-39: EL SISTEMA muestra bajo cada respuesta del asistente en la web un desplegable «Pasos seguidos» con las tools ejecutadas en ese turno (nombre, estado y extracto) y las entradas del registro que no sean diagnósticos técnicos del supervisor (RF-35).
+- RF-39: EL SISTEMA muestra bajo cada respuesta del asistente en la web un desplegable «Pasos seguidos» con un resumen del turno: las tools ejecutadas (nombre, estado y extracto), los pasos de control que no sean diagnósticos técnicos del supervisor (RF-35) y, para las entradas heredadas en texto, el propio texto. La entrada, la salida y el detalle completos de cada paso solo se muestran en el panel de depuración.
 - RF-40: EL SISTEMA conserva los pasos de cada turno junto a su respuesta, de modo que el desplegable de una respuesta anterior no cambia con los turnos siguientes.
+- RF-42: CUANDO el registro del turno trae entradas de nodo, EL SISTEMA muestra como primera línea de «Pasos seguidos» el flujo recorrido, con los nodos en el orden en que actuaron (por ejemplo «Flujo: supervisor → rutas → sintetizador»), sin contar el diagnóstico técnico del supervisor.
 - RF-41: SI un turno no ejecutó ninguna tool ni dejó ninguna entrada de registro visible, ENTONCES EL SISTEMA no muestra el desplegable «Pasos seguidos» en esa respuesta.
 
 ### Contrato común
@@ -82,7 +83,7 @@ Esta spec define los dos clientes como **capas finas** sobre el grafo: muestran 
 - RF-32: CUANDO hay un único plan pendiente, EL SISTEMA no pide elegir plan y lo aprueba o rechaza directamente.
 - RF-33: SI un plan tiene un formato que el cliente no reconoce, ENTONCES EL SISTEMA muestra sus datos de forma legible en lugar de fallar.
 - RF-34: CUANDO el grafo devuelve una respuesta sin plan pendiente, EL SISTEMA muestra la respuesta y no pregunta nada.
-- RF-35: EL SISTEMA muestra en el CLI las entradas técnicas del supervisor, y no las muestra en ninguna parte de la web de Streamlit.
+- RF-35: EL SISTEMA muestra las entradas técnicas del supervisor en el CLI y en el panel de depuración de la web, y no las muestra en el chat ni en «Pasos seguidos».
 - RF-36: DONDE esté activo el modo simulado, EL SISTEMA devuelve planes con el mismo formato que el grafo real y, para algunos pedidos, varios planes a la vez.
 - RF-37: CUANDO una persona escribe una consulta que contiene literalmente `assets/imagen_demo.jpg` en el CLI o en Streamlit, EL SISTEMA transmite ese mensaje sin modificar al mismo grafo que usan ambos clientes.
 
@@ -129,11 +130,12 @@ Esta spec define los dos clientes como **capas finas** sobre el grafo: muestran 
 
 ## Dudas abiertas
 
-Ninguna. Cerrada: **alcance de RF-35.** Los diagnósticos del supervisor se ocultan en toda la web de Streamlit (chat y panel de depuración), la lectura más estricta de la spec 006, y se muestran solo en el CLI.
+Ninguna. Cerrada: **alcance de RF-35.** Los diagnósticos del supervisor se ocultan en el chat y en «Pasos seguidos» y se muestran en el CLI y en el panel de depuración de la web (cambio del 2026-10-23, al adoptar el registro estructurado de la spec 011; antes se ocultaban en toda la web).
 
 ## Decisiones tomadas
 
 - **Pasos seguidos (2026-10-22, incidencia #19).** El CLI ya muestra en cada turno el registro y la traza (RF-15) y no cambia. La web pasa a mostrarlos bajo cada respuesta (RF-39 a RF-41), con el filtro de RF-35. Solo se dispone de lo que el contrato de seis claves expone: la traza de tools y el registro. El recorrido por especialistas (qué rol actuó) no es visible hasta que el grafo lo exponga, y eso lo decide su autor.
+- **«Pasos seguidos» como resumen (2026-10-23).** La spec 011 convierte `log` en entradas estructuradas con la entrada y la salida completas de cada nodo y tool. Volcarlas en el chat daba unos 9.700 caracteres en una ruta simple. «Pasos seguidos» pasa a ser un resumen (flujo de nodos, pasos de control y tools de la traza) y el detalle completo queda en el panel de depuración. Con el registro estructurado ya es posible mostrar el flujo por especialistas (RF-42), cosa que antes no.
 - **Mensaje visible al enviar (2026-10-22).** Streamlit solo dibujaba el mensaje al terminar el turno, porque el historial se pinta antes de llamar al grafo. Ahora se dibuja la burbuja de la persona y un indicador de espera antes de llamarlo (RF-38).
 
 - **Contrato con el grafo (2026-10-15).** Se propone en el plan un contrato basado en el enunciado. Como el grafo real aún no existe, se toma como propuesta y se ajustará cuando se suba el real.
