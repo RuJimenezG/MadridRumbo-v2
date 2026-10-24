@@ -24,8 +24,9 @@
        Hecho cuando: `pytest tests/test_flujo_imagen_calculo.py` en verde.
 - [x] T11. (Hecha a nivel de tools, 2026-10-14) Ejecutar una vez la demo real con la imagen y la pregunta de ejemplo y guardar el resultado para el informe. ⚠️ gasta API. (RF-1, RF-21, RF-22)
        Hecho cuando: la traza muestra `describir_imagen` y `calculadora`, y el total coincide con el cálculo a mano.
-- [ ] T12. (Parcial: falta demo real) Validación final RF por RF (`/sdd-validar`). (Todos)
+- [x] T12. Validación final RF por RF (`/sdd-validar`). (Todos)
        Hecho cuando: `validacion.md` con veredicto «Sí».
+       Estado: completada tras la demo real en grupo (octubre de 2026), confirmada por el equipo.
 
 ## Cambio del 2026-10-19: reintento y causa del error
 

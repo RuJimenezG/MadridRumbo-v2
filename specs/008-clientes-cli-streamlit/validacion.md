@@ -1,7 +1,7 @@
 # Validación — Spec 008
 
-> Fecha: 2026-10-19 · Actualizada el 2026-10-22 (RF-38 a RF-41) · Resultado de `python -m pytest -q`: 936 passed, 5 failed
-> (los 5 son de `tests/test_bicimad.py`, ajenos a los clientes), sin llamadas a API.
+> Fecha: 2026-10-19 · Actualizada el 2026-10-22 (RF-38 a RF-41) y tras la demo real en grupo (octubre de 2026) · Resultado de `python -m pytest -q`: 1225 passed, 13 failed
+> (los 13 son de BiciMAD, ajenos a los clientes), sin llamadas a API.
 
 | RF | Cómo se comprueba | Test o comprobación manual | Resultado |
 |---|---|---|---|
@@ -50,7 +50,7 @@
 | RF-42 | Automático | `tests/test_presentacion.py::test_pasos_muestran_el_flujo_de_nodos_en_orden`, `::test_pasos_incluyen_el_registro_antes_de_las_tools`, `tests/test_app_streamlit.py::test_la_respuesta_muestra_los_pasos_seguidos` | ✅ |
 | Demo CLI (simulado) | Manual | `python main.py --demo --auto-aprobar`, el chat con rechazo y aprobación y la elección entre dos planes, con `MADRIDRUMBO_GRAFO=falso` | ✅ |
 | Demo web (simulado) | Manual | `AppTest` de Streamlit: horarios sin plan, ruta con un plan, dos planes con selector, rechazo, aprobación, filtro del supervisor y nueva conversación | ✅ |
-| Demo con el grafo real y API | Manual ⚠️ | Horarios, una ruta con aprobación y una pregunta fuera de corpus con Gemini, Nominatim y Google | ⏭ Pendiente |
+| Demo con el grafo real y API | Manual ⚠️ | Horarios, una ruta con aprobación y una pregunta fuera de corpus con Gemini, Nominatim y Google | ✅ Demo en grupo (octubre de 2026), correcta según el equipo |
 | Interfaz en un navegador real | Manual | `streamlit run app.py` en modo simulado: aviso, planes, selector, aprobar y panel de depuración | ✅ |
 
 ## Comprobaciones realizadas
@@ -81,7 +81,7 @@ acredita la transmisión del texto, no la interpretación visual.
 - [x] Todos los RF con test en verde (`pytest`) sin API.
 - [x] Demo manual del CLI y de Streamlit con el modo simulado.
 - [x] Pruebas de los clientes contra el grafo real con dobles de prueba, sin API.
-- [ ] Demo manual con el grafo real y API (Gemini, Nominatim y Google).
+- [x] Demo manual con el grafo real y API (Gemini, Nominatim y Google), realizada en grupo.
 - [x] Interfaz de Streamlit comprobada en un navegador real.
 
 ## Fuera de spec
@@ -100,9 +100,8 @@ acredita la transmisión del texto, no la interpretación visual.
   007, no en los clientes.
 
 ## Veredicto
-**Parcial.** Los 38 requisitos (RF-1 a RF-37 y RF-22b) tienen evidencia en
-verde y la suite completa pasa sin API. Los clientes se han probado contra el
-grafo simulado y contra el grafo real con dobles de prueba. Falta la demo con
-el grafo real y las APIs de verdad, que gasta llamadas y necesita las claves de
-Gemini, Nominatim y Google. T34 y T35
-quedan abiertas hasta entonces.
+**Sí.** Los 43 requisitos (RF-1 a RF-42 y RF-22b) tienen evidencia en verde y la
+suite pasa sin API salvo 13 tests de BiciMAD ajenos a los clientes. Los clientes se
+han probado contra el grafo simulado, contra el grafo real con dobles de prueba y,
+además, en una demo con el grafo real y las APIs realizada en grupo por el equipo (octubre de 2026), con resultado correcto según el equipo.
+T34 y T35 cerradas.

@@ -1,6 +1,6 @@
 # Validación — Spec 001
 
-> Fecha: 2026-10-14 · Actualizada el 2026-10-19 tras integrarse el grafo (spec 005) · Resultado de `pytest`: 623 passed, 0 failed (`develop`)
+> Fecha: 2026-10-14 · Actualizada el 2026-10-19 tras integrarse el grafo (spec 005) y tras la demo real en grupo (octubre de 2026) · Resultado de `pytest`: 1225 passed, 13 failed (`develop`; los 13 son de BiciMAD, por credenciales de la EMT, y no pertenecen a esta spec)
 
 | RF | Cómo se comprueba | Test o comprobación manual | Resultado |
 |---|---|---|---|
@@ -21,12 +21,12 @@
 | RF-15 | Automático | `tests/test_especialista_horarios.py::test_llm_falla`, `::test_respuesta_invalida` | ✅ |
 | RF-16 | Automático | `tests/test_fallback_horarios.py::test_palabras_horario` (y `test_cada_palabra_clave`, `test_sin_acentos_ni_mayusculas`) | ✅ |
 | Integración | Automático | El especialista `horarios` forma parte del grafo (spec 005); las consultas de horarios las prueba `tests/test_grafo_enrutamiento.py::test_horarios_y_rutas_mantienen_sus_consultas_internas_sin_duplicar_rag` | ✅ |
-| Demo | Manual ⚠️ API | «¿Hasta qué hora hay metro hoy?» con el grafo real, el RAG indexado y Gemini → traza con `hora_actual` y `rag_ask` | ⏭ Pendiente |
+| Demo | Manual ⚠️ API | «¿Hasta qué hora hay metro hoy?» con el grafo real, el RAG indexado y Gemini → traza con `hora_actual` y `rag_ask` | ✅ Demo en grupo (octubre de 2026), correcta según el equipo |
 
 ## Criterios de finalización
 - [x] Todos los RF con test en verde (`pytest`) sin API.
 - [x] El especialista está integrado en el grafo y probado con dobles (specs 005 a 007).
-- [ ] Demo manual con el grafo real y las APIs (RAG indexado y Gemini).
+- [x] Demo manual con el grafo real y las APIs (RAG indexado y Gemini), realizada en grupo.
 
 ## Fuera de spec
 - `rag_ask` registrada en la allowlist global (`src/tools/__init__.py`). La spec exige que el especialista pueda invocar el RAG (RF-10) pero no dice quién lo registra. El RAG ya está integrado en `develop` (PR #1 y #3), así que el import funciona; no se ha probado con el RAG indexado y Gemini.
@@ -36,4 +36,4 @@
 - Rubén adaptó `src/agents/horarios.py` y `base.py` para el grafo (prompt con la excepción de horarios y solo sus dos tools, y límite compartido de tools por turno) y añadió tests propios en `tests/test_especialista_horarios.py` y `tests/test_allowlist_horarios.py`. Los requisitos RF-8 a RF-15 siguen cubiertos por los mismos tests.
 
 ## Veredicto
-**Parcial.** Los 16 RF tienen test en verde y la suite completa pasa (623 passed en `develop`). El especialista `horarios` ya está integrado en el grafo y probado con dobles sin API. Falta la demo con el grafo real, el RAG indexado y Gemini («¿hasta qué hora hay metro hoy?»), que gasta API y todavía no se ha hecho. T11 queda abierta hasta entonces.
+**Sí.** Los 16 RF tienen test en verde (la suite pasa salvo 13 tests de BiciMAD ajenos a esta spec). El especialista `horarios` está integrado en el grafo, probado con dobles sin API y, además, con la demo con el grafo real y las APIs realizada en grupo por el equipo (octubre de 2026), con resultado correcto según el equipo. T11 cerrada. *Nota:* el corpus no contiene horarios de metro, así que para «¿hasta qué hora hay metro hoy?» la respuesta esperable es una abstención, no un horario.

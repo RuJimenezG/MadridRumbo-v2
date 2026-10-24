@@ -1,6 +1,6 @@
 # Validación — Spec 002
 
-> Fecha: 2026-10-14 · Actualizada el 2026-10-19 tras integrarse el grafo (specs 005 a 007) · Resultado de `pytest`: 623 passed, 0 failed (`develop`)
+> Fecha: 2026-10-14 · Actualizada el 2026-10-19 tras integrarse el grafo (specs 005 a 007) y tras la demo real en grupo (octubre de 2026) · Resultado de `pytest`: 1225 passed, 13 failed (`develop`; los 13 son de BiciMAD, por credenciales de la EMT, y no pertenecen a esta spec)
 
 | RF | Cómo se comprueba | Test o comprobación manual | Resultado |
 |---|---|---|---|
@@ -34,7 +34,7 @@
 ## Criterios de finalización
 - [x] Todos los RF con test en verde (`pytest`) sin API.
 - [x] Demo manual de las tools realizada con la API real y resultado guardado en el informe.
-- [ ] Flujo imagen → importes → total de punta a punta con el grafo real: **no es posible hoy** (ver «Limitaciones»).
+- [x] Flujo imagen → importes → total de punta a punta con el grafo real, comprobado en la demo en grupo (octubre de 2026). Desde la spec 008 (RF-37) la imagen demo se activa con la referencia literal `assets/imagen_demo.jpg`.
 
 ## Fuera de spec
 - Además de los tests citados, `tests/test_describir_imagen.py::test_el_exito_a_la_primera_no_espera_ni_registra` comprueba que sin fallo no se espera ni se registra nada.
@@ -44,11 +44,11 @@
 - Imagen demo: captura de la sección «Billetes de autobuses EMT» de RedTransporte (800 x 260 px). No es un cartel oficial; la fuente y la fecha están en el README.
 
 ## Limitaciones
-- **El flujo de la imagen es inalcanzable desde los clientes.** La spec 007 solo permite `tarifas` con una «imagen aportada válida», pero `src/agent.py` fija `imagen_valida=False` en cada turno y la API pública no ofrece forma de aportar una imagen. Una consulta sobre una imagen se desvía al RAG, que no ve imágenes. Pendiente de que quien lleva el grafo decida cómo se aporta.
+- **(Superado: ver RF-37 de la spec 008 y la demo en grupo.) El flujo de la imagen es inalcanzable desde los clientes.** La spec 007 solo permite `tarifas` con una «imagen aportada válida», pero `src/agent.py` fija `imagen_valida=False` en cada turno y la API pública no ofrece forma de aportar una imagen. Una consulta sobre una imagen se desvía al RAG, que no ve imágenes. Pendiente de que quien lleva el grafo decida cómo se aporta.
 - La demo real (2026-10-14) se hizo a nivel de tools, con un script, no a través del grafo.
 - El reintento y el registro de la causa (RF-24 a RF-27) solo se han probado con clientes falsos y con los errores reales de `google.genai` construidos a mano; no se han provocado con un 503 real de Gemini.
 
 ## Veredicto
-**Parcial.** Los 27 RF (RF-1 a RF-27) tienen test en verde y la suite completa pasa (623 passed en `develop`). El 2026-10-14 se ejecutó la demo real de las dos tools con `gemini-3.8-flash`: `describir_imagen` leyó los cuatro precios de la imagen (RF-1, RF-3, RF-11) y `calculadora` dio 9,50 para `3*1,50+5,00`, con las dos llamadas en la traza (RF-9, RF-10, RF-19, RF-20). RF-21 a RF-23 se reformularon cuando la spec 005 repartió el flujo entre `tarifas` y `auxiliar`; siguen cubiertos con dobles de prueba, pero no se pueden demostrar de punta a punta con el grafo real mientras no se pueda aportar una imagen. T11 quedó hecha a nivel de tools; T12 sigue abierta.
+**Sí.** Los 27 RF (RF-1 a RF-27) tienen test en verde (la suite pasa salvo 13 tests de BiciMAD ajenos a esta spec) y el flujo de punta a punta se comprobó en una demo con el grafo real y las APIs realizada en grupo por el equipo (octubre de 2026), con resultado correcto según el equipo. El 2026-10-14 se ejecutó la demo real de las dos tools con `gemini-3.8-flash`: `describir_imagen` leyó los cuatro precios de la imagen (RF-1, RF-3, RF-11) y `calculadora` dio 9,50 para `3*1,50+5,00`, con las dos llamadas en la traza (RF-9, RF-10, RF-19, RF-20). RF-21 a RF-23 se reformularon cuando la spec 005 repartió el flujo entre `tarifas` y `auxiliar`; siguen cubiertos con dobles de prueba, pero no se pueden demostrar de punta a punta con el grafo real mientras no se pueda aportar una imagen. T11 quedó hecha a nivel de tools y T12 se cierra con la demo en grupo.
 
 **Actualización del 2026-10-19 (RF-24 a RF-27).** Se añadieron el reintento ante errores temporales y el registro de la causa del fallo, a raíz de la demo real, donde un 503 pasajero, un modelo retirado y una clave inválida daban el mismo mensaje. Los 4 requisitos nuevos tienen test en verde (466 passed).

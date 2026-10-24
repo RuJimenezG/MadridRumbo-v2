@@ -71,10 +71,12 @@
        Hecho cuando: `pytest tests/test_clientes_grafo_real.py` en verde.
 - [x] T33. Actualizar el README con la demo nueva, los planes y la elección entre varios. (RF-11, RF-30, RF-31)
        Hecho cuando: los comandos del README funcionan en modo simulado.
-- [ ] T34. ⚠️ Demo con el grafo real y API (Gemini, Nominatim y Google): una consulta de horarios, una ruta con aprobación y una pregunta fuera de corpus. Solo si se pide.
+- [x] T34. ⚠️ Demo con el grafo real y API (Gemini, Nominatim y Google): una consulta de horarios, una ruta con aprobación y una pregunta fuera de corpus. Solo si se pide.
        Hecho cuando: los resultados quedan anotados en `validacion.md`.
-- [ ] T35. (Parcial: falta la demo con el grafo real y API, T34) Validación final RF por RF (`/sdd-validar`). (Todos)
+       Estado: completada en grupo (octubre de 2026); resultado correcto según el equipo, anotado en `validacion.md`.
+- [x] T35. Validación final RF por RF (`/sdd-validar`). (Todos)
        Hecho cuando: `validacion.md` con veredicto «Sí».
+       Estado: completada tras la demo real en grupo (octubre de 2026).
 
 ## Cambio aprobado 2026-10-19: transmisión de la referencia de imagen demo
 
