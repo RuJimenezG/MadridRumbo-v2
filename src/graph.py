@@ -49,6 +49,7 @@ class ContextoEjecucion(TypedDict, total=False):
 
     diagnostico_supervisor: dict[str, str] | None
     correcciones_tarifas: int
+    correcciones_rutas_tarifarias: int
     imagen_valida: bool
 
 
@@ -129,11 +130,11 @@ def _registrar_nodo_fallido(sesion: SesionDepuracion, nombre: object, entrada: o
     )
 
 
-def _registrar_fallback_supervisor(
+def _registrar_diagnosticos_supervisor(
     sesion: SesionDepuracion,
     contexto: Mapping[str, Any] | None,
 ) -> bool:
-    """Proyecta el diagnóstico efímero tras un fallback, sin añadirlo al estado.
+    """Proyecta los diagnósticos efímeros del Supervisor sin añadirlos al estado.
 
     El nodo del Supervisor termina correctamente porque aplica una alternativa
     segura. La entrada ``control`` separa el rechazo de su decisión primaria
@@ -141,25 +142,49 @@ def _registrar_fallback_supervisor(
     """
     if not isinstance(contexto, Mapping):
         return False
+    registrado = False
     diagnostico = contexto.get("diagnostico_supervisor")
-    if not isinstance(diagnostico, Mapping):
-        return False
-    categoria = diagnostico.get("categoria")
-    if not isinstance(categoria, str) or not categoria or categoria == "sin_fallback":
-        return False
-    resumen = diagnostico.get("resumen")
-    sesion.registrar(
-        "control",
-        "supervisor",
-        None,
-        None,
-        resultado="rechazado",
-        detalle={
-            "categoria": categoria,
-            "resumen": resumen if isinstance(resumen, str) else "El Supervisor aplicó un fallback seguro.",
-        },
-    )
-    return True
+    if isinstance(diagnostico, Mapping):
+        categoria = diagnostico.get("categoria")
+        if isinstance(categoria, str) and categoria and categoria != "sin_fallback":
+            resumen = diagnostico.get("resumen")
+            sesion.registrar(
+                "control",
+                "supervisor",
+                None,
+                None,
+                resultado="rechazado",
+                detalle={
+                    "categoria": categoria,
+                    "resumen": (
+                        resumen
+                        if isinstance(resumen, str)
+                        else "El Supervisor aplicó un fallback seguro."
+                    ),
+                },
+            )
+            registrado = True
+
+    correcciones = contexto.get("correcciones_rutas_tarifarias")
+    if isinstance(correcciones, int) and not isinstance(correcciones, bool) and correcciones > 0:
+        cantidad = "aparición" if correcciones == 1 else "apariciones"
+        verbo = "Se redirigió" if correcciones == 1 else "Se redirigieron"
+        sesion.registrar(
+            "control",
+            "supervisor",
+            None,
+            None,
+            resultado="rechazado",
+            detalle={
+                "categoria": "correccion_semantica",
+                "resumen": (
+                    f"{verbo} {correcciones} {cantidad} de rutas a rag por una "
+                    "consulta tarifaria entre zonas."
+                ),
+            },
+        )
+        registrado = True
+    return registrado
 
 
 def _consumir_eventos_grafo(
@@ -191,7 +216,7 @@ def _consumir_eventos_grafo(
             actualizaciones.pop(nodo["nodo"], None)
             sesion.registrar("nodo", nodo["nodo"], nodo["entrada"], salida)
             if nodo["nodo"] == "supervisor" and not diagnostico_supervisor_registrado:
-                diagnostico_supervisor_registrado = _registrar_fallback_supervisor(sesion, contexto)
+                diagnostico_supervisor_registrado = _registrar_diagnosticos_supervisor(sesion, contexto)
 
     try:
         for evento in eventos:

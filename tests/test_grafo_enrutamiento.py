@@ -293,6 +293,66 @@ def test_combinado_metro_corregido_llama_rag_ask_y_conserva_traza():
     assert set(resultado) == {"respuesta", "plan", "log", "traza", "hitl_pendiente", "done"}
 
 
+def test_consulta_de_zonas_corregida_llama_rag_ask_y_conserva_traza():
+    """RF-6, RF-7 y RF-13: A-B2 redirige el recorrido de rutas al RAG documental."""
+    mensaje = "Precio del abono A-B2"
+    evidencia = "Corpus CRTM: el precio depende de las zonas tarifarias."
+    ejecutor = EjecutorFalso({"rag_ask": evidencia})
+    llm_rag = LLMFalso(
+        [
+            {"tool": "rag_ask", "args": {"consulta": mensaje}},
+            {"final": f"Respuesta anclada: {evidencia}"},
+        ]
+    )
+
+    def llm_rutas_no_permitido(_mensajes):
+        raise AssertionError("El especialista rutas no debe ejecutarse para A-B2.")
+
+    contexto = {
+        "diagnostico_supervisor": None,
+        "correcciones_tarifas": 0,
+        "correcciones_rutas_tarifarias": 0,
+        "imagen_valida": False,
+    }
+    grafo = crear_grafo(
+        modelo_supervisor=lambda mensajes: {"roles": ["rutas"]},
+        modelos_especialistas={"rag": llm_rag, "rutas": llm_rutas_no_permitido},
+        ejecutar=ejecutor,
+        modelo_sintetizador=lambda estado: f"Respuesta anclada: {evidencia}",
+    )
+
+    salida = invocar_grafo(
+        grafo,
+        crear_estado_inicial(mensaje),
+        "recorrido-zonas-a-b2",
+        contexto=contexto,
+    )
+
+    assert ejecutor.llamadas == [("rag_ask", {"consulta": mensaje})]
+    assert salida["traza"] == [
+        {"tool": "rag_ask", "args": {"consulta": mensaje}, "status": "ok", "preview": evidencia}
+    ]
+    assert salida["respuesta"] == f"Respuesta anclada: {evidencia}"
+    assert contexto["diagnostico_supervisor"]["categoria"] == "sin_fallback"
+    assert contexto["correcciones_rutas_tarifarias"] == 1
+
+
+def test_ruta_fisica_con_precio_conserva_rutas_y_rag():
+    """RF-5 y RF-16: dos lugares físicos no pierden el especialista de rutas."""
+    llamadas = []
+    mensaje = "¿Cómo voy desde Sol hasta Atocha y cuánto cuesta el abono entre A y B2?"
+    grafo = _grafo_con_roles(["rutas", "rag"], llamadas)
+
+    salida = invocar_grafo(
+        grafo,
+        crear_estado_inicial(mensaje),
+        "recorrido-ruta-fisica-con-precio",
+    )
+
+    assert llamadas == ["rutas", "rag"]
+    assert salida["cola_roles"] == []
+
+
 def test_horarios_y_rutas_mantienen_sus_consultas_internas_sin_duplicar_rag():
     """RF-58 y RF-59: horarios usa su excepción RAG y rutas solo su tool exterior."""
     ruta = json.dumps({"estado": "ok", "ruta": {"duracion_min": 12}})

@@ -87,6 +87,7 @@ def _invocar_turno_con_diagnostico(
     contexto = {
         "diagnostico_supervisor": None,
         "correcciones_tarifas": 0,
+        "correcciones_rutas_tarifarias": 0,
         "imagen_valida": _imagen_demo_valida_para(estado.get("mensaje")),
     }
     sesion = SesionDepuracion()
