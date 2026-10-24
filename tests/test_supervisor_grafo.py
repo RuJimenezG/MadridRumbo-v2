@@ -160,6 +160,7 @@ def test_decision_tarifas_textual_valida_se_corrige_a_rag():
         "categoria",
         "resumen",
         "correcciones_tarifas",
+        "correcciones_rutas_tarifarias",
     }
 
 
@@ -211,6 +212,51 @@ def test_fallback_valido_se_conserva_sin_correccion_semantica():
     assert decision.uso_fallback is True
     assert decision.categoria == "roles_invalidos"
     assert decision.correcciones_tarifas == 0
+
+
+def test_decision_llm_valida_con_rutas_para_zonas_se_corrige_a_rag():
+    """RF-6 y RF-8: una decisión válida incompatible se corrige sin fallback."""
+    decision = decidir_decision_supervisor(
+        {"mensaje": "Dime el precio del abono transporte entre las zonas A y B2."},
+        modelo=lambda mensajes: {"roles": ["rutas"]},
+    )
+
+    assert decision.roles == ["rag"]
+    assert decision.uso_fallback is False
+    assert decision.categoria == "sin_fallback"
+    assert decision.correcciones_rutas_tarifarias == 1
+
+
+def test_correccion_de_rutas_conserva_orden_y_repeticiones():
+    """RF-7: todas las apariciones incompatibles cambian de rol in situ."""
+    decision = decidir_decision_supervisor(
+        {"mensaje": "Precio del abono A-B2"},
+        modelo=lambda mensajes: {
+            "roles": ["auxiliar", "rutas", "horarios", "rutas", "rag"]
+        },
+    )
+
+    assert decision.roles == ["auxiliar", "rag", "horarios", "rag", "rag"]
+    assert decision.correcciones_rutas_tarifarias == 2
+    assert decision.uso_fallback is False
+    assert decision.categoria == "sin_fallback"
+
+
+def test_ruta_fisica_con_precio_y_zonas_conserva_rutas_y_rag():
+    """RF-5 y RF-16: la guarda no elimina una ruta con dos lugares físicos."""
+    decision = decidir_decision_supervisor(
+        {
+            "mensaje": (
+                "¿Cómo voy desde Sol hasta Atocha y cuánto cuesta el abono "
+                "entre A y B2?"
+            )
+        },
+        modelo=lambda mensajes: {"roles": ["rutas", "rag"]},
+    )
+
+    assert decision.roles == ["rutas", "rag"]
+    assert decision.correcciones_rutas_tarifarias == 0
+    assert decision.uso_fallback is False
 
 
 def test_adaptador_del_supervisor_conserva_el_texto_para_normalizarlo():
