@@ -10,8 +10,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from google import genai
 from google.genai import types
 from config import GEMINI_API_KEY, GENERATION_MODEL, TEMPERATURE
-from src.retrieve import RetrievedChunk, format_context
-from prompt import PROMPT_TEMPLATE
+from .retrieve import RetrievedChunk, format_context
+from .prompt import PROMPT_TEMPLATE
 
 client = genai.Client(api_key=GEMINI_API_KEY)
 

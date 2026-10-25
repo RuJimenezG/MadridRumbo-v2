@@ -1,0 +1,382 @@
+"""Tests del chat interactivo del CLI (spec 008, RF-1 a RF-5 y RF-28). No usan API.
+
+La entrada y la salida del CLI se inyectan: `leer` devuelve líneas de una lista y
+`escribir` acumula lo que se imprimiría.
+"""
+import config
+from src.clientes.cli import ejecutar_cli
+from src.clientes.grafo_falso import GrafoFalso
+from src.clientes.sesion import MENSAJE_ERROR
+
+
+RUTA = config.PEDIDOS_DEMO[1]  # el único pedido que pausa para HITL
+
+
+class GrafoSinPlan:
+    """Grafo de pruebas que responde con un eco y nunca pide aprobación (el HITL va en otros tests)."""
+
+    def __init__(self, fallar_primera=False):
+        self.llamadas = []
+        self.fallar_primera = fallar_primera
+
+    def procesar_turno(self, estado, mensaje, thread_id):
+        self.llamadas.append(("procesar_turno", thread_id, mensaje))
+        if self.fallar_primera and len(self.llamadas) == 1:
+            raise RuntimeError("fallo simulado")
+        return {
+            "respuesta": f"Eco: {mensaje}",
+            "log": [{
+                "paso": 1,
+                "tipo": "nodo",
+                "nodo": "supervisor",
+                "entrada": {"mensaje": mensaje},
+                "salida": {"roles": ["eco"]},
+                "resultado": "completado",
+                "detalle": None,
+            }],
+            "hitl_pendiente": False,
+            "done": False,
+        }
+
+    def aprobar_plan(self, estado, thread_id, aprobado):
+        raise AssertionError("estos tests no deberían aprobar ni rechazar")
+
+
+class Entrada:
+    """Sustituye a `input`: devuelve las líneas en orden y lanza EOFError cuando se acaban."""
+
+    def __init__(self, lineas):
+        self.lineas = list(lineas)
+        self.prompts = []  # lo que el CLI ha preguntado, en orden
+
+    def __call__(self, prompt=""):
+        self.prompts.append(prompt)
+        if not self.lineas:
+            raise EOFError
+        return self.lineas.pop(0)
+
+
+def ejecutar(lineas, agente=None, argumentos=None, aviso=None):
+    """Lanza el CLI con esas entradas y devuelve (código de salida, texto impreso, grafo)."""
+    agente = agente or GrafoSinPlan()
+    salida = []
+    codigo = ejecutar_cli(argumentos or [], agente, Entrada(lineas), salida.append, aviso)
+    return codigo, "\n".join(salida), agente
+
+
+def test_chat_interactivo_responde():
+    # RF-1: la persona escribe y ve la respuesta del asistente.
+    codigo, texto, _ = ejecutar(["hola", "salir"])
+    assert codigo == 0
+    assert "Eco: hola" in texto
+
+
+def test_cli_reenvia_referencia_de_demo_sin_modificar():
+    """RF-37: el bucle CLI entrega al agente la referencia literal aprobada."""
+    mensaje = "Analiza assets/imagen_demo.jpg e indica los precios."
+
+    codigo, _, grafo = ejecutar([mensaje, "salir"])
+
+    assert codigo == 0
+    assert len(grafo.llamadas) == 1
+    assert grafo.llamadas[0][0] == "procesar_turno"
+    assert grafo.llamadas[0][2] == mensaje
+
+
+def test_mismo_thread_id_en_todo_el_chat():
+    # RF-2: todos los mensajes llevan el mismo identificador, que además se muestra.
+    _, texto, grafo = ejecutar(["uno", "dos", "tres", "salir"])
+    hilos = {hilo for _, hilo, _ in grafo.llamadas}
+    assert len(grafo.llamadas) == 3
+    assert len(hilos) == 1
+    assert hilos.pop() in texto
+
+
+def test_mensaje_vacio_no_llama_al_grafo():
+    # RF-3
+    _, _, grafo = ejecutar(["", "   ", "salir"])
+    assert grafo.llamadas == []
+
+
+def test_salir_termina():
+    # RF-4
+    codigo, _, grafo = ejecutar(["salir", "esto no se lee"])
+    assert codigo == 0
+    assert grafo.llamadas == []
+
+
+def test_fin_de_entrada_termina_sin_error():
+    # RF-4: Ctrl+D (fin de entrada) también termina.
+    codigo, _, _ = ejecutar(["hola"])
+    assert codigo == 0
+
+
+def test_ctrl_c_termina_sin_error():
+    # RF-4: Ctrl+C termina sin error ni traza.
+    def leer(prompt=""):
+        raise KeyboardInterrupt
+
+    salida = []
+    codigo = ejecutar_cli([], GrafoSinPlan(), leer, salida.append, None)
+    assert codigo == 0
+
+
+def test_fallo_del_grafo_no_corta_el_chat():
+    # RF-5: se avisa en español, no se muestran detalles internos y el chat sigue.
+    codigo, texto, grafo = ejecutar(["uno", "dos", "salir"], GrafoSinPlan(fallar_primera=True))
+    assert codigo == 0
+    assert MENSAJE_ERROR in texto
+    assert "fallo simulado" not in texto
+    assert "Eco: dos" in texto
+    assert len(grafo.llamadas) == 2
+
+
+def test_muestra_el_aviso_del_modo_simulado():
+    # RF-28: el aviso se imprime al iniciar, antes de la primera respuesta.
+    _, texto, _ = ejecutar(["hola", "salir"], aviso="MODO SIMULADO: prueba")
+    assert "MODO SIMULADO: prueba" in texto
+    assert texto.index("MODO SIMULADO") < texto.index("Eco: hola")
+
+
+# --- HITL: aprobar o rechazar el plan (RF-6 a RF-10) ---
+# Se usa GrafoFalso: un pedido de ruta deja un plan pendiente (los demás cierran sin pausa).
+
+def ejecutar_hitl(lineas, agente=None):
+    """Como `ejecutar`, pero con el grafo simulado y devolviendo también lo que preguntó el CLI."""
+    agente = agente or GrafoFalso()
+    entrada = Entrada(lineas)
+    salida = []
+    codigo = ejecutar_cli([], agente, entrada, salida.append, None)
+    return codigo, "\n".join(salida), agente, entrada
+
+
+def llamadas(grafo):
+    """Lista de (nombre, dato) de las llamadas al grafo, sin el identificador."""
+    return [(nombre, dato) for nombre, _, dato in grafo.llamadas]
+
+
+def test_plan_pendiente_pregunta_decision():
+    # RF-6: se muestra el plan y se pregunta si se aprueba o se rechaza.
+    _, texto, _, entrada = ejecutar_hitl([RUTA, "s", "salir"])
+    assert "Plan propuesto" in texto
+    preguntas = [p for p in entrada.prompts if "[s/n]" in p]
+    assert len(preguntas) == 1
+    assert "aprueba" in preguntas[0].lower()
+
+
+def test_no_cierra_sin_decision():
+    # RF-7: sin una decisión explícita nunca se llama a aprobar_plan.
+    for lineas in (["hola"], [RUTA, "salir"]):  # fin de entrada y `salir` en la pregunta
+        codigo, _, grafo, _ = ejecutar_hitl(lineas)
+        assert codigo == 0
+        assert [nombre for nombre, _ in llamadas(grafo)] == ["procesar_turno"]
+
+
+def test_aprobar_muestra_terminada_solo_si_el_grafo_lo_dice():
+    # RF-8: la aprobación llega al grafo y «Terminada» depende solo de lo que diga el grafo.
+    _, texto, grafo, _ = ejecutar_hitl([RUTA, "s", "salir"])
+    assert llamadas(grafo)[-1] == ("aprobar_plan", True)
+    assert "Terminada: sí" in texto
+
+    class GrafoQueNoCierra(GrafoFalso):
+        def aprobar_plan(self, estado, thread_id, aprobado):
+            nuevo = super().aprobar_plan(estado, thread_id, aprobado)
+            nuevo["done"] = False
+            return nuevo
+
+    _, texto, _, _ = ejecutar_hitl([RUTA, "s", "salir"], GrafoQueNoCierra())
+    assert "Terminada: sí" not in texto
+
+
+def test_rechazar_permite_seguir():
+    # RF-9: tras rechazar, se puede escribir otro mensaje en la misma conversación.
+    _, texto, grafo, _ = ejecutar_hitl([RUTA, "n", RUTA, "s", "salir"])
+    assert [nombre for nombre, _ in llamadas(grafo)] == [
+        "procesar_turno", "aprobar_plan", "procesar_turno", "aprobar_plan",
+    ]
+    assert llamadas(grafo)[1] == ("aprobar_plan", False)
+    assert len({hilo for _, hilo, _ in grafo.llamadas}) == 1
+    assert "Plan rechazado" in texto
+
+
+def test_decision_invalida_repregunta():
+    # RF-10: una respuesta no válida vuelve a preguntar sin llamar al grafo.
+    _, texto, grafo, entrada = ejecutar_hitl([RUTA, "x", "quizá", "n", "salir"])
+    assert len([p for p in entrada.prompts if "[s/n]" in p]) == 3
+    assert "Respuesta no válida" in texto
+    assert llamadas(grafo) == [("procesar_turno", RUTA), ("aprobar_plan", False)]
+
+
+# --- Planes de ruta: resumen y elección entre varios (spec 008, RF-6, RF-9, RF-31 a RF-35) ---
+
+VARIAS_RUTAS = "Dame dos rutas alternativas desde la Puerta del Sol hasta la Estación de Atocha"
+HORARIOS = config.PEDIDOS_DEMO[0]
+
+
+class GrafoEspia(GrafoFalso):
+    """Grafo simulado que guarda el `estado` que recibe `aprobar_plan`."""
+
+    def __init__(self):
+        super().__init__()
+        self.estados_recibidos = []
+
+    def aprobar_plan(self, estado, thread_id, aprobado):
+        self.estados_recibidos.append(dict(estado))
+        return super().aprobar_plan(estado, thread_id, aprobado)
+
+
+def ejecutar_planes(lineas):
+    """Lanza el CLI con el grafo espía y devuelve (código, texto, grafo, entrada)."""
+    grafo = GrafoEspia()
+    entrada = Entrada(lineas)
+    salida = []
+    codigo = ejecutar_cli([], grafo, entrada, salida.append, None)
+    return codigo, "\n".join(salida), grafo, entrada
+
+
+def preguntas_de_plan(entrada):
+    return [p for p in entrada.prompts if "[1-" in p]
+
+
+def decisiones_enviadas(grafo):
+    return [dato for nombre, _, dato in grafo.llamadas if nombre == "aprobar_plan"]
+
+
+def test_plan_pendiente_muestra_resumen():
+    # RF-6: el plan se ve con su identificador y un resumen legible, no como un diccionario.
+    _, texto, _, _ = ejecutar_planes([RUTA, "s", "salir"])
+    assert "ruta-1" in texto and "Origen:" in texto and "Destino:" in texto and "min" in texto
+    assert "{'id'" not in texto
+
+
+def test_un_plan_no_pide_elegir():
+    # RF-32: con un único plan solo se pregunta si se aprueba.
+    _, _, grafo, entrada = ejecutar_planes([RUTA, "s", "salir"])
+    assert preguntas_de_plan(entrada) == []
+    assert "plan_id_seleccionado" not in grafo.estados_recibidos[-1]
+
+
+def test_varios_planes_pide_elegir():
+    # RF-31: con varios planes se pide el número y se envía el identificador elegido al grafo.
+    _, texto, grafo, entrada = ejecutar_planes([VARIAS_RUTAS, "2", "s", "salir"])
+    assert "ruta-1" in texto and "ruta-2" in texto
+    assert len(preguntas_de_plan(entrada)) == 1 and "[1-2]" in preguntas_de_plan(entrada)[0]
+    assert grafo.estados_recibidos[-1]["plan_id_seleccionado"] == "ruta-2"
+    assert "Terminada: sí" in texto
+
+
+def test_eleccion_de_plan_invalida_repregunta():
+    # Una elección que no es un número válido vuelve a preguntar sin llamar al grafo.
+    _, texto, grafo, entrada = ejecutar_planes([VARIAS_RUTAS, "9", "x", "1", "n", "s", "salir"])
+    assert len(preguntas_de_plan(entrada)) == 3
+    assert "Plan no válido" in texto
+    assert decisiones_enviadas(grafo) == [False, True]
+
+
+def test_rechazar_muestra_el_nuevo_plan():
+    # RF-9: si tras rechazar el grafo deja otro plan pendiente, se muestra y se vuelve a preguntar.
+    _, texto, grafo, entrada = ejecutar_planes([VARIAS_RUTAS, "1", "n", "s", "salir"])
+    assert decisiones_enviadas(grafo) == [False, True]
+    assert grafo.estados_recibidos[0]["plan_id_seleccionado"] == "ruta-1"
+    # Con un único plan restante ya no se pide elegir: solo hubo una pregunta de elección.
+    assert len(preguntas_de_plan(entrada)) == 1
+    assert "Terminada: sí" in texto
+
+
+def test_salir_en_la_eleccion_no_aprueba_nada():
+    # RF-7: sin decisión explícita no se cierra nada.
+    for lineas in ([VARIAS_RUTAS, "salir"], [VARIAS_RUTAS]):
+        codigo, _, grafo, _ = ejecutar_planes(lineas)
+        assert codigo == 0
+        assert decisiones_enviadas(grafo) == []
+
+
+def test_respuesta_sin_plan_no_pregunta():
+    # RF-34: horarios cierra sin plan: se muestra la respuesta y no se pregunta nada.
+    _, texto, grafo, entrada = ejecutar_planes([HORARIOS, "salir"])
+    assert "Terminada: sí" in texto
+    assert [p for p in entrada.prompts if "[s/n]" in p or "[1-" in p] == []
+    assert decisiones_enviadas(grafo) == []
+
+
+def test_el_cli_muestra_las_entradas_tecnicas_del_supervisor():
+    # RF-35: el CLI las muestra (solo la web las oculta).
+    tecnica = {
+        "paso": 2,
+        "tipo": "control",
+        "nodo": "supervisor",
+        "entrada": None,
+        "salida": None,
+        "resultado": "rechazado",
+        "detalle": {"categoria": "json_invalido", "resumen": "Se aplicó el fallback."},
+    }
+
+    class GrafoConDiagnostico(GrafoSinPlan):
+        def procesar_turno(self, estado, mensaje, thread_id):
+            resultado = super().procesar_turno(estado, mensaje, thread_id)
+            resultado["log"].append(tecnica)
+            return resultado
+
+    _, texto, _ = ejecutar(["hola", "salir"], GrafoConDiagnostico())
+    assert "Paso 2 · control · supervisor [rechazado]" in texto
+    assert '"categoria": "json_invalido"' in texto
+
+
+def test_cli_muestra_el_registro_estructurado_completo_en_orden():
+    """RF-23: la CLI expone nodo, tool, control y diagnóstico del Supervisor."""
+    registro = [
+        {
+            "paso": 1,
+            "tipo": "nodo",
+            "nodo": "supervisor",
+            "entrada": {"mensaje": "consulta"},
+            "salida": {"roles": ["rag"]},
+            "resultado": "completado",
+            "detalle": None,
+        },
+        {
+            "paso": 2,
+            "tipo": "tool",
+            "nodo": "rag_ask",
+            "entrada": {"consulta": "consulta"},
+            "salida": {"texto": "respuesta"},
+            "resultado": "completado",
+            "detalle": None,
+        },
+        {
+            "paso": 3,
+            "tipo": "control",
+            "nodo": "fachada",
+            "entrada": None,
+            "salida": None,
+            "resultado": "rechazado",
+            "detalle": {"categoria": "plan_pendiente", "resumen": "Plan pendiente."},
+        },
+        {
+            "paso": 4,
+            "tipo": "nodo",
+            "nodo": "supervisor",
+            "entrada": {"mensaje": "ambigua"},
+            "salida": None,
+            "resultado": "fallido",
+            "detalle": {"categoria": "json_invalido", "resumen": "Fallback del Supervisor."},
+        },
+    ]
+
+    class GrafoConRegistro:
+        def procesar_turno(self, estado, mensaje, thread_id):
+            return {
+                "respuesta": "Resultado",
+                "log": registro,
+                "traza": [],
+                "hitl_pendiente": False,
+                "done": True,
+            }
+
+    _, texto, _ = ejecutar(["hola", "salir"], GrafoConRegistro())
+    assert "Paso 1 · nodo · supervisor [completado]" in texto
+    assert "Paso 2 · tool · rag_ask [completado]" in texto
+    assert "Paso 3 · control · fachada [rechazado]" in texto
+    assert "Paso 4 · nodo · supervisor [fallido]" in texto
+    assert '"categoria": "json_invalido"' in texto
+    assert texto.index("Paso 1") < texto.index("Paso 2") < texto.index("Paso 3") < texto.index("Paso 4")
