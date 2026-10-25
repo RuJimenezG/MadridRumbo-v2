@@ -129,6 +129,7 @@ def test_procesar_turno_inicializa_el_contexto_sin_imagen_valida(monkeypatch):
         {
             "diagnostico_supervisor": None,
             "correcciones_tarifas": 0,
+            "correcciones_rutas_tarifarias": 0,
             "imagen_valida": False,
         }
     ]
@@ -422,6 +423,47 @@ def test_correccion_semantica_se_expone_solo_en_el_turno_que_la_origina(monkeypa
     assert "diagnostico_supervisor" not in snapshot
     assert "correccion_semantica" not in str(snapshot["historial"])
     assert "correccion_semantica" not in str(primero["traza"])
+
+
+def test_correccion_de_rutas_registra_diagnostico_tecnico_separado(monkeypatch):
+    """RF-9 a RF-11: la corrección deja un control seguro y no persistido."""
+    respuesta_cruda = "RESPUESTA_CRUDA_DEL_LLM_QUE_NO_DEBE_PERSISTIR"
+
+    class RespuestaDelModelo(dict):
+        def __repr__(self):
+            return respuesta_cruda
+
+    grafo = crear_grafo(
+        modelo_supervisor=lambda mensajes: RespuestaDelModelo(roles=["rutas"]),
+        especialistas={"rag": lambda estado: {}},
+        modelo_sintetizador=lambda contexto: "Resumen controlado.",
+    )
+    monkeypatch.setattr(agent, "_GRAFO", grafo)
+
+    resultado = agent.procesar_turno(
+        {},
+        "Precio del abono A-B2",
+        "hilo-correccion-rutas",
+    )
+    snapshot = recuperar_estado(grafo, "hilo-correccion-rutas")
+
+    _comprobar_contrato(resultado)
+    controles = [
+        entrada
+        for entrada in resultado["log"]
+        if entrada["tipo"] == "control"
+        and entrada["detalle"].get("categoria") == "correccion_semantica"
+    ]
+    assert len(controles) == 1
+    assert controles[0]["nodo"] == "supervisor"
+    assert controles[0]["resultado"] == "rechazado"
+    assert controles[0]["detalle"] == {
+        "categoria": "correccion_semantica",
+        "resumen": "Se redirigió 1 aparición de rutas a rag por una consulta tarifaria entre zonas.",
+    }
+    assert respuesta_cruda not in str(resultado)
+    assert "correcciones_rutas_tarifarias" not in snapshot
+    assert "correcciones_rutas_tarifarias" not in str(resultado["traza"])
 
 
 def test_reanudacion_hitl_no_reutiliza_correccion_semantica(monkeypatch):

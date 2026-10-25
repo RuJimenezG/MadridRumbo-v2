@@ -361,6 +361,51 @@ def test_invocar_grafo_registra_snapshots_de_nodos_tools_y_fallo_sin_eventos_pub
     assert len(sesion.entradas) == 4
 
 
+def test_correccion_de_rutas_del_supervisor_se_proyecta_como_control_efimero():
+    """RF-9 y RF-11: la corrección no se confunde con un fallback del Supervisor."""
+
+    class GrafoConCorreccionDeRutas:
+        def stream(self, estado, *, config, context, stream_mode):
+            inicial = dict(estado)
+            salida = {**inicial, "cola_roles": ["rag"]}
+            yield ("values", inicial)
+            yield ("tasks", {"id": "supervisor", "name": "supervisor", "input": inicial})
+            context["diagnostico_supervisor"] = {
+                "categoria": "sin_fallback",
+                "resumen": "Decisión estructurada validada.",
+            }
+            context["correcciones_rutas_tarifarias"] = 2
+            yield ("updates", {"supervisor": {"cola_roles": ["rag"]}})
+            yield ("tasks", {"id": "supervisor", "name": "supervisor", "error": None, "result": {}})
+            yield ("values", salida)
+
+    sesion = SesionDepuracion()
+    salida = invocar_grafo(
+        GrafoConCorreccionDeRutas(),
+        {"mensaje": "Precio del abono A-B2"},
+        "hilo-correccion-rutas",
+        contexto={
+            "diagnostico_supervisor": None,
+            "correcciones_rutas_tarifarias": 0,
+        },
+        sesion=sesion,
+    )
+
+    assert salida == {"mensaje": "Precio del abono A-B2", "cola_roles": ["rag"]}
+    assert sesion.entradas[-1] == {
+        "paso": 2,
+        "tipo": "control",
+        "nodo": "supervisor",
+        "entrada": None,
+        "salida": None,
+        "resultado": "rechazado",
+        "detalle": {
+            "categoria": "correccion_semantica",
+            "resumen": "Se redirigieron 2 apariciones de rutas a rag por una consulta tarifaria entre zonas.",
+        },
+    }
+
+
 def test_fallback_del_supervisor_se_proyecta_como_control_efimero():
     """RF-10, RF-11 y RF-15: el diagnóstico real no altera el nodo completado ni el estado."""
 
