@@ -1,108 +1,271 @@
 # MadridRumbo
-> **Project Break 2 · Sprints 11–13 | AI Engineering Bootcamp**
+
+> **Project Break 2 · Sprints 11–13 | AI Engineering Bootcamp**  
 > **Grupo 3:** Rubén Jiménez Gutiérrez, Guzmán López Barceló, José Manuel Gil Ruiz.
 
-> **Estado del README.** Este documento se está completando por partes. Aquí figura la parte de **José** (tools auxiliares, multimodal y sus especialistas). Instalación general, indexado del RAG, grafo, CLI y Streamlit los completa el resto del equipo.
+## Alcance
 
-## Tools y especialistas (parte de José)
+MadridRumbo es un asistente en español sobre transporte público de la Comunidad de Madrid. Combina un sistema RAG anclado a un corpus del CRTM con un grafo multiagente que decide qué capacidad necesita cada consulta: información documental, horarios, planificación de rutas, cálculos o lectura de la imagen demo.
 
-### Tools
+El RAG no ha desaparecido: permanece como módulo independiente y se invoca como una herramienta del grafo. Sus respuestas documentales deben basarse exclusivamente en los fragmentos recuperados del corpus; cuando no hay evidencia, debe abstenerse con «No lo sé, no está en los documentos.»
 
-Todas están en `src/tools/` y solo se ejecutan a través de `ejecutar_tool(nombre, args, traza)`, que aplica la allowlist `TOOLS_PERMITIDAS` y deja en `traza` el nombre, los argumentos, el estado (`ok`, `error` o `bloqueada`) y un extracto del resultado. El LLM propone; el código decide qué se ejecuta.
+**Ejemplos de preguntas dentro del alcance:**
+
+- ¿Qué es la Tarjeta Azul y en qué medios de transporte es válida?
+- ¿En qué zona tarifaria se encuentra la parada de Plaza de Castilla?
+- ¿Hasta qué hora hay metro hoy?
+- ¿Cómo puedo ir desde la Puerta del Sol hasta la Estación de Atocha?
+- ¿Cómo voy del hospital La Princesa a Sol?
+- Analiza `assets/imagen_demo.jpg` e indica los precios.
+
+**Ejemplos de preguntas fuera del alcance:**
+
+- ¿Cuánto cuesta un billete de metro en Barcelona?
+- ¿Cuál es la capital de Francia?
+- Planifica una ruta en coche, bicicleta o fuera del ámbito de cobertura CRTM.
+
+Las rutas se calculan para transporte público (metro, metro ligero/tranvía, autobús y Cercanías); los trayectos a pie solo se aceptan como parte de una ruta de transporte público. La herramienta acepta hora de salida o de llegada (nunca las dos) y un título de billete en texto libre: la zona y el precio salen del RAG, que se abstiene si no los conoce. Sin hora pedida y con un trayecto de 1 a 6 km, y si hace buen tiempo, añade una alternativa en BiciMAD con estaciones reales de la EMT.
+
+---
+
+## Corpus documental
+
+El RAG carga desde `data/` documentos Markdown y el CSV de paradas CRTM. El corpus procede de fuentes descargadas el 07/09/2026:
+
+- `Paradas CRTM.csv`
+  - Reúne las paradas de Metro, Metro Ligero, Cercanías, EMT, autobuses interurbanos y autobuses urbanos.
+  - Se construye a partir de las colecciones GTFS del [portal de datos del CRTM](https://datos.crtm.es/search?type=CSV%2520Collection): se conservan `stop_id`, `stop_name`, `stop_desc`, `zone_id` y un campo `type` con el modo de transporte.
+  - Durante la carga, las paradas se agrupan por tipo y zona tarifaria, en bloques de hasta seis paradas.
+- `crtm_billetes_tarifas.md`
+  - Información relevante de [Billetes y tarifas del CRTM](https://www.crtm.es/billetes-y-tarifas/).
+- `crtm_faq.md`
+  - Información procedente de las [preguntas frecuentes de billetes y tarifas](https://www.crtm.es/billetes-y-tarifas/preguntas-frecuentes/).
+- `bocm-20251231-tarifas_transporte.md` y `bocm-20251231-precios_transporte.md`
+  - Versiones textuales de los documentos de tarifas y precios publicados por el CRTM: [tarifas](https://www.crtm.es/media/sjqj4ggj/bocm-20251231-tarifas_transporte.pdf) y [precios](https://www.crtm.es/media/s1qi0nmo/bocm-20251231-precios_transporte.pdf).
+
+Los archivos Markdown con tablas válidas conservan cada tabla completa —incluido su título y encabezados— en un único chunk. Así se evita separar precios o condiciones que solo tienen sentido juntos.
+
+---
+
+## Arquitectura
+
+El sistema separa la preparación offline del corpus de la conversación online. La configuración centralizada en `config.py` reúne rutas, modelos, límites, allowlists y parámetros operativos; las claves se leen exclusivamente desde `.env`.
+
+```text
+                         PREPARACIÓN DEL CORPUS
+
+ PDF / Markdown / CSV CRTM
+             ↓
+ carga → limpieza → chunking semántico → embeddings → ChromaDB persistente
+             ↓                                      ↑
+ output/chunks.json · output/embeddings.json ───────┘
+
+                         CONSULTA Y CONVERSACIÓN
+
+ CLI / Streamlit
+        ↓
+ src.agent (fachada pública)
+        ↓
+ LangGraph: Supervisor → especialistas → Sintetizador
+        │                    │
+        │                    ├─ rag        → rag_ask → ChromaDB + Gemini
+        │                    ├─ horarios   → hora_actual / rag_ask
+        │                    ├─ rutas      → Nominatim + Google Routes + RAG
+        │                    ├─ auxiliar   → hora_actual / calculadora
+        │                    └─ tarifas    → describir_imagen
+        ↓
+ respuesta, planes, log, traza, HITL y estado por thread_id
+```
+
+El supervisor pide al modelo una lista JSON de roles válidos y aplica las reglas de seguridad en Python. Si la respuesta del proveedor falla, no es JSON válido o contiene roles incorrectos, se usa un fallback determinista y se conserva un diagnóstico técnico seguro. Las consultas textuales sobre tarifas se redirigen al RAG si no aportan una imagen válida; una mención a una foto o cartel no basta.
+
+### Grafo multiagente
+
+| Componente | Responsabilidad |
+| --- | --- |
+| Supervisor | Decide y ordena los roles necesarios; valida su decisión, aplica fallback y guardas semánticas. |
+| `rag` | Responde sobre normativa, tarifas, títulos, zonas y documentos del CRTM usando evidencia recuperada. |
+| `horarios` | Combina la hora actual de Madrid y el RAG para preguntas de servicio, frecuencias o «hoy / ahora». |
+| `rutas` | Solicita una ruta entre origen y destino; la tool consulta geocodificación, Google Routes y el RAG para zona y precio. |
+| `auxiliar` | Obtiene la hora actual y ejecuta cálculos aritméticos deterministas. |
+| `tarifas` | Extrae textos e importes visibles de una imagen válida; no calcula importes por sí mismo. |
+| Sintetizador | Produce una respuesta sencilla en español a partir de las notas de los especialistas, sin añadir datos no obtenidos. |
+
+Cada conversación se conserva en memoria con un `thread_id`. Las operaciones públicas del grafo son `src.agent.procesar_turno(estado, mensaje, thread_id)` y `src.agent.aprobar_plan(estado, thread_id, aprobado)`. Ambas devuelven las mismas seis claves: `respuesta`, `plan`, `log`, `traza`, `hitl_pendiente` y `done`.
+
+Los límites de turnos y de invocaciones de tools se aplican en Python. Las tools solo se ejecutan mediante `ejecutar_tool(nombre, args, traza)`, que aplica una allowlist y registra el nombre, argumentos, estado y vista previa del resultado.
+
+### Tools disponibles
 
 | Tool | Tipo | Qué hace |
-|---|---|---|
-| `hora_actual` | Auxiliar determinista | Fecha, hora, día de la semana y tipo de día (laborable, sábado o domingo) en la zona horaria configurada. Sin red ni LLM. No conoce festivos. |
-| `calculadora` | Auxiliar determinista | Evalúa `+ - * /`, paréntesis y signo menos, con decimales con coma o punto. Usa `ast` y `Decimal`, sin `eval`. Resultado con 2 decimales (enteros sin decimales). |
-| `describir_imagen` | Multimodal | Lee una imagen de `assets/` con Gemini y devuelve los textos y cifras visibles. Solo JPG, JPEG y PNG, máximo 4 MB, y solo dentro de `assets/`. |
-| `rag_ask` | RAG | Delega en `rag.responder.rag_ask`. Se importa solo al usarla. |
+| --- | --- | --- |
+| `rag_ask` | RAG | Delega en `rag.responder.rag_ask` para responder con el corpus CRTM. |
+| `hora_actual` | Auxiliar determinista | Devuelve fecha, hora, día y tipo de día en `Europe/Madrid`; no usa red ni LLM. No distingue festivos. |
+| `calculadora` | Auxiliar determinista | Evalúa `+`, `-`, `*`, `/`, paréntesis y signo menos con `ast` y `Decimal`, sin `eval`; acepta coma o punto decimal. |
+| `planificar_ruta` | API externa + RAG | Geocodifica con Nominatim, comprueba que los extremos están en la Comunidad de Madrid, calcula con Google Routes (con hora de salida o de llegada) y consulta internamente el RAG para zona y precio. Sin hora pedida y solo si la bici es posible por distancia (1 a 6 km), consulta el tiempo (Open-Meteo) y, si procede, añade una alternativa en BiciMAD (EMT) en los campos `clima` y `bici`. Si falla la EMT, Google u Open-Meteo, la ruta llega igual con un aviso. |
+| `describir_imagen` | Multimodal | Lee texto y cifras de JPG, JPEG o PNG dentro de `assets/`, con un tamaño máximo de 4 MB. |
 
-Cualquier fallo (tool no permitida, error del modelo, expresión inválida…) devuelve un texto que empieza por `ERROR`, sin lanzar excepciones.
+Un fallo de tool se convierte en un texto controlado que comienza por `ERROR`, sin propagar excepciones al chat. La tool de imagen reintenta una sola vez ante errores temporales (por ejemplo 503, 429 o red); no reintenta errores de clave, petición o modelo.
 
-### Especialistas
+### Rutas, BiciMAD y clima
 
-Los dos comparten el bucle de `src/agents/base.py`: el LLM devuelve `{"tool", "args"}` para pedir una tool o `{"final"}` para dar su nota. El código aplica la lista de tools de cada especialista y el tope de pasos. Un especialista **nunca decide `done`**: solo devuelve `notas` y `traza`.
+`planificar_ruta` sigue un orden fijo que decide Python, no el LLM:
 
-| Especialista | Para qué | Tools permitidas |
-|---|---|---|
-| `horarios` (`src/agents/horarios.py`) | Cuándo, a qué hora y hasta cuándo hay servicio | `hora_actual`, `rag_ask` |
-| `tarifas` (`src/agents/tarifas.py`) | Lee los importes de una imagen de tarifas; la cuenta la hace el especialista `auxiliar` | `describir_imagen` |
+1. **Nominatim** geocodifica origen y destino y solo conserva candidatos de la Comunidad de Madrid, sin duplicados. Si un lugar es ambiguo se muestran opciones numeradas y se acepta «2», «2 y 1» o «la 2 y la 1»; el mensaje indica siempre qué opción se ha usado y cómo corregirla.
+2. **Google Routes** calcula el itinerario en transporte público.
+3. **RAG** aporta la zona y el precio (primero la zona; el precio se pregunta sin la zona y, si el RAG se abstiene, con ella). Lo que el RAG no sabe no se estima: el resultado indica que no se pudo determinar.
+4. **BiciMAD (EMT) y Google Routes** añaden la alternativa en bici solo si no se pide hora, la distancia en línea recta está entre 1 y 6 km, la estación de origen tiene bicis, la de destino huecos libres, ambas están a 500 m o menos y son distintas.
+5. **Open-Meteo** da el tiempo actual del origen, solo si la bici es posible por distancia. Un tiempo no apto (lluvia, llovizna, nieve, tormenta, menos de 5 °C, más de 32 °C o viento de más de 30 km/h) evita ofrecer la bici y pide la ruta de transporte con preferencia de menos trayectos a pie. Si el clima no está disponible, la bici se ofrece con un aviso.
 
-`src/supervisor_reglas.py` contiene el fallback determinista del supervisor: `elegir_rol_por_palabras(mensaje)` devuelve `"horarios"` si el mensaje trae términos como hora, horario, ahora, hoy, noche, última, primera, abre, cierra o frecuencia; si no, devuelve `None`.
+Los límites por consulta están en Python: como máximo 4 llamadas a Google (1 de transporte, 1 de bici y 2 a pie), 2 a la EMT, 1 a Open-Meteo y 3 al RAG. Los umbrales de bici y clima están en `config.py`.
 
-### Configuración (`config.py`)
+La zona, el precio, el clima, la alternativa en bici y la opción de lugar usada se añaden tal cual a la respuesta final; el modelo solo redacta el resumen. La verificación TLS de Open-Meteo usa el almacén de certificados de `certifi` y nunca se desactiva.
 
-| Constante | Valor | Para qué |
-|---|---|---|
-| `ZONA_HORARIA` | `Europe/Madrid` | Zona de `hora_actual` |
-| `MAX_STEPS_ESPECIALISTA` | `3` | Máximo de tools por turno de un especialista |
-| `TOOLS_POR_ESPECIALISTA` | dict | Allowlist de cada especialista |
-| `IMAGENES_DIR`, `IMAGEN_DEMO` | `assets/`, `imagen_demo.jpg` | Carpeta autorizada e imagen por defecto |
-| `IMAGEN_MAX_MB`, `EXTENSIONES_IMAGEN` | `4`, jpg/jpeg/png | Límites de `describir_imagen` |
-| `MODELO_VISION` | `gemini-3.8-flash` | Modelo de la tool de imagen, independiente del modelo del RAG |
-| `CALC_MAX_CARACTERES` | `200` | Longitud máxima de una expresión |
+### Aprobación humana de rutas (HITL)
 
-## Cómo probar mi parte
+Las rutas son los únicos resultados que se pausan para aprobación. Cuando el grafo devuelve uno o varios planes, los clientes muestran su identificador, origen, destino, duración, tramos, zona y precio disponibles. La persona elige un plan si hay varios y después lo aprueba o lo rechaza.
 
-### Tests (sin API)
-
-Con el entorno virtual activo y las dependencias instaladas (`pip install -r requirements.txt`):
-
-```bash
-python -m pytest
+```text
+consulta de ruta → plan pendiente → elegir plan (si hay varios) → aprobar / rechazar
+                                      │                              │
+                                      └───────── aprobar ────────────┘ → done=True
+                                                                     
+                                                       rechazar → replanificación o continuar
 ```
 
-Los tests usan un LLM, un cliente de visión y unas tools falsos: no llaman a ninguna API ni gastan cuota.
+Mientras haya un plan pendiente, los clientes bloquean mensajes nuevos. Un rechazo no cierra la conversación: el grafo puede proponer una alternativa o permitir continuar en el mismo `thread_id`.
 
-### `hora_actual` y `calculadora` (locales, sin API)
+### Estructura del proyecto
 
-```bash
-python -c "from src.tools import ejecutar_tool; print(ejecutar_tool('hora_actual', {}, []))"
-python -c "from src.tools import ejecutar_tool; print(ejecutar_tool('calculadora', {'expresion': '3*1,50+5,00'}, []))"
+```text
+MadridRumbo/
+├── main.py                         # Cliente CLI del grafo
+├── app.py                          # Cliente web Streamlit del mismo grafo
+├── config.py                       # Configuración centralizada
+├── model_auth.py                   # Lectura/solicitud de claves de modelos
+├── requirements.txt
+├── .env.example                    # Plantilla de variables de entorno
+├── rag/                            # Módulo RAG reutilizable
+│   ├── load.py · clean.py · chunk.py · pipeline.py
+│   ├── embed.py · index.py · retrieve.py
+│   ├── prompt.py · generate.py · responder.py
+│   ├── rag_cli.py                  # CLI de preparación, índice y consulta RAG
+│   └── eval_retrieval.py · eval_generacion.py
+├── src/
+│   ├── agent.py · graph.py · estado.py
+│   ├── supervisor.py · supervisor_reglas.py · catalogo_roles.py
+│   ├── sintetizador.py · depuracion.py · modelos.py · reloj.py
+│   ├── agents/                     # rag, horarios, rutas, auxiliar y tarifas
+│   ├── tools/                      # allowlist y herramientas del grafo
+│   └── clientes/                   # contrato, sesión, CLI, presentación y modo simulado
+├── data/                           # Corpus CRTM
+├── assets/                         # Icono e imagen demo
+├── output/                         # Artefactos generados
+├── chroma/                         # Índice vectorial persistente, generado localmente
+├── specs/                          # Especificaciones, planes, tareas y validaciones SDD
+├── docs/                           # Constitución, plantillas y guía de tests
+└── tests/                          # Suite sin llamadas a servicios reales
 ```
 
-La segunda debe imprimir `9,50`.
+---
 
-### Multimodal con la API real (⚠️ gasta una llamada)
+## Preparación del entorno
 
-1. Consigue una clave gratuita en [Google AI Studio](https://aistudio.google.com/apikey).
-2. Crea un archivo `.env` 
+Se recomienda Python 3.10 o superior.
 
-   ```
-   GEMINI_API_KEY=tu_clave
-   ```
+### 1. Crear y activar un entorno virtual
 
+```bash
+python -m venv .venv
+```
 
-Debe listar los cuatro precios de la imagen demo (1,50 €, 1,80 €, 5,00 €, 7,30 €) y la traza con estado `ok`. Si falla con `ERROR: el modelo no pudo describir la imagen`, la causa real (tipo de error y código, como `ServerError 503 UNAVAILABLE`) queda en el registro de avisos de la consola. Un error temporal (503, 429 o de red) se reintenta una vez tras 2 segundos; una clave inválida (400, 401, 403) o un modelo retirado (404) no se reintentan.
+Windows PowerShell:
 
-## Imagen demo multimodal
+```powershell
+.venv\Scripts\Activate.ps1
+```
 
-- Archivo: `assets/imagen_demo.jpg` (800 x 260 px), usado por la tool `describir_imagen`.
-- Contenido: captura de la sección «Billetes de autobuses EMT» con cuatro precios: billete sencillo EMT 1,50 €, billete sencillo TransBus 1,80 €, billete Exprés Aeropuerto 5,00 € y Metrobús 10 viajes 7,30 €.
-- Fuente: captura propia de [RedTransporte, precios de billetes y abonos (tarifas 2026)](https://www.redtransporte.com/madrid/precios-abonos.html), © RedTransporte. La página no indica licencia; se usa solo con fines educativos.
-- Fecha de captura: 2026-10-14.
-- Demo prevista: «Según assets/imagen_demo.jpg, ¿cuánto cuestan 3 billetes sencillos EMT y 1 Exprés Aeropuerto?» (3 × 1,50 + 5,00 = 9,50 €). Resultado real de las dos tools en `entregables/informe_decisiones.md`.
+Linux/macOS:
 
-## Limitaciones conocidas (parte de José)
+```bash
+source .venv/bin/activate
+```
 
-- `hora_actual` solo distingue laborable, sábado y domingo; los festivos se tratan como laborables.
-- La lectura de cifras de `describir_imagen` se ha verificado solo con la imagen demo.
-- Los especialistas `horarios` y `tarifas` se probaron con un LLM falso y ahora los usa el grafo, pero `tarifas` solo se activa con una imagen aportada válida y ningún cliente puede aportarla todavía.
-- `describir_imagen` reintenta una sola vez ante un error temporal y registra la causa, pero el mensaje que ve el agente sigue siendo genérico a propósito, para no filtrar detalles internos.
+### 2. Instalar dependencias
 
-## Metodología
+```bash
+pip install -r requirements.txt
+```
 
-El proyecto sigue Spec-Driven Development: cada funcionalidad tiene su carpeta en `specs/NNN-nombre/` con `spec.md`, `plan.md`, `tasks.md` y `validacion.md`. Las specs de mi parte son `specs/001-tool-hora-especialista-horarios/` y `specs/002-multimodal-imagen-calculadora/`. Las reglas están en `docs/constitution.md` y `AGENTS.md`.
+El stack utiliza Python, LangChain, LangGraph, ChromaDB, `google-genai`, Streamlit y pytest, entre otras dependencias indicadas en `requirements.txt`.
 
-## Cómo usar la aplicación (CLI y Streamlit)
+### 3. Configurar las variables de entorno
 
-El CLI (`main.py`) y la web (`app.py`) son clientes del mismo grafo multiagente y muestran lo mismo ante el mismo pedido: respuesta, planes, qué especialistas actuaron y qué tools se ejecutaron. La aprobación humana (HITL) la pide el grafo cuando una consulta genera un **plan de ruta**: solo una aprobación lo cierra. Las demás consultas (horarios, RAG) se responden directamente, sin preguntar nada.
+Crea `.env` a partir de `.env.example` y completa únicamente las claves que vaya a usar el flujo elegido:
 
-### Qué grafo se usa
+```env
+GEMINI_API_KEY=tu_clave_de_google_ai_studio
+OPENAI_API_KEY=tu_clave_de_openai
+GOOGLE_ROUTES_API_KEY=tu_clave_de_google_routes
+NOMINATIM_CONTACTO=tu_email_o_contacto
+EMT_CLIENT_ID=tu_client_id_de_la_emt
+EMT_PASS_KEY=tu_passkey_de_la_emt
+```
 
-Los clientes usan el grafo real de `src/agent.py` (funciones `procesar_turno` y `aprobar_plan`). Hace falta instalar las dependencias (`pip install -r requirements.txt`) y tener en el `.env` las claves que use cada tool: `GEMINI_API_KEY` para el modelo y, para planificar rutas, `GOOGLE_ROUTES_API_KEY` y `NOMINATIM_CONTACTO` (los nombres están en `.env.example`). **Con el grafo real, una ruta gasta llamadas a Gemini, Nominatim y Google.**
+`GEMINI_API_KEY` es necesaria para generación, embeddings Gemini, el supervisor/especialistas y la visión. `OPENAI_API_KEY` solo es necesaria si se cambia el proveedor de embeddings en `config.py`. Las rutas reales requieren además `GOOGLE_ROUTES_API_KEY` y un contacto para identificar la aplicación ante Nominatim. `EMT_CLIENT_ID` y `EMT_PASS_KEY` solo hacen falta para la alternativa en BiciMAD: sin ellas la ruta funciona igual, sin bici. Open-Meteo no necesita clave.
 
-Para probar los clientes sin gastar API se puede activar el **modo simulado**: un grafo de pruebas con respuestas fijas que se parece al real (solo las rutas pausan, con uno o varios planes). Se activa con una variable de entorno y los clientes avisan de que están en ese modo.
+> No incluyas claves en el código, en documentación ni en el repositorio.
+
+---
+
+## Preparación e indexado del RAG
+
+El RAG separa el tratamiento del corpus de la creación del índice. Sus comandos son independientes del chat multiagente.
+
+```text
+Documentos → carga → limpieza → fragmentación → embeddings → ChromaDB
+```
+
+### Preparar corpus y embeddings
+
+```bash
+python -m rag.rag_cli --prepare
+```
+
+Genera `output/chunks.json` y `output/embeddings.json`. ⚠️ Puede consumir llamadas al proveedor de embeddings.
+
+### Crear o actualizar el índice
+
+```bash
+python -m rag.rag_cli --index
+```
+
+Indexa los chunks en la colección persistente de ChromaDB y reutiliza `output/embeddings.json` si corresponde al mismo modelo y al mismo número de chunks. Si no existe `chunks.json`, realiza antes la ingesta.
+
+Para eliminar y reconstruir la colección configurada:
+
+```bash
+python -m rag.rag_cli --index --recreate-index
+```
+
+### Consultar solo el retrieval o pedir una respuesta RAG
+
+```bash
+python -m rag.rag_cli --query "¿En qué zona está Plaza de Castilla?" --k 4
+python -m rag.rag_cli --ask "¿Qué es la Tarjeta Azul?" --k 4
+```
+
+`--query` muestra los chunks recuperados y sus fuentes sin llamar al generador, aunque puede requerir el embedding de la consulta. `--ask` ejecuta retrieval y generación, muestra respuesta y fuentes, y puede consumir una llamada de Gemini. El valor de `k` controla el número de chunks recuperados; el predeterminado es 4.
+
+---
+
+## Uso de la aplicación
+
+Los clientes `main.py` y `app.py` consumen el mismo contrato de `src.agent`; no llaman al RAG directamente. Con el grafo real, una consulta puede usar Gemini, el RAG, Nominatim o Google Routes según el caso.
+
+### Modo simulado, sin APIs
+
+Para recorrer CLI, Streamlit y el flujo HITL sin claves ni coste, activa el grafo de pruebas:
 
 PowerShell:
 
@@ -116,59 +279,100 @@ Bash:
 export MADRIDRUMBO_GRAFO=falso
 ```
 
+Los clientes avisan visiblemente de que están en modo simulado. Sus respuestas son fijas, pero los planes conservan el formato del grafo real, incluidos los casos con varias alternativas.
+
 ### Chat por terminal
 
 ```bash
 python main.py
 ```
 
-Escribe tu consulta y pulsa Intro. Si la consulta genera un plan de ruta, el CLI lo muestra (identificador, origen, destino, duración, tramos, zona y precio) y pregunta:
+Escribe una consulta y pulsa Intro. El CLI muestra la respuesta, el `thread_id`, las notas del log y la traza de tools. También muestra los diagnósticos técnicos seguros del supervisor, útiles para depuración.
 
-- Si hay **varios planes**, primero `¿Qué plan quieres decidir? [1-N]`: escribe el número. Con un único plan no pregunta.
-- Después `¿Apruebas el plan? [s/n]`: `s` aprueba y se muestra `Terminada: sí`; `n` rechaza, y el grafo vuelve a planificar y suele proponer otro plan, que se pregunta de nuevo.
-- Cualquier otra respuesta vuelve a preguntar. Con `salir` (o Ctrl+C) se termina sin aprobar nada.
+Si la consulta genera planes:
 
-El CLI muestra también el registro técnico del supervisor (líneas `Supervisor: categoria=...`), que es lo que consulta quien depura.
+- Con varios planes pregunta `¿Qué plan quieres decidir? [1-N]`; admite el número o el identificador.
+- Después pregunta `¿Apruebas el plan? [s/n]`.
+- `s` aprueba el plan y solo muestra «Terminada: sí» si el grafo lo confirma.
+- `n` rechaza el plan; el grafo puede proponer otra alternativa o el chat puede continuar.
+- Una respuesta distinta vuelve a preguntar; `salir`, `Ctrl+C` o fin de entrada terminan sin aprobar nada.
 
-### Demo de tres pedidos
+### Demo de tres consultas
 
 ```bash
-python main.py --demo                  # pide aprobar o rechazar el plan de la ruta a mano
-python main.py --demo --auto-aprobar   # aprueba los planes automáticamente
+python main.py --demo
+python main.py --demo --auto-aprobar
 ```
 
-La demo lanza, cada uno en su propia conversación: «¿Hasta qué hora hay metro hoy?» (horarios, sin pausa), «¿Cómo puedo ir desde la Puerta del Sol hasta la Estación de Atocha?» (ruta: genera un plan y pausa para HITL) y «¿Cuál es la capital de Francia?» (fuera de corpus, sin pausa). `--auto-aprobar` solo se puede usar junto con `--demo`, y con varios planes aprueba el primero.
+La demo usa conversaciones independientes para tres pedidos: horarios («¿Hasta qué hora hay metro hoy?»), ruta («¿Cómo puedo ir desde la Puerta del Sol hasta la Estación de Atocha?»), y una pregunta fuera de corpus («¿Cuál es la capital de Francia?»). La opción `--auto-aprobar` solo es válida junto con `--demo`; cuando hay varias rutas, aprueba la primera.
 
-### Web con Streamlit
+### Interfaz web con Streamlit
 
 ```bash
 streamlit run app.py
 ```
 
-- En la barra lateral aparecen los planes pendientes con su resumen. Si hay varios, un selector permite elegir cuál decidir; los botones **Aprobar** y **Rechazar** solo están activos con un plan pendiente. Mientras lo haya, el cuadro de mensaje queda bloqueado.
-- Al enviar un mensaje, aparece en el chat de inmediato con un indicador de espera. Bajo cada respuesta hay un desplegable **Pasos seguidos** con un resumen del turno: el flujo de nodos recorridos («Flujo: supervisor → rutas → sintetizador»), los pasos de control y las tools ejecutadas, sin los diagnósticos del supervisor; si el turno no ejecutó nada, no aparece.
-- **Nueva conversación** crea un identificador nuevo y vacía el historial.
-- El desplegable **Depuración** muestra el identificador, el registro de depuración completo (con la entrada y la salida de cada nodo y tool, y los diagnósticos del supervisor), la traza de tools y las banderas de plan pendiente y conversación terminada.
+La aplicación conserva el historial y el `thread_id` en la sesión del navegador. Al enviar un mensaje, este aparece en el chat de inmediato con un indicador de espera. Bajo cada respuesta hay un desplegable **Pasos seguidos** con las tools ejecutadas en ese turno (nombre, estado y extracto) y el registro visible; si el turno no ejecutó nada, no aparece. La barra lateral incluye los planes pendientes, selector cuando hay más de uno, botones **Aprobar** y **Rechazar**, **Nueva conversación** y un panel de depuración. Al existir un plan pendiente, el campo de chat queda desactivado hasta decidirlo.
 
-### Cómo probar el HITL
+El panel web oculta los diagnósticos técnicos del supervisor; el CLI sí los muestra. Al reiniciar el proceso se pierde el estado, porque el checkpointer actual está en memoria.
 
-1. Activa el modo simulado y lanza `python main.py`.
-2. Escribe «¿Cómo puedo ir desde la Puerta del Sol hasta la Estación de Atocha?»: aparece un plan y la pregunta `[s/n]`.
-3. Responde `n` y comprueba que no se cierra. Con el grafo real se propone otro plan; en el modo simulado no queda ninguno y puedes escribir otro mensaje.
-4. Vuelve a escribir la ruta y responde `s` al plan: debe aparecer `Terminada: sí`.
-5. Para ver la elección entre varios planes (solo en el modo simulado), escribe «Dame dos rutas alternativas desde la Puerta del Sol hasta la Estación de Atocha» y elige un número.
+### Imagen demo multimodal
 
-En Streamlit es lo mismo con el selector y los botones de la barra lateral.
+La única imagen seleccionable desde los clientes es la referencia literal `assets/imagen_demo.jpg`; no hay subida de archivos ni se permiten rutas arbitrarias. Escríbela como parte de la consulta, por ejemplo:
 
-### Limitaciones conocidas de los clientes
+```text
+Analiza assets/imagen_demo.jpg e indica los precios.
+```
 
-- **Imágenes:** los clientes no pueden aportar una imagen al grafo, así que las consultas sobre una imagen se desvían al RAG y el especialista `tarifas` no se activa desde el CLI ni desde la web. Queda pendiente de que el grafo ofrezca una forma de aportarla.
-- Con el grafo real, la sesión vive en memoria: al reiniciar el proceso se pierden las conversaciones.
+El grafo valida que sea el archivo demo permitido en `assets/` y solo durante ese turno. La imagen contiene una captura de «Billetes de autobuses EMT» con cuatro importes: billete sencillo EMT (1,50 €), TransBus (1,80 €), Exprés Aeropuerto (5,00 €) y Metrobús de 10 viajes (7,30 €).
 
-### Código de los clientes
+Fuente: captura propia de [RedTransporte, precios de billetes y abonos (tarifas 2026)](https://www.redtransporte.com/madrid/precios-abonos.html), © RedTransporte; se utiliza únicamente con fines educativos. Fecha de captura: 2026-10-14.
 
-Todo está en `src/clientes/`: `contrato.py` (claves del estado que devuelve el grafo), `planes.py` (resumen de planes y filtro del log), `presentacion.py` (formato común), `sesion.py` (lógica de la conversación, compartida), `cargar.py` (grafo real o simulado), `grafo_falso.py` y `cli.py`. `main.py` y `app.py` son capas finas que solo dibujan. Los tests (`python -m pytest`) no gastan API: usan el grafo simulado y el grafo real con especialistas falsos (`tests/test_clientes_grafo_real.py`). La especificación está en `specs/008-clientes-cli-streamlit/`.
+La consulta «Según assets/imagen_demo.jpg, ¿cuánto cuestan 3 billetes sencillos EMT y 1 Exprés Aeropuerto?» (la ruta literal activa el contexto de imagen, spec 007) debe seguir el flujo visión → cálculo y producir `9,50 €` cuando se use el grafo real con una API disponible.
+
+---
+
+## Pruebas y evaluación
+
+La suite automatizada usa dobles para LLM, APIs, embeddings, ChromaDB y tools. No debe llamar a proveedores reales ni requerir claves:
+
+```bash
+python -m pytest -q
+```
+
+Las especificaciones cubren el RAG base, la preservación de tablas Markdown, las tools de hora/visión/cálculo, la planificación de rutas, el grafo LangGraph, la robustez del supervisor, las guardas de tarifas y los clientes CLI/Streamlit. Las validaciones disponibles documentan pruebas con grafo simulado y con el grafo real inyectando dobles, incluido el HITL, varios planes, el aislamiento por `thread_id`, la traza de tools y el filtrado de diagnósticos en la web.
+
+El módulo RAG también incluye los puntos de entrada `rag/eval_retrieval.py` y `rag/eval_generacion.py` para evaluar la recuperación con distintos valores de `k` y las respuestas/anulaciones del generador.
+
+---
+
+## Limitaciones conocidas
+
+- Las demostraciones manuales pendientes con Gemini, Nominatim y Google Routes no deben considerarse evidencia automatizada: consumen cuota y requieren las claves correspondientes.
+- El checkpointer del grafo es en memoria. Al reiniciar el proceso no se conserva una conversación ni los planes pendientes.
+- `hora_actual` diferencia laborable, sábado y domingo, pero no conoce festivos nacionales ni locales.
+- Solo se admite la imagen demo por su referencia literal; no hay selector, subida de archivos, vídeo, audio ni rutas arbitrarias.
+- La lectura visual se ha validado con la imagen demo; depende de la disponibilidad del modelo Gemini Vision.
+- Las rutas se calculan solo en transporte público y dentro de la Comunidad de Madrid. La alternativa en bici es una oferta adicional (sin hora pedida, de 1 a 6 km y con buen tiempo) y no sustituye a la ruta. No existe un modo «solo bici»: una petición «en bici» calcula igualmente la ruta de transporte. Si la bici queda fuera del rango de 1 a 6 km, el mensaje no distingue entre trayecto demasiado corto y demasiado largo.
+- La alternativa en BiciMAD depende de la EMT, que es lenta: el login tiene un límite de 10 s y las estaciones de 20 s, de modo que en el peor caso añade entre 25 y 30 s. El criterio de «estación activa» es una suposición no verificada con la EMT.
+- Tras aprobar un plan, el modelo vuelve a resumir la ruta en lugar de una confirmación breve, y un seguimiento («¿y en bici?») crea un plan nuevo idéntico al ya aprobado.
+- El historial solo guarda los mensajes de la persona, no las respuestas del asistente; las respuestas a opciones numeradas se resuelven con una regla determinista.
+- El precio de algunos títulos (por ejemplo el abono joven) depende de que el RAG recupere su tabla, y a veces no la recupera. Cuando el RAG devuelve varias opciones sin etiquetar, la respuesta las muestra todas sin indicar cuál corresponde a la ruta. Renfe Avant se trata como tren pesado, porque Google no lo distingue de Cercanías.
+- La web muestra los pasos de cada turno (tools y registro), pero no qué especialista lanzó cada tool: el contrato público del grafo expone seis claves y no incluye ese dato.
+- El RAG se ancla al corpus disponible y no garantiza una abstención determinista fuera de él; la instrucción de abstención se aplica en el prompt.
+
+---
+
+## Metodología
+
+El proyecto sigue Spec-Driven Development (SDD). Cada funcionalidad vive en `specs/NNN-nombre/` con `spec.md`, `plan.md`, `tasks.md` y `validacion.md`. La constitución del proyecto se encuentra en `docs/constitution.md` y establece, entre otros principios, RAG anclado, separación modular, tools controladas, HITL, persistencia por conversación, configuración centralizada y pruebas sin APIs como puerta de calidad.
+
+Las specs vigentes documentan esta evolución: desde el RAG inicial (000), la hora y horarios (001), visión/cálculo (002), tablas Markdown (003), rutas (004), grafo multiagente (005), robustez del supervisor (006), guardas para tarifas textuales (007), clientes CLI/Streamlit (008), la alternativa en BiciMAD con clima (009), lugares, bloques literales y precio por ruta (010) y la depuración con pasos seguidos (011).
+
+---
 
 ## Créditos
 
 - Datos meteorológicos de [Open-Meteo.com](https://open-meteo.com/), licencia CC BY 4.0.
+- Estaciones de BiciMAD: API abierta de la EMT de Madrid.
+- Geocodificación: [Nominatim](https://nominatim.org/) con datos de © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors, licencia ODbL.
