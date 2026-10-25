@@ -14,6 +14,7 @@ from typing import Any, Callable, Mapping, MutableMapping
 from src.catalogo_roles import (
     ROLES_CATALOGO,
     corregir_tarifas_textuales,
+    es_consulta_tarifaria_entre_zonas,
     instrucciones_para_supervisor,
 )
 from src.modelos import ErrorProveedorModelo, crear_modelo_supervisor
@@ -67,6 +68,7 @@ class DecisionSupervisor:
     categoria: str
     resumen: str
     correcciones_tarifas: int = 0
+    correcciones_rutas_tarifarias: int = 0
 
 
 def _mensajes_para_modelo(estado: Mapping[str, Any]) -> list[dict[str, str]]:
@@ -154,6 +156,26 @@ def _decision_fallback(
     )
 
 
+def _corregir_rutas_tarifarias_entre_zonas(
+    roles: list[str],
+    mensaje: object,
+    *,
+    tiene_imagen_valida: bool,
+) -> tuple[list[str], int]:
+    """Redirige a RAG las rutas incompatibles de una tarifa textual entre zonas."""
+    cola = list(roles)
+    if not es_consulta_tarifaria_entre_zonas(
+        mensaje,
+        tiene_imagen_valida=tiene_imagen_valida,
+    ):
+        return cola, 0
+
+    correcciones = sum(rol == "rutas" for rol in cola)
+    if not correcciones:
+        return cola, 0
+    return ["rag" if rol == "rutas" else rol for rol in cola], correcciones
+
+
 def decidir_decision_supervisor(
     estado: Mapping[str, Any],
     modelo: ModeloSupervisor | None = None,
@@ -174,6 +196,11 @@ def decidir_decision_supervisor(
             estado.get("mensaje", ""),
             tiene_imagen_valida=tiene_imagen_valida is True,
         )
+        roles, correcciones_rutas_tarifarias = _corregir_rutas_tarifarias_entre_zonas(
+            roles,
+            estado.get("mensaje", ""),
+            tiene_imagen_valida=tiene_imagen_valida is True,
+        )
         # Spec 010: una consulta de ruta con origen y destino no puede quedarse sin `rutas` (p. ej. ruta + precio solo a rag).
         roles, _ = completar_rutas_con_extremos(roles, estado.get("mensaje", ""))
         return DecisionSupervisor(
@@ -182,6 +209,7 @@ def decidir_decision_supervisor(
             categoria="sin_fallback",
             resumen=RESUMENES_DIAGNOSTICO["sin_fallback"],
             correcciones_tarifas=correcciones_tarifas,
+            correcciones_rutas_tarifarias=correcciones_rutas_tarifarias,
         )
     except ErrorProveedorModelo:
         return _decision_fallback(estado, "proveedor")
@@ -224,6 +252,10 @@ def nodo_supervisor(
         }
         if decision.correcciones_tarifas > 0:
             contexto["correcciones_tarifas"] = decision.correcciones_tarifas
+        if decision.correcciones_rutas_tarifarias > 0:
+            contexto["correcciones_rutas_tarifarias"] = (
+                decision.correcciones_rutas_tarifarias
+            )
 
     actualizacion: dict[str, Any] = {"cola_roles": roles}
 

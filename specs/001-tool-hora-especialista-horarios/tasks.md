@@ -22,5 +22,6 @@
       Hecho cuando: `pytest tests/test_fallback_horarios.py` en verde.
 - [x] T10. Acordar con quien lleve `src/graph.py` el contrato del estado y del LLM, y anotarlo en la spec. (RF-14)
       Hecho cuando: la duda abierta de la spec queda resuelta y marcada.
-- [ ] T11. (Parcial: falta demo con grafo) Validación final RF por RF (`/sdd-validar`). (Todos)
+- [x] T11. Validación final RF por RF (`/sdd-validar`). (Todos)
       Hecho cuando: `validacion.md` con veredicto «Sí».
+      Estado: completada tras la demo real en grupo (octubre de 2026), confirmada por el equipo.

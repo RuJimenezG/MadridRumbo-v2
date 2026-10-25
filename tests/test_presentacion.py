@@ -341,6 +341,27 @@ def test_ocultar_tecnicas():
     assert "Paso 3 · nodo · rag [completado]" in texto
 
 
+def test_ocultar_tecnicas_filtra_el_control_de_correccion_semantica():
+    """RF-12: el chat no muestra el control técnico de tarifas entre zonas."""
+    control = {
+        "paso": 5,
+        "tipo": "control",
+        "nodo": "supervisor",
+        "entrada": None,
+        "salida": None,
+        "resultado": "rechazado",
+        "detalle": {
+            "categoria": "correccion_semantica",
+            "resumen": "Se redirigió 1 aparición de rutas a rag por una consulta tarifaria entre zonas.",
+        },
+    }
+
+    texto = formatear_turno({"respuesta": "x", "log": [control]}, "h", ocultar_tecnicas=True)
+
+    assert "Registro de depuración" not in texto
+    assert "correccion_semantica" not in texto
+
+
 def test_si_todo_el_log_es_tecnico_no_queda_la_seccion_de_especialistas():
     solo_tecnicas = [LOG_CON_TECNICAS[1], LOG_CON_TECNICAS[3]]
     texto = formatear_turno({"respuesta": "x", "log": solo_tecnicas}, "h", ocultar_tecnicas=True)

@@ -54,49 +54,49 @@ ABONO TRANSPORTE: PRECIOS APLICABLES CON DESCUENTO DESDE 1/1/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Ordinario | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad ≥ 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| NORMAL | Relaciones con A | A | 32,70 € | 26,10 € | 26,10 € | 16,30 € | 19,60 € | 9,70 € |
+| NORMAL | Relaciones con zona A | A-A | 32,70 € | 26,10 € | 26,10 € | 16,30 € | 19,60 € | 9,70 € |
 
 ABONO TRANSPORTE: PRECIOS APLICABLES CON DESCUENTO DESDE 1/1/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Ordinario | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad ≥ 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| NORMAL | Relaciones con A | B1 | 38,20 € | 30,50 € | 30,50 € | 19,00 € | 22,90 € | 11,40 € |
+| NORMAL | Relaciones con zona A | A-B1 | 38,20 € | 30,50 € | 30,50 € | 19,00 € | 22,90 € | 11,40 € |
 
 ABONO TRANSPORTE: PRECIOS APLICABLES CON DESCUENTO DESDE 1/1/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Ordinario | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad ≥ 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| NORMAL | Relaciones con A | B2 | 43,20 € | 34,50 € | 34,50 € | 21,60 € | 25,90 € | 12,90 € |
+| NORMAL | Relaciones con zona A | A-B2 | 43,20 € | 34,50 € | 34,50 € | 21,60 € | 25,90 € | 12,90 € |
 
 ABONO TRANSPORTE: PRECIOS APLICABLES CON DESCUENTO DESDE 1/1/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Ordinario | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad ≥ 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| NORMAL | Relaciones con A | B3 | 49,20 € | 39,30 € | 39,30 € | 24,60 € | 29,50 € | 14,70 € |
+| NORMAL | Relaciones con zona A | A-B3 | 49,20 € | 39,30 € | 39,30 € | 24,60 € | 29,50 € | 14,70 € |
 
 ABONO TRANSPORTE: PRECIOS APLICABLES CON DESCUENTO DESDE 1/1/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Ordinario | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad ≥ 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| NORMAL | Relaciones con A | C1 | 49,20 € | 39,30 € | 39,30 € | 24,60 € | 29,50 € | 14,70 € |
+| NORMAL | Relaciones con zona A | A-C1 | 49,20 € | 39,30 € | 39,30 € | 24,60 € | 29,50 € | 14,70 € |
 
 ABONO TRANSPORTE: PRECIOS APLICABLES CON DESCUENTO DESDE 1/1/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Ordinario | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad ≥ 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| NORMAL | Relaciones con A | C2 | 49,20 € | 39,30 € | 39,30 € | 24,60 € | 29,50 € | 14,70 € |
+| NORMAL | Relaciones con zona A | A-C2 | 49,20 € | 39,30 € | 39,30 € | 24,60 € | 29,50 € | 14,70 € |
 
 ABONO TRANSPORTE: PRECIOS APLICABLES CON DESCUENTO DESDE 1/1/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Ordinario | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad ≥ 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| NORMAL | Relaciones con A | E1 | 66,30 € | 53,00 € | 53,00 € | 33,10 € | 39,70 € | 19,80 € |
+| NORMAL | Relaciones con zona A | A-E1 | 66,30 € | 53,00 € | 53,00 € | 33,10 € | 39,70 € | 19,80 € |
 
 ABONO TRANSPORTE: PRECIOS APLICABLES CON DESCUENTO DESDE 1/1/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Ordinario | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad ≥ 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| NORMAL | Relaciones con A | E2 | 79,00 € | 63,20 € | 63,20 € | 39,50 € | 47,40 € | 23,70 € |
+| NORMAL | Relaciones con zona A | A-E2 | 79,00 € | 63,20 € | 63,20 € | 39,50 € | 47,40 € | 23,70 € |
 
 ABONO TRANSPORTE: PRECIOS APLICABLES CON DESCUENTO DESDE 1/1/2026
 
@@ -342,37 +342,37 @@ BILLETES SENCILLOS: PRECIOS VIGENTES 2026
 
 | Títulos Metro, ML1, MLO Y EMT | Títulos Metro, ML1, MLO Y EMT | Ordinario | Discapacidad | Familia Numerosa General | Familia Numerosa Especial | Familia Numerosa General+Disc | Familia Numerosa Especial+Disc |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| Metro Zona A y ML1 | Billete Sencillo | 1,50 € | 1,20 € | 1,20 € | 0,70 € | 0,90 € | 0,40 € |
+| Metro Zona A y ML1 hasta 5 estaciones | Billete Sencillo | 1,50 € | 1,20 € | 1,20 € | 0,70 € | 0,90 € | 0,40 € |
 
 BILLETES SENCILLOS: PRECIOS VIGENTES 2026
 
 | Títulos Metro, ML1, MLO Y EMT | Títulos Metro, ML1, MLO Y EMT | Ordinario | Discapacidad | Familia Numerosa General | Familia Numerosa Especial | Familia Numerosa General+Disc | Familia Numerosa Especial+Disc |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| Metro Zona A y ML1 | Billete Sencillo | 1,60 € | 1,20 € | 1,20 € | 0,80 € | 0,90 € | 0,40 € |
+| Metro Zona A y ML1 6 estaciones | Billete Sencillo | 1,60 € | 1,20 € | 1,20 € | 0,80 € | 0,90 € | 0,40 € |
 
 BILLETES SENCILLOS: PRECIOS VIGENTES 2026
 
 | Títulos Metro, ML1, MLO Y EMT | Títulos Metro, ML1, MLO Y EMT | Ordinario | Discapacidad | Familia Numerosa General | Familia Numerosa Especial | Familia Numerosa General+Disc | Familia Numerosa Especial+Disc |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| Metro Zona A y ML1 | Billete Sencillo | 1,70 € | 1,30 € | 1,30 € | 0,80 € | 1,00 € | 0,50 € |
+| Metro Zona A y ML1 7 estaciones | Billete Sencillo | 1,70 € | 1,30 € | 1,30 € | 0,80 € | 1,00 € | 0,50 € |
 
 BILLETES SENCILLOS: PRECIOS VIGENTES 2026
 
 | Títulos Metro, ML1, MLO Y EMT | Títulos Metro, ML1, MLO Y EMT | Ordinario | Discapacidad | Familia Numerosa General | Familia Numerosa Especial | Familia Numerosa General+Disc | Familia Numerosa Especial+Disc |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| Metro Zona A y ML1 | Billete Sencillo | 1,80 € | 1,40 € | 1,40 € | 0,90 € | 1,00 € | 0,50 € |
+| Metro Zona A y ML1 8 estaciones | Billete Sencillo | 1,80 € | 1,40 € | 1,40 € | 0,90 € | 1,00 € | 0,50 € |
 
 BILLETES SENCILLOS: PRECIOS VIGENTES 2026
 
 | Títulos Metro, ML1, MLO Y EMT | Títulos Metro, ML1, MLO Y EMT | Ordinario | Discapacidad | Familia Numerosa General | Familia Numerosa Especial | Familia Numerosa General+Disc | Familia Numerosa Especial+Disc |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| Metro Zona A y ML1 | Billete Sencillo | 1,90 € | 1,50 € | 1,50 € | 0,90 € | 1,10 € | 0,50 € |
+| Metro Zona A y ML1 9 estaciones | Billete Sencillo | 1,90 € | 1,50 € | 1,50 € | 0,90 € | 1,10 € | 0,50 € |
 
 BILLETES SENCILLOS: PRECIOS VIGENTES 2026
 
 | Títulos Metro, ML1, MLO Y EMT | Títulos Metro, ML1, MLO Y EMT | Ordinario | Discapacidad | Familia Numerosa General | Familia Numerosa Especial | Familia Numerosa General+Disc | Familia Numerosa Especial+Disc |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| Metro Zona A y ML1 | Billete Sencillo | 2,00 € | 1,60 € | 1,60 € | 1,00 € | 1,20 € | 0,60 € |
+| Metro Zona A y ML1 10 estaciones o más| Billete Sencillo | 2,00 € | 1,60 € | 1,60 € | 1,00 € | 1,20 € | 0,60 € |
 
 BILLETES SENCILLOS: PRECIOS VIGENTES 2026
 

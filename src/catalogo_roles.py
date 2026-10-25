@@ -94,6 +94,32 @@ _VARIANTES_TARIFARIAS = MappingProxyType(
 )
 
 
+# Catálogo cerrado: estos códigos se refieren a ámbitos tarifarios, no a lugares.
+ZONAS_TARIFARIAS = frozenset({"a", "b1", "b2", "b3", "c1", "c2", "e1", "e2"})
+_CODIGO_ZONA = r"(?:a|b[123]|c[12]|e[12])"
+_PREFIJO_ZONA = r"(?:(?:la|las)\s+)?(?:zona(?:s)?\s+)?"
+_PATRONES_PARES_ZONA = (
+    re.compile(
+        rf"\bentre\s+{_PREFIJO_ZONA}(?P<origen>{_CODIGO_ZONA})\s+y\s+"
+        rf"{_PREFIJO_ZONA}(?P<destino>{_CODIGO_ZONA})\b"
+    ),
+    re.compile(
+        rf"\bde\s+{_PREFIJO_ZONA}(?P<origen>{_CODIGO_ZONA})\s+a\s+"
+        rf"{_PREFIJO_ZONA}(?P<destino>{_CODIGO_ZONA})\b"
+    ),
+    re.compile(
+        rf"(?<![a-z0-9])(?P<origen>{_CODIGO_ZONA})\s*[-–—]\s*"
+        rf"(?P<destino>{_CODIGO_ZONA})(?![a-z0-9])"
+    ),
+)
+_PATRON_RUTA_CON_DOS_LUGARES = re.compile(
+    r"\b(?:como\s+(?:voy|llego)|ruta|itinerario)\b.*?\bdesde\s+"
+    r"(?P<origen>[a-z][a-z0-9 ]*?)\s+(?:hasta|a)\s+"
+    r"(?P<destino>[a-z][a-z0-9 ]*?)(?=\s+(?:y\s+)?(?:cuanto|que|precio|"
+    r"costar|cuesta|abono)\b|[?.!]|$)"
+)
+
+
 def instrucciones_para_supervisor() -> str:
     """Devuelve las responsabilidades y exclusiones desde el catálogo único."""
     lineas = ["Responsabilidades y límites de los roles:"]
@@ -111,6 +137,10 @@ def instrucciones_para_supervisor() -> str:
             "No selecciones tarifas salvo que exista una imagen aportada válida.",
             "Referirse solo a una imagen, foto o cartel no constituye una imagen aportada.",
         )
+    )
+    lineas.append(
+        "Los códigos A, B1, B2, B3, C1, C2, E1 y E2 son zonas tarifarias; "
+        "no son origen ni destino físico."
     )
     return "\n".join(lineas)
 
@@ -133,6 +163,57 @@ def es_consulta_tarifaria_textual(mensaje: object) -> bool:
 
     palabras = _tokens_normalizados(mensaje)
     return any(palabras & variantes for variantes in _VARIANTES_TARIFARIAS.values())
+
+
+def _texto_normalizado(texto: str) -> str:
+    """Normaliza el texto para comparar conectores y códigos sin tildes."""
+    sin_tildes = unicodedata.normalize("NFD", texto.lower())
+    return "".join(
+        caracter
+        for caracter in sin_tildes
+        if unicodedata.category(caracter) != "Mn"
+    )
+
+
+def _es_zona_aislada(texto: str) -> bool:
+    """Indica si un extremo normalizado es únicamente un código tarifario."""
+    return " ".join(texto.split()) in ZONAS_TARIFARIAS
+
+
+def _es_peticion_ruta_con_lugares_fisicos(texto: str) -> bool:
+    """Reconoce de forma conservadora una ruta con dos extremos no tarifarios."""
+    coincidencia = _PATRON_RUTA_CON_DOS_LUGARES.search(texto)
+    if coincidencia is None:
+        return False
+
+    return not _es_zona_aislada(coincidencia["origen"]) and not _es_zona_aislada(
+        coincidencia["destino"]
+    )
+
+
+def es_consulta_tarifaria_entre_zonas(
+    mensaje: object,
+    *,
+    tiene_imagen_valida: bool,
+) -> bool:
+    """Detecta una tarifa textual que relaciona explícitamente dos zonas admitidas."""
+    if tiene_imagen_valida or not isinstance(mensaje, str):
+        return False
+    if not es_consulta_tarifaria_textual(mensaje):
+        return False
+
+    texto = _texto_normalizado(mensaje)
+    if _es_peticion_ruta_con_lugares_fisicos(texto):
+        return False
+
+    for patron in _PATRONES_PARES_ZONA:
+        coincidencia = patron.search(texto)
+        if coincidencia and {
+            coincidencia["origen"],
+            coincidencia["destino"],
+        } <= ZONAS_TARIFARIAS:
+            return True
+    return False
 
 
 def corregir_tarifas_textuales(
