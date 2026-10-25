@@ -1,7 +1,7 @@
 # MadridRumbo
 
 > **Project Break 2 · Sprints 11–13 | AI Engineering Bootcamp**  
-> **Grupo 3:** Rubén Jiménez Gutiérrez, Guzmán López Barceló, José Manuel Gil Ruiz.
+> **Grupo 2:** Rubén Jiménez Gutiérrez, Guzmán López Barceló, José Manuel Gil Ruiz.
 
 ## Alcance
 
@@ -54,7 +54,7 @@ El sistema separa la preparación offline del corpus de la conversación online.
 ```text
                          PREPARACIÓN DEL CORPUS
 
- PDF / Markdown / CSV CRTM
+ Markdown / CSV CRTM
              ↓
  carga → limpieza → chunking semántico → embeddings → ChromaDB persistente
              ↓                                      ↑
@@ -158,13 +158,15 @@ MadridRumbo/
 │   ├── agents/                     # rag, horarios, rutas, auxiliar y tarifas
 │   ├── tools/                      # allowlist y herramientas del grafo
 │   └── clientes/                   # contrato, sesión, CLI, presentación y modo simulado
+├── entregables/                    # Entregables del proyecto
 ├── data/                           # Corpus CRTM
 ├── assets/                         # Icono e imagen demo
 ├── output/                         # Artefactos generados
 ├── chroma/                         # Índice vectorial persistente, generado localmente
 ├── specs/                          # Especificaciones, planes, tareas y validaciones SDD
 ├── docs/                           # Constitución, plantillas y guía de tests
-└── tests/                          # Suite sin llamadas a servicios reales
+├── tests/                          # Suite sin llamadas a servicios reales
+└── AGENTS.md                       # Guía del proyecto para el agente utilizado en SDD
 ```
 
 ---
@@ -212,7 +214,7 @@ EMT_CLIENT_ID=tu_client_id_de_la_emt
 EMT_PASS_KEY=tu_passkey_de_la_emt
 ```
 
-`GEMINI_API_KEY` es necesaria para generación, embeddings Gemini, el supervisor/especialistas y la visión. `OPENAI_API_KEY` solo es necesaria si se cambia el proveedor de embeddings en `config.py`. Las rutas reales requieren además `GOOGLE_ROUTES_API_KEY` y un contacto para identificar la aplicación ante Nominatim. `EMT_CLIENT_ID` y `EMT_PASS_KEY` solo hacen falta para la alternativa en BiciMAD: sin ellas la ruta funciona igual, sin bici. Open-Meteo no necesita clave.
+`GEMINI_API_KEY` es necesaria para generación, embeddings Gemini, el supervisor/especialistas y la visión. `OPENAI_API_KEY` solo es necesaria si se cambia el proveedor de embeddings en `config.py`. Las rutas reales requieren además [`GOOGLE_ROUTES_API_KEY`](https://developers.google.com/maps/documentation/routes/get-api-key?hl=es-419&utm_source=chatgpt.com) y un contacto para identificar la aplicación ante Nominatim. [`EMT_CLIENT_ID`](https://mobilitylabs.emtmadrid.es/) y [`EMT_PASS_KEY`](https://mobilitylabs.emtmadrid.es/) solo hacen falta para la alternativa en BiciMAD: sin ellas la ruta funciona igual, sin bici. Open-Meteo no necesita clave. Para Nominamit solamente hay que poner un correo, no hay que registrarse en ningún sitio.
 
 > No incluyas claves en el código, en documentación ni en el repositorio.
 
@@ -328,46 +330,22 @@ El grafo valida que sea el archivo demo permitido en `assets/` y solo durante es
 
 Fuente: captura propia de [RedTransporte, precios de billetes y abonos (tarifas 2026)](https://www.redtransporte.com/madrid/precios-abonos.html), © RedTransporte; se utiliza únicamente con fines educativos. Fecha de captura: 2026-10-14.
 
-La consulta «Según assets/imagen_demo.jpg, ¿cuánto cuestan 3 billetes sencillos EMT y 1 Exprés Aeropuerto?» (la ruta literal activa el contexto de imagen, spec 007) debe seguir el flujo visión → cálculo y producir `9,50 €` cuando se use el grafo real con una API disponible.
-
----
-
-## Pruebas y evaluación
-
-La suite automatizada usa dobles para LLM, APIs, embeddings, ChromaDB y tools. No debe llamar a proveedores reales ni requerir claves:
-
-```bash
-python -m pytest -q
-```
-
-Las especificaciones cubren el RAG base, la preservación de tablas Markdown, las tools de hora/visión/cálculo, la planificación de rutas, el grafo LangGraph, la robustez del supervisor, las guardas de tarifas y los clientes CLI/Streamlit. Las validaciones disponibles documentan pruebas con grafo simulado y con el grafo real inyectando dobles, incluido el HITL, varios planes, el aislamiento por `thread_id`, la traza de tools y el filtrado de diagnósticos en la web.
-
-El módulo RAG también incluye los puntos de entrada `rag/eval_retrieval.py` y `rag/eval_generacion.py` para evaluar la recuperación con distintos valores de `k` y las respuestas/anulaciones del generador.
+La consulta «Según assets/imagen_demo.jpg, ¿cuánto cuestan 1 billete sencillos EMT y 1 Exprés Aeropuerto?» (la ruta literal activa el contexto de imagen) debe seguir el flujo visión → cálculo y producir `9,50 €` cuando se use el grafo real con una API disponible.
 
 ---
 
 ## Limitaciones conocidas
 
-- Las demostraciones manuales pendientes con Gemini, Nominatim y Google Routes no deben considerarse evidencia automatizada: consumen cuota y requieren las claves correspondientes.
 - El checkpointer del grafo es en memoria. Al reiniciar el proceso no se conserva una conversación ni los planes pendientes.
-- `hora_actual` diferencia laborable, sábado y domingo, pero no conoce festivos nacionales ni locales.
+-▶️ `hora_actual` diferencia laborable, sábado y domingo, pero no conoce festivos nacionales ni locales.
 - Solo se admite la imagen demo por su referencia literal; no hay selector, subida de archivos, vídeo, audio ni rutas arbitrarias.
 - La lectura visual se ha validado con la imagen demo; depende de la disponibilidad del modelo Gemini Vision.
 - Las rutas se calculan solo en transporte público y dentro de la Comunidad de Madrid. La alternativa en bici es una oferta adicional (sin hora pedida, de 1 a 6 km y con buen tiempo) y no sustituye a la ruta. No existe un modo «solo bici»: una petición «en bici» calcula igualmente la ruta de transporte. Si la bici queda fuera del rango de 1 a 6 km, el mensaje no distingue entre trayecto demasiado corto y demasiado largo.
 - La alternativa en BiciMAD depende de la EMT, que es lenta: el login tiene un límite de 10 s y las estaciones de 20 s, de modo que en el peor caso añade entre 25 y 30 s. El criterio de «estación activa» es una suposición no verificada con la EMT.
-- Tras aprobar un plan, el modelo vuelve a resumir la ruta en lugar de una confirmación breve, y un seguimiento («¿y en bici?») crea un plan nuevo idéntico al ya aprobado.
 - El historial solo guarda los mensajes de la persona, no las respuestas del asistente; las respuestas a opciones numeradas se resuelven con una regla determinista.
 - El precio de algunos títulos (por ejemplo el abono joven) depende de que el RAG recupere su tabla, y a veces no la recupera. Cuando el RAG devuelve varias opciones sin etiquetar, la respuesta las muestra todas sin indicar cuál corresponde a la ruta. Renfe Avant se trata como tren pesado, porque Google no lo distingue de Cercanías.
 - La web muestra los pasos de cada turno (tools y registro), pero no qué especialista lanzó cada tool: el contrato público del grafo expone seis claves y no incluye ese dato.
 - El RAG se ancla al corpus disponible y no garantiza una abstención determinista fuera de él; la instrucción de abstención se aplica en el prompt.
-
----
-
-## Metodología
-
-El proyecto sigue Spec-Driven Development (SDD). Cada funcionalidad vive en `specs/NNN-nombre/` con `spec.md`, `plan.md`, `tasks.md` y `validacion.md`. La constitución del proyecto se encuentra en `docs/constitution.md` y establece, entre otros principios, RAG anclado, separación modular, tools controladas, HITL, persistencia por conversación, configuración centralizada y pruebas sin APIs como puerta de calidad.
-
-Las specs vigentes documentan esta evolución: desde el RAG inicial (000), la hora y horarios (001), visión/cálculo (002), tablas Markdown (003), rutas (004), grafo multiagente (005), robustez del supervisor (006), guardas para tarifas textuales (007), clientes CLI/Streamlit (008), la alternativa en BiciMAD con clima (009), lugares, bloques literales y precio por ruta (010) y la depuración con pasos seguidos (011).
 
 ---
 
