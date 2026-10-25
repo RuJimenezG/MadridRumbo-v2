@@ -32,193 +32,193 @@ Se aprueban pues las tarifas de transporte público actualizadas con un incremen
 
 ## Página 70
 
-TARIFAS DESDE 01/01/2026
+TARIFA OFICIAL BASE, SIN DESCUENTO, DESDE 01/01/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Sin descuento | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | NORMAL | Relaciones con A | A | 56,20 € | 44,90 € | 44,90 € | 28,10 € | 33,70 € | 16,80 € |
 
-TARIFAS DESDE 01/01/2026
+TARIFA OFICIAL BASE, SIN DESCUENTO, DESDE 01/01/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Sin descuento | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | NORMAL | Relaciones con A | B1 | 65,60 € | 52,40 € | 52,40 € | 32,80 € | 39,30 € | 19,60 € |
 
-TARIFAS DESDE 01/01/2026
+TARIFA OFICIAL BASE, SIN DESCUENTO, DESDE 01/01/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Sin descuento | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | NORMAL | Relaciones con A | B2 | 74,10 € | 59,20 € | 59,20 € | 37,00 € | 44,40 € | 22,20 € |
 
-TARIFAS DESDE 01/01/2026
+TARIFA OFICIAL BASE, SIN DESCUENTO, DESDE 01/01/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Sin descuento | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | NORMAL | Relaciones con A | B3 | 84,40 € | 67,50 € | 67,50 € | 42,20 € | 50,60 € | 25,30 € |
 
-TARIFAS DESDE 01/01/2026
+TARIFA OFICIAL BASE, SIN DESCUENTO, DESDE 01/01/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Sin descuento | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | NORMAL | Relaciones con A | C1 | 84,40 € | 67,50 € | 67,50 € | 42,20 € | 50,60 € | 25,30 € |
 
-TARIFAS DESDE 01/01/2026
+TARIFA OFICIAL BASE, SIN DESCUENTO, DESDE 01/01/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Sin descuento | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | NORMAL | Relaciones con A | C2 | 84,40 € | 67,50 € | 67,50 € | 42,20 € | 50,60 € | 25,30 € |
 
-TARIFAS DESDE 01/01/2026
+TARIFA OFICIAL BASE, SIN DESCUENTO, DESDE 01/01/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Sin descuento | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | NORMAL | Relaciones con A | E1 | 113,90 € | 91,10 € | 91,10 € | 56,90 € | 68,30 € | 34,10 € |
 
-TARIFAS DESDE 01/01/2026
+TARIFA OFICIAL BASE, SIN DESCUENTO, DESDE 01/01/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Sin descuento | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | NORMAL | Relaciones con A | E2 | 135,70 € | 108,50 € | 108,50 € | 67,80 € | 81,40 € | 40,70 € |
 
-TARIFAS DESDE 01/01/2026
+TARIFA OFICIAL BASE, SIN DESCUENTO, DESDE 01/01/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Sin descuento | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | NORMAL | Interzonales | B1-B2 | 49,30 € | 39,40 € | 39,40 € | 24,60 € | 29,50 € | 14,70 € |
 
-TARIFAS DESDE 01/01/2026
+TARIFA OFICIAL BASE, SIN DESCUENTO, DESDE 01/01/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Sin descuento | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | NORMAL | Interzonales | B1-B3 | 56,20 € | 44,90 € | 44,90 € | 28,10 € | 33,70 € | 16,80 € |
 
-TARIFAS DESDE 01/01/2026
+TARIFA OFICIAL BASE, SIN DESCUENTO, DESDE 01/01/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Sin descuento | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | NORMAL | Interzonales | B1-C1 | 56,20 € | 44,90 € | 44,90 € | 28,10 € | 33,70 € | 16,80 € |
 
-TARIFAS DESDE 01/01/2026
+TARIFA OFICIAL BASE, SIN DESCUENTO, DESDE 01/01/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Sin descuento | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | NORMAL | Interzonales | B1-C2 | 56,20 € | 44,90 € | 44,90 € | 28,10 € | 33,70 € | 16,80 € |
 
-TARIFAS DESDE 01/01/2026
+TARIFA OFICIAL BASE, SIN DESCUENTO, DESDE 01/01/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Sin descuento | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | NORMAL | Interzonales | B1-E1 | 84,40 € | 67,50 € | 67,50 € | 42,20 € | 50,60 € | 25,30 € |
 
-TARIFAS DESDE 01/01/2026
+TARIFA OFICIAL BASE, SIN DESCUENTO, DESDE 01/01/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Sin descuento | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | NORMAL | Interzonales | B1-E2 | 92,10 € | 73,60 € | 73,60 € | 46,00 € | 55,20 € | 27,60 € |
 
-TARIFAS DESDE 01/01/2026
+TARIFA OFICIAL BASE, SIN DESCUENTO, DESDE 01/01/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Sin descuento | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | NORMAL | Interzonales | B2-B3 | 49,30 € | 39,40 € | 39,40 € | 24,60 € | 29,50 € | 14,70 € |
 
-TARIFAS DESDE 01/01/2026
+TARIFA OFICIAL BASE, SIN DESCUENTO, DESDE 01/01/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Sin descuento | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | NORMAL | Interzonales | B2-C1 | 49,30 € | 39,40 € | 39,40 € | 24,60 € | 29,50 € | 14,70 € |
 
-TARIFAS DESDE 01/01/2026
+TARIFA OFICIAL BASE, SIN DESCUENTO, DESDE 01/01/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Sin descuento | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | NORMAL | Interzonales | B2-C2 | 49,30 € | 39,40 € | 39,40 € | 24,60 € | 29,50 € | 14,70 € |
 
-TARIFAS DESDE 01/01/2026
+TARIFA OFICIAL BASE, SIN DESCUENTO, DESDE 01/01/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Sin descuento | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | NORMAL | Interzonales | B2-E1 | 74,10 € | 59,20 € | 59,20 € | 37,00 € | 44,40 € | 22,20 € |
 
-TARIFAS DESDE 01/01/2026
+TARIFA OFICIAL BASE, SIN DESCUENTO, DESDE 01/01/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Sin descuento | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | NORMAL | Interzonales | B2-E2 | 84,40 € | 67,50 € | 67,50 € | 42,20 € | 50,60 € | 25,30 € |
 
-TARIFAS DESDE 01/01/2026
+TARIFA OFICIAL BASE, SIN DESCUENTO, DESDE 01/01/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Sin descuento | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | NORMAL | Interzonales | B3-C1 | 49,30 € | 39,40 € | 39,40 € | 24,60 € | 29,50 € | 14,70 € |
 
-TARIFAS DESDE 01/01/2026
+TARIFA OFICIAL BASE, SIN DESCUENTO, DESDE 01/01/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Sin descuento | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | NORMAL | Interzonales | B3-C2 | 49,30 € | 39,40 € | 39,40 € | 24,60 € | 29,50 € | 14,70 € |
 
-TARIFAS DESDE 01/01/2026
+TARIFA OFICIAL BASE, SIN DESCUENTO, DESDE 01/01/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Sin descuento | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | NORMAL | Interzonales | B3-E1 | 65,60 € | 52,40 € | 52,40 € | 32,80 € | 39,30 € | 19,60 € |
 
-TARIFAS DESDE 01/01/2026
+TARIFA OFICIAL BASE, SIN DESCUENTO, DESDE 01/01/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Sin descuento | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | NORMAL | Interzonales | B3-E2 | 74,10 € | 59,20 € | 59,20 € | 37,00 € | 44,40 € | 22,20 € |
 
-TARIFAS DESDE 01/01/2026
+TARIFA OFICIAL BASE, SIN DESCUENTO, DESDE 01/01/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Sin descuento | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | NORMAL | Interzonales | C1-C2 | 49,30 € | 39,40 € | 39,40 € | 24,60 € | 29,50 € | 14,70 € |
 
-TARIFAS DESDE 01/01/2026
+TARIFA OFICIAL BASE, SIN DESCUENTO, DESDE 01/01/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Sin descuento | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | NORMAL | Interzonales | C1-E1 | 56,20 € | 44,90 € | 44,90 € | 28,10 € | 33,70 € | 16,80 € |
 
-TARIFAS DESDE 01/01/2026
+TARIFA OFICIAL BASE, SIN DESCUENTO, DESDE 01/01/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Sin descuento | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | NORMAL | Interzonales | C1-E2 | 65,60 € | 52,40 € | 52,40 € | 32,80 € | 39,30 € | 19,60 € |
 
-TARIFAS DESDE 01/01/2026
+TARIFA OFICIAL BASE, SIN DESCUENTO, DESDE 01/01/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Sin descuento | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | NORMAL | Interzonales | C2-E1 | 49,30 € | 39,40 € | 39,40 € | 24,60 € | 29,50 € | 14,70 € |
 
-TARIFAS DESDE 01/01/2026
+TARIFA OFICIAL BASE, SIN DESCUENTO, DESDE 01/01/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Sin descuento | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | NORMAL | Interzonales | C2-E2 | 56,20 € | 44,90 € | 44,90 € | 28,10 € | 33,70 € | 16,80 € |
 
-TARIFAS DESDE 01/01/2026
+TARIFA OFICIAL BASE, SIN DESCUENTO, DESDE 01/01/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Sin descuento | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | JOVEN | JOVEN | JOVEN | 20,00 € | 16,00 € | 16,00 € | 10,00 € | 12,00 € | 6,00 € |
 
-TARIFAS DESDE 01/01/2026
+TARIFA OFICIAL BASE, SIN DESCUENTO, DESDE 01/01/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Sin descuento | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | TARJETA AZUL | TARJETA AZUL | TARJETA AZUL | 6,30 € |  |  |  |  |  |
 
-TARIFAS DESDE 01/01/2026
+TARIFA OFICIAL BASE, SIN DESCUENTO, DESDE 01/01/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Sin descuento | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | TERCERA EDAD | TERCERA EDAD | TERCERA EDAD | Gratuita |  |  |  |  |  |
 
-TARIFAS DESDE 01/01/2026
+TARIFA OFICIAL BASE, SIN DESCUENTO, DESDE 01/01/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Sin descuento | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |

@@ -50,199 +50,199 @@ No obstante, el Consorcio Regional de la Comunidad de Madrid, plantea que esta c
 
 En consecuencia, los precios del transportes público en el año 2026 en el ámbito de competencias del Consorcio Regional de Transportes Públicos Regulares de Madrid, son los siguientes:
 
-ABONO TRANSPORTE: PRECIOS APLICABLES CON DESCUENTO DESDE 1/1/2026
+ABONO TRANSPORTE: PRECIO FINAL APLICABLE CON DESCUENTO DESDE 1/1/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Ordinario | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad ≥ 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | NORMAL | Relaciones con zona A | A-A | 32,70 € | 26,10 € | 26,10 € | 16,30 € | 19,60 € | 9,70 € |
 
-ABONO TRANSPORTE: PRECIOS APLICABLES CON DESCUENTO DESDE 1/1/2026
+ABONO TRANSPORTE: PRECIO FINAL APLICABLE CON DESCUENTO DESDE 1/1/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Ordinario | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad ≥ 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | NORMAL | Relaciones con zona A | A-B1 | 38,20 € | 30,50 € | 30,50 € | 19,00 € | 22,90 € | 11,40 € |
 
-ABONO TRANSPORTE: PRECIOS APLICABLES CON DESCUENTO DESDE 1/1/2026
+ABONO TRANSPORTE: PRECIO FINAL APLICABLE CON DESCUENTO DESDE 1/1/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Ordinario | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad ≥ 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | NORMAL | Relaciones con zona A | A-B2 | 43,20 € | 34,50 € | 34,50 € | 21,60 € | 25,90 € | 12,90 € |
 
-ABONO TRANSPORTE: PRECIOS APLICABLES CON DESCUENTO DESDE 1/1/2026
+ABONO TRANSPORTE: PRECIO FINAL APLICABLE CON DESCUENTO DESDE 1/1/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Ordinario | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad ≥ 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | NORMAL | Relaciones con zona A | A-B3 | 49,20 € | 39,30 € | 39,30 € | 24,60 € | 29,50 € | 14,70 € |
 
-ABONO TRANSPORTE: PRECIOS APLICABLES CON DESCUENTO DESDE 1/1/2026
+ABONO TRANSPORTE: PRECIO FINAL APLICABLE CON DESCUENTO DESDE 1/1/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Ordinario | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad ≥ 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | NORMAL | Relaciones con zona A | A-C1 | 49,20 € | 39,30 € | 39,30 € | 24,60 € | 29,50 € | 14,70 € |
 
-ABONO TRANSPORTE: PRECIOS APLICABLES CON DESCUENTO DESDE 1/1/2026
+ABONO TRANSPORTE: PRECIO FINAL APLICABLE CON DESCUENTO DESDE 1/1/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Ordinario | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad ≥ 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | NORMAL | Relaciones con zona A | A-C2 | 49,20 € | 39,30 € | 39,30 € | 24,60 € | 29,50 € | 14,70 € |
 
-ABONO TRANSPORTE: PRECIOS APLICABLES CON DESCUENTO DESDE 1/1/2026
+ABONO TRANSPORTE: PRECIO FINAL APLICABLE CON DESCUENTO DESDE 1/1/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Ordinario | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad ≥ 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | NORMAL | Relaciones con zona A | A-E1 | 66,30 € | 53,00 € | 53,00 € | 33,10 € | 39,70 € | 19,80 € |
 
-ABONO TRANSPORTE: PRECIOS APLICABLES CON DESCUENTO DESDE 1/1/2026
+ABONO TRANSPORTE: PRECIO FINAL APLICABLE CON DESCUENTO DESDE 1/1/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Ordinario | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad ≥ 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | NORMAL | Relaciones con zona A | A-E2 | 79,00 € | 63,20 € | 63,20 € | 39,50 € | 47,40 € | 23,70 € |
 
-ABONO TRANSPORTE: PRECIOS APLICABLES CON DESCUENTO DESDE 1/1/2026
+ABONO TRANSPORTE: PRECIO FINAL APLICABLE CON DESCUENTO DESDE 1/1/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Ordinario | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad ≥ 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | NORMAL | Interzonales | B1-B2 | 28,70 € | 22,90 € | 22,90 € | 14,30 € | 17,20 € | 8,50 € |
 
-ABONO TRANSPORTE: PRECIOS APLICABLES CON DESCUENTO DESDE 1/1/2026
+ABONO TRANSPORTE: PRECIO FINAL APLICABLE CON DESCUENTO DESDE 1/1/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Ordinario | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad ≥ 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | NORMAL | Interzonales | B1-B3 | 32,70 € | 26,10 € | 26,10 € | 16,30 € | 19,60 € | 9,70 € |
 
-ABONO TRANSPORTE: PRECIOS APLICABLES CON DESCUENTO DESDE 1/1/2026
+ABONO TRANSPORTE: PRECIO FINAL APLICABLE CON DESCUENTO DESDE 1/1/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Ordinario | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad ≥ 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | NORMAL | Interzonales | B1-C1 | 32,70 € | 26,10 € | 26,10 € | 16,30 € | 19,60 € | 9,70 € |
 
-ABONO TRANSPORTE: PRECIOS APLICABLES CON DESCUENTO DESDE 1/1/2026
+ABONO TRANSPORTE: PRECIO FINAL APLICABLE CON DESCUENTO DESDE 1/1/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Ordinario | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad ≥ 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | NORMAL | Interzonales | B1-C2 | 32,70 € | 26,10 € | 26,10 € | 16,30 € | 19,60 € | 9,70 € |
 
-ABONO TRANSPORTE: PRECIOS APLICABLES CON DESCUENTO DESDE 1/1/2026
+ABONO TRANSPORTE: PRECIO FINAL APLICABLE CON DESCUENTO DESDE 1/1/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Ordinario | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad ≥ 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | NORMAL | Interzonales | B1-E1 | 49,20 € | 39,30 € | 39,30 € | 24,60 € | 29,50 € | 14,70 € |
 
-ABONO TRANSPORTE: PRECIOS APLICABLES CON DESCUENTO DESDE 1/1/2026
+ABONO TRANSPORTE: PRECIO FINAL APLICABLE CON DESCUENTO DESDE 1/1/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Ordinario | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad ≥ 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | NORMAL | Interzonales | B1-E2 | 53,70 € | 42,90 € | 42,90 € | 26,80 € | 32,20 € | 16,00 € |
 
-ABONO TRANSPORTE: PRECIOS APLICABLES CON DESCUENTO DESDE 1/1/2026
+ABONO TRANSPORTE: PRECIO FINAL APLICABLE CON DESCUENTO DESDE 1/1/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Ordinario | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad ≥ 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | NORMAL | Interzonales | B2-B3 | 28,70 € | 22,90 € | 22,90 € | 14,30 € | 17,20 € | 8,50 € |
 
-ABONO TRANSPORTE: PRECIOS APLICABLES CON DESCUENTO DESDE 1/1/2026
+ABONO TRANSPORTE: PRECIO FINAL APLICABLE CON DESCUENTO DESDE 1/1/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Ordinario | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad ≥ 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | NORMAL | Interzonales | B2-C1 | 28,70 € | 22,90 € | 22,90 € | 14,30 € | 17,20 € | 8,50 € |
 
-ABONO TRANSPORTE: PRECIOS APLICABLES CON DESCUENTO DESDE 1/1/2026
+ABONO TRANSPORTE: PRECIO FINAL APLICABLE CON DESCUENTO DESDE 1/1/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Ordinario | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad ≥ 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | NORMAL | Interzonales | B2-C2 | 28,70 € | 22,90 € | 22,90 € | 14,30 € | 17,20 € | 8,50 € |
 
-ABONO TRANSPORTE: PRECIOS APLICABLES CON DESCUENTO DESDE 1/1/2026
+ABONO TRANSPORTE: PRECIO FINAL APLICABLE CON DESCUENTO DESDE 1/1/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Ordinario | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad ≥ 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | NORMAL | Interzonales | B2-E1 | 43,20 € | 34,50 € | 34,50 € | 21,60 € | 25,90 € | 12,90 € |
 
-ABONO TRANSPORTE: PRECIOS APLICABLES CON DESCUENTO DESDE 1/1/2026
+ABONO TRANSPORTE: PRECIO FINAL APLICABLE CON DESCUENTO DESDE 1/1/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Ordinario | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad ≥ 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | NORMAL | Interzonales | B2-E2 | 49,20 € | 39,30 € | 39,30 € | 24,60 € | 29,50 € | 14,70 € |
 
-ABONO TRANSPORTE: PRECIOS APLICABLES CON DESCUENTO DESDE 1/1/2026
+ABONO TRANSPORTE: PRECIO FINAL APLICABLE CON DESCUENTO DESDE 1/1/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Ordinario | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad ≥ 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | NORMAL | Interzonales | B3-C1 | 28,70 € | 22,90 € | 22,90 € | 14,30 € | 17,20 € | 8,50 € |
 
-ABONO TRANSPORTE: PRECIOS APLICABLES CON DESCUENTO DESDE 1/1/2026
+ABONO TRANSPORTE: PRECIO FINAL APLICABLE CON DESCUENTO DESDE 1/1/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Ordinario | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad ≥ 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | NORMAL | Interzonales | B3-C2 | 28,70 € | 22,90 € | 22,90 € | 14,30 € | 17,20 € | 8,50 € |
 
-ABONO TRANSPORTE: PRECIOS APLICABLES CON DESCUENTO DESDE 1/1/2026
+ABONO TRANSPORTE: PRECIO FINAL APLICABLE CON DESCUENTO DESDE 1/1/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Ordinario | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad ≥ 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | NORMAL | Interzonales | B3-E1 | 38,20 € | 30,50 € | 30,50 € | 19,00 € | 22,90 € | 11,40 € |
 
-ABONO TRANSPORTE: PRECIOS APLICABLES CON DESCUENTO DESDE 1/1/2026
+ABONO TRANSPORTE: PRECIO FINAL APLICABLE CON DESCUENTO DESDE 1/1/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Ordinario | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad ≥ 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | NORMAL | Interzonales | B3-E2 | 43,20 € | 34,50 € | 34,50 € | 21,60 € | 25,90 € | 12,90 € |
 
-ABONO TRANSPORTE: PRECIOS APLICABLES CON DESCUENTO DESDE 1/1/2026
+ABONO TRANSPORTE: PRECIO FINAL APLICABLE CON DESCUENTO DESDE 1/1/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Ordinario | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad ≥ 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | NORMAL | Interzonales | C1-C2 | 28,70 € | 22,90 € | 22,90 € | 14,30 € | 17,20 € | 8,50 € |
 
-ABONO TRANSPORTE: PRECIOS APLICABLES CON DESCUENTO DESDE 1/1/2026
+ABONO TRANSPORTE: PRECIO FINAL APLICABLE CON DESCUENTO DESDE 1/1/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Ordinario | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad ≥ 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | NORMAL | Interzonales | C1-E1 | 32,70 € | 26,10 € | 26,10 € | 16,30 € | 19,60 € | 9,70 € |
 
-ABONO TRANSPORTE: PRECIOS APLICABLES CON DESCUENTO DESDE 1/1/2026
+ABONO TRANSPORTE: PRECIO FINAL APLICABLE CON DESCUENTO DESDE 1/1/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Ordinario | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad ≥ 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | NORMAL | Interzonales | C1-E2 | 38,20 € | 30,50 € | 30,50 € | 19,00 € | 22,90 € | 11,40 € |
 
-ABONO TRANSPORTE: PRECIOS APLICABLES CON DESCUENTO DESDE 1/1/2026
+ABONO TRANSPORTE: PRECIO FINAL APLICABLE CON DESCUENTO DESDE 1/1/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Ordinario | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad ≥ 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | NORMAL | Interzonales | C2-E1 | 28,70 € | 22,90 € | 22,90 € | 14,30 € | 17,20 € | 8,50 € |
 
-ABONO TRANSPORTE: PRECIOS APLICABLES CON DESCUENTO DESDE 1/1/2026
+ABONO TRANSPORTE: PRECIO FINAL APLICABLE CON DESCUENTO DESDE 1/1/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Ordinario | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad ≥ 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | NORMAL | Interzonales | C2-E2 | 32,70 € | 26,10 € | 26,10 € | 16,30 € | 19,60 € | 9,70 € |
 
-ABONO TRANSPORTE: PRECIOS APLICABLES CON DESCUENTO DESDE 1/1/2026
+ABONO TRANSPORTE: PRECIO FINAL APLICABLE CON DESCUENTO DESDE 1/1/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Ordinario | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad ≥ 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | JOVEN | JOVEN | JOVEN | 10,00 € | 8,00 € | 8,00 € | 5,00 € | 6,00 € | 3,00 € |
 
-ABONO TRANSPORTE: PRECIOS APLICABLES CON DESCUENTO DESDE 1/1/2026
+ABONO TRANSPORTE: PRECIO FINAL APLICABLE CON DESCUENTO DESDE 1/1/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Ordinario | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad ≥ 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | TARJETA AZUL | TARJETA AZUL | TARJETA AZUL | 3,70 € |  |  |  |  |  |
 
-ABONO TRANSPORTE: PRECIOS APLICABLES CON DESCUENTO DESDE 1/1/2026
+ABONO TRANSPORTE: PRECIO FINAL APLICABLE CON DESCUENTO DESDE 1/1/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Ordinario | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad ≥ 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | ABONO +65 (*) | ABONO +65 (*) | ABONO +65 (*) | Título gratuito | Título gratuito |  |  |  |  |
 
-ABONO TRANSPORTE: PRECIOS APLICABLES CON DESCUENTO DESDE 1/1/2026
+ABONO TRANSPORTE: PRECIO FINAL APLICABLE CON DESCUENTO DESDE 1/1/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Ordinario | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad ≥ 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | TARJETA INFANTIL | TARJETA INFANTIL | TARJETA INFANTIL | Título gratuito | Título gratuito |  |  |  |  |
 
-ABONO TRANSPORTE: PRECIOS APLICABLES CON DESCUENTO DESDE 1/1/2026
+ABONO TRANSPORTE: PRECIO FINAL APLICABLE CON DESCUENTO DESDE 1/1/2026
 
 | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | TÍTULO 30 DÍAS | Ordinario | Personas con discapacidad superior o igual al 65% | Familias Numerosas Categoría General | Familias Numerosas Categoría Especial | FNGeneral + Personas con discapacidad ≥ 65% | FNEspecial + Personas con discapacidad ≥ 65% |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
