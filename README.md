@@ -334,21 +334,6 @@ La consulta «Según assets/imagen_demo.jpg, ¿cuánto cuestan 1 billete sencill
 
 ---
 
-## Limitaciones conocidas
-
-- El checkpointer del grafo es en memoria. Al reiniciar el proceso no se conserva una conversación ni los planes pendientes.
--▶️ `hora_actual` diferencia laborable, sábado y domingo, pero no conoce festivos nacionales ni locales.
-- Solo se admite la imagen demo por su referencia literal; no hay selector, subida de archivos, vídeo, audio ni rutas arbitrarias.
-- La lectura visual se ha validado con la imagen demo; depende de la disponibilidad del modelo Gemini Vision.
-- Las rutas se calculan solo en transporte público y dentro de la Comunidad de Madrid. La alternativa en bici es una oferta adicional (sin hora pedida, de 1 a 6 km y con buen tiempo) y no sustituye a la ruta. No existe un modo «solo bici»: una petición «en bici» calcula igualmente la ruta de transporte. Si la bici queda fuera del rango de 1 a 6 km, el mensaje no distingue entre trayecto demasiado corto y demasiado largo.
-- La alternativa en BiciMAD depende de la EMT, que es lenta: el login tiene un límite de 10 s y las estaciones de 20 s, de modo que en el peor caso añade entre 25 y 30 s. El criterio de «estación activa» es una suposición no verificada con la EMT.
-- El historial solo guarda los mensajes de la persona, no las respuestas del asistente; las respuestas a opciones numeradas se resuelven con una regla determinista.
-- El precio de algunos títulos (por ejemplo el abono joven) depende de que el RAG recupere su tabla, y a veces no la recupera. Cuando el RAG devuelve varias opciones sin etiquetar, la respuesta las muestra todas sin indicar cuál corresponde a la ruta. Renfe Avant se trata como tren pesado, porque Google no lo distingue de Cercanías.
-- La web muestra los pasos de cada turno (tools y registro), pero no qué especialista lanzó cada tool: el contrato público del grafo expone seis claves y no incluye ese dato.
-- El RAG se ancla al corpus disponible y no garantiza una abstención determinista fuera de él; la instrucción de abstención se aplica en el prompt.
-
----
-
 ## Créditos
 
 - Datos meteorológicos de [Open-Meteo.com](https://open-meteo.com/), licencia CC BY 4.0.
